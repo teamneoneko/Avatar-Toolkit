@@ -1,6 +1,6 @@
 # Avatar Toolkit
 
-## DO NOT USE YET FOR NOW PLEASE USE THE UNOFFICAL CATS BLENDER PLUGIN!
+## DO NOT USE YET FOR NOW PLEASE USE THE UNOFFICIAL CATS BLENDER PLUGIN [HERE}(https://github.com/unofficalcats/Cats-Blender-Plugin-Unofficial-)!
 #### Avatar Toolkit is in very early Alpha and will contain issues, please ensure you report them!
 
 A new modern tool designed to shorten steps needed to import and optimize models into VRChat, Resonite and other similar games.
@@ -13,12 +13,11 @@ Need a more stable toolset while Avatar Toolkit is in Alpha? Then please use Ble
 
 ## Blender version support policies.
 
-Please [Click Here](https://github.com/Yusarina/Cats-Blender-Plugin-Unofficial-/wiki/Blender-Version-Support-Policies) to view which versions of blender we support.
+Coming Soon.
 
 ## Features
 
-Please [Click Here](https://github.com/Yusarina/Cats-Blender-Plugin-Unofficial-/wiki/Features) to view the features of cats.
-
+Coming Soon.
 
 ## Requirements
 While The Avatar Toolkit is in Alpha, we are running on Blender 4.3 Alpha, however no stable releases will happen on Blender 4.x as we are aiming for Blender 5.0 for any type of stable release.
