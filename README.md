@@ -1,6 +1,6 @@
 # Avatar Toolkit
 
-##DO NOT USE YET FOR NOW PLEASE USE THE UNOFFICAL CATS BLENDER PLUGIN!
+## DO NOT USE YET FOR NOW PLEASE USE THE UNOFFICAL CATS BLENDER PLUGIN!
 #### Avatar Toolkit is in very early Alpha and will contain issues, please ensure you report them!
 
 A new modern tool designed to shorten steps needed to import and optimize models into VRChat, Resonite and other similar games.
