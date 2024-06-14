@@ -21,10 +21,10 @@ def read_pmx_header(file):
     rigid_body_index_size = struct.unpack('<b', file.read(1))[0]
     
     # Read model name and comments
-    model_name = file.read(struct.unpack('<i', file.read(4))[0]).decode('utf-16-le')
-    model_english_name = file.read(struct.unpack('<i', file.read(4))[0]).decode('utf-16-le')
-    model_comment = file.read(struct.unpack('<i', file.read(4))[0]).decode('utf-16-le')
-    model_english_comment = file.read(struct.unpack('<i', file.read(4))[0]).decode('utf-16-le')
+    model_name = str(file.read(struct.unpack('<i', file.read(4))[0]), 'utf-16-le', errors='replace')
+    model_english_name = str(file.read(struct.unpack('<i', file.read(4))[0]), 'utf-16-le', errors='replace')
+    model_comment = str(file.read(struct.unpack('<i', file.read(4))[0]), 'utf-16-le', errors='replace')
+    model_english_comment = str(file.read(struct.unpack('<i', file.read(4))[0]), 'utf-16-le', errors='replace')
     
     return version, encoding, additional_uvs, vertex_index_size, texture_index_size, material_index_size, bone_index_size, morph_index_size, rigid_body_index_size, model_name, model_english_name, model_comment, model_english_comment
 
@@ -46,8 +46,8 @@ def read_vertex(file, vertex_index_size):
     return position, normal, uv, bone_indices, bone_weights, edge_scale
 
 def read_material(file, texture_index_size):
-    material_name = file.read(struct.unpack('<i', file.read(4))[0]).decode('utf-16-le')
-    material_english_name = file.read(struct.unpack('<i', file.read(4))[0]).decode('utf-16-le')
+    material_name = str(file.read(struct.unpack('<i', file.read(4))[0]), 'utf-16-le', errors='replace')
+    material_english_name = str(file.read(struct.unpack('<i', file.read(4))[0]), 'utf-16-le', errors='replace')
     
     diffuse_color = struct.unpack('<4f', file.read(16))
     specular_color = struct.unpack('<3f', file.read(12))
@@ -67,13 +67,13 @@ def read_material(file, texture_index_size):
     else:
         toon_texture_index = struct.unpack('<b', file.read(1))[0]
     
-    comment = file.read(struct.unpack('<i', file.read(4))[0]).decode('utf-16-le')
+    comment = str(file.read(struct.unpack('<i', file.read(4))[0]), 'utf-16-le', errors='replace')
     
     return material_name, material_english_name, diffuse_color, specular_color, specular_strength, ambient_color, flag, edge_color, edge_size, texture_index, sphere_texture_index, sphere_mode, toon_sharing_flag, toon_texture_index, comment
 
 def read_bone(file, bone_index_size):
-    bone_name = file.read(struct.unpack('<i', file.read(4))[0]).decode('utf-16-le')
-    bone_english_name = file.read(struct.unpack('<i', file.read(4))[0]).decode('utf-16-le')
+    bone_name = str(file.read(struct.unpack('<i', file.read(4))[0]), 'utf-16-le', errors='replace')
+    bone_english_name = str(file.read(struct.unpack('<i', file.read(4))[0]), 'utf-16-le', errors='replace')
     
     position = struct.unpack('<3f', file.read(12))
     parent_bone_index = struct.unpack(f'<{bone_index_size}B', file.read(bone_index_size))[0]
@@ -115,8 +115,8 @@ def read_bone(file, bone_index_size):
     return bone_name, bone_english_name, position, parent_bone_index, layer, flag, tail_position, inherit_bone_parent_index, inherit_bone_parent_influence, fixed_axis, local_x_vector, local_z_vector, external_key, ik_target_bone_index, ik_loop_count, ik_limit_radian, ik_links
 
 def read_morph(file, morph_index_size):
-    morph_name = file.read(struct.unpack('<i', file.read(4))[0]).decode('utf-16-le')
-    morph_english_name = file.read(struct.unpack('<i', file.read(4))[0]).decode('utf-16-le')
+    morph_name = str(file.read(struct.unpack('<i', file.read(4))[0]), 'utf-16-le', errors='replace')
+    morph_english_name = str(file.read(struct.unpack('<i', file.read(4))[0]), 'utf-16-le', errors='replace')
     
     panel = struct.unpack('<b', file.read(1))[0]
     morph_type = struct.unpack('<b', file.read(1))[0]
@@ -196,9 +196,7 @@ def import_pmx(filepath):
             texture_count = struct.unpack('<i', file.read(4))[0]
             textures = []
             for _ in range(texture_count):
-                texture_path_length = struct.unpack('<i', file.read(4))[0]
-                texture_path_data = file.read(texture_path_length)
-                texture_path = texture_path_data.decode('utf-16-le', errors='replace').rstrip('\0')
+                texture_path = str(file.read(struct.unpack('<i', file.read(4))[0]), 'utf-16-le', errors='replace')
                 textures.append(texture_path)
             
             # Read materials
@@ -208,95 +206,95 @@ def import_pmx(filepath):
                 material_name, material_english_name, diffuse_color, specular_color, specular_strength, ambient_color, flag, edge_color, edge_size, texture_index, sphere_texture_index, sphere_mode, toon_sharing_flag, toon_texture_index, comment = read_material(file, texture_index_size)
                 materials.append((material_name, material_english_name, diffuse_color, specular_color, specular_strength, ambient_color, flag, edge_color, edge_size, texture_index, sphere_texture_index, sphere_mode, toon_sharing_flag, toon_texture_index, comment))
             
-            # Read bones
-            bone_count = struct.unpack('<i', file.read(4))[0]
-            bones = []
-            for _ in range(bone_count):
-                bone_name, bone_english_name, position, parent_bone_index, layer, flag, tail_position, inherit_bone_parent_index, inherit_bone_parent_influence, fixed_axis, local_x_vector, local_z_vector, external_key, ik_target_bone_index, ik_loop_count, ik_limit_radian, ik_links = read_bone(file, bone_index_size)
-                bones.append((bone_name, bone_english_name, position, parent_bone_index, layer, flag, tail_position, inherit_bone_parent_index, inherit_bone_parent_influence, fixed_axis, local_x_vector, local_z_vector, external_key, ik_target_bone_index, ik_loop_count, ik_limit_radian, ik_links))
+        # Read bones
+        bone_count = struct.unpack('<i', file.read(4))[0]
+        bones = []
+        for _ in range(bone_count):
+            bone_name, bone_english_name, position, parent_bone_index, layer, flag, tail_position, inherit_bone_parent_index, inherit_bone_parent_influence, fixed_axis, local_x_vector, local_z_vector, external_key, ik_target_bone_index, ik_loop_count, ik_limit_radian, ik_links = read_bone(file, bone_index_size)
+            bones.append((bone_name, bone_english_name, position, parent_bone_index, layer, flag, tail_position, inherit_bone_parent_index, inherit_bone_parent_influence, fixed_axis, local_x_vector, local_z_vector, external_key, ik_target_bone_index, ik_loop_count, ik_limit_radian, ik_links))
+        
+        # Read morphs
+        morph_count = struct.unpack('<i', file.read(4))[0]
+        morphs = []
+        for _ in range(morph_count):
+            morph_name, morph_english_name, panel, morph_type, morph_data = read_morph(file, morph_index_size)
+            morphs.append((morph_name, morph_english_name, panel, morph_type, morph_data))
+        
+        # Create Blender objects and assign PMX data
+        mesh = bpy.data.meshes.new(model_name)
+        mesh.from_pydata([v[0] for v in vertices], [], faces)
+        mesh.update()
+        
+        obj = bpy.data.objects.new(model_name, mesh)
+        bpy.context.collection.objects.link(obj)
+        
+        # Assign vertex normals
+        for i, vertex in enumerate(vertices):
+            mesh.vertices[i].normal = vertex[1]
+        
+        # Assign UV coordinates
+        uv_layer = mesh.uv_layers.new()
+        for i, vertex in enumerate(vertices):
+            uv_layer.data[i].uv = vertex[2]
+        
+        # Assign materials
+        for material_data in materials:
+            material = bpy.data.materials.new(material_data[0])
+            material.diffuse_color = material_data[2]
+            material.specular_color = material_data[3]
+            material.specular_intensity = material_data[4]
+            material.ambient = material_data[5]
+            # Set other material properties based on the PMX data
             
-            # Read morphs
-            morph_count = struct.unpack('<i', file.read(4))[0]
-            morphs = []
-            for _ in range(morph_count):
-                morph_name, morph_english_name, panel, morph_type, morph_data = read_morph(file, morph_index_size)
-                morphs.append((morph_name, morph_english_name, panel, morph_type, morph_data))
+            mesh.materials.append(material)
+        
+        # Create armature and assign bones
+        armature = bpy.data.armatures.new(model_name + "_Armature")
+        armature_obj = bpy.data.objects.new(model_name + "_Armature", armature)
+        bpy.context.collection.objects.link(armature_obj)
+        
+        bpy.context.view_layer.objects.active = armature_obj
+        bpy.ops.object.mode_set(mode='EDIT')
+        
+        for bone_data in bones:
+            bone = armature.edit_bones.new(bone_data[0])
+            bone.head = bone_data[2]
+            bone.tail = bone_data[6]
             
-            # Create Blender objects and assign PMX data
-            mesh = bpy.data.meshes.new(model_name)
-            mesh.from_pydata([v[0] for v in vertices], [], faces)
-            mesh.update()
+            if bone_data[3] != -1:
+                parent_bone = armature.edit_bones[bone_data[3]]
+                bone.parent = parent_bone
             
-            obj = bpy.data.objects.new(model_name, mesh)
-            bpy.context.collection.objects.link(obj)
+            # Set other bone properties based on the PMX data
+        
+        bpy.ops.object.mode_set(mode='OBJECT')
+        
+        # Assign bone weights to the mesh
+        for i, vertex in enumerate(vertices):
+            for j in range(4):
+                if vertex[3][j] != -1:
+                    bone_name = bones[vertex[3][j]][0]
+                    weight = vertex[4][j]
+                    
+                    vertex_group = obj.vertex_groups.get(bone_name)
+                    if not vertex_group:
+                        vertex_group = obj.vertex_groups.new(name=bone_name)
+                    
+                    vertex_group.add([i], weight, 'REPLACE')
+        
+        # Assign morphs to the mesh
+        for morph_data in morphs:
+            morph_name = morph_data[0]
+            morph_type = morph_data[3]
             
-            # Assign vertex normals
-            for i, vertex in enumerate(vertices):
-                mesh.vertices[i].normal = vertex[1]
-            
-            # Assign UV coordinates
-            uv_layer = mesh.uv_layers.new()
-            for i, vertex in enumerate(vertices):
-                uv_layer.data[i].uv = vertex[2]
-            
-            # Assign materials
-            for material_data in materials:
-                material = bpy.data.materials.new(material_data[0])
-                material.diffuse_color = material_data[2]
-                material.specular_color = material_data[3]
-                material.specular_intensity = material_data[4]
-                material.ambient = material_data[5]
-                # Set other material properties based on the PMX data
-                
-                mesh.materials.append(material)
-            
-            # Create armature and assign bones
-            armature = bpy.data.armatures.new(model_name + "_Armature")
-            armature_obj = bpy.data.objects.new(model_name + "_Armature", armature)
-            bpy.context.collection.objects.link(armature_obj)
-            
-            bpy.context.view_layer.objects.active = armature_obj
-            bpy.ops.object.mode_set(mode='EDIT')
-            
-            for bone_data in bones:
-                bone = armature.edit_bones.new(bone_data[0])
-                bone.head = bone_data[2]
-                bone.tail = bone_data[6]
-                
-                if bone_data[3] != -1:
-                    parent_bone = armature.edit_bones[bone_data[3]]
-                    bone.parent = parent_bone
-                
-                # Set other bone properties based on the PMX data
-            
-            bpy.ops.object.mode_set(mode='OBJECT')
-            
-            # Assign bone weights to the mesh
-            for i, vertex in enumerate(vertices):
-                for j in range(4):
-                    if vertex[3][j] != -1:
-                        bone_name = bones[vertex[3][j]][0]
-                        weight = vertex[4][j]
-                        
-                        vertex_group = obj.vertex_groups.get(bone_name)
-                        if not vertex_group:
-                            vertex_group = obj.vertex_groups.new(name=bone_name)
-                        
-                        vertex_group.add([i], weight, 'REPLACE')
-            
-            # Assign morphs to the mesh
-            for morph_data in morphs:
-                morph_name = morph_data[0]
-                morph_type = morph_data[3]
-                
-                if morph_type == 1:  # Vertex morph
-                    shape_key = obj.shape_key_add(name=morph_name)
-                    for offset_data in morph_data[4]:
-                        vertex_index = offset_data[0]
-                        offset = offset_data[1]
-                        shape_key.data[vertex_index].co += mathutils.Vector(offset)
-                # Handle other morph types based on the PMX specification
-            
+            if morph_type == 1:  # Vertex morph
+                shape_key = obj.shape_key_add(name=morph_name)
+                for offset_data in morph_data[4]:
+                    vertex_index = offset_data[0]
+                    offset = offset_data[1]
+                    shape_key.data[vertex_index].co += mathutils.Vector(offset)
+            # Handle other morph types based on the PMX specification
+        
             print(f"Successfully imported PMX file: {filepath}")
             print(f"Model Name: {model_name}")
             print(f"Model English Name: {model_english_name}")
