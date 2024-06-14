@@ -12,4 +12,5 @@ class AvatarToolkitPanel(bpy.types.Panel):
     def draw(self, context):
         layout = self.layout
         layout.label(text="Welcome to Avatar Toolkit!")
-        print("Avatar Toolkit Panel is being drawn")
+        #print("Avatar Toolkit Panel is being drawn")
+        

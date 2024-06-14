@@ -1,23 +1,19 @@
 if "bpy" not in locals():
     import bpy
-    from . import panel, quick_access, optimization
+    import glob
+    import os
+    from os.path import dirname, basename, isfile, join
+    modules = glob.glob(join(dirname(__file__), "*.py"))
+    for module_name in [ basename(f)[:-3] for f in modules if isfile(f) and not f.endswith('__init__.py')]:
+        exec("from . import "+module_name)
+        print("importing " +module_name)
 else:
     import importlib
-    # Reload the modules to reflect changes during development
-    importlib.reload(panel)
-    importlib.reload(quick_access)
-    importlib.reload(optimization)
+    modules = glob.glob(join(dirname(__file__), "*.py"))
+    for module_name in [ basename(f)[:-3] for f in modules if isfile(f) and not f.endswith('__init__.py')]:
+        print("reloading " +module_name)
+        exec("importlib.reload("+module_name+")")
+        
+    
+    
 
-def register():
-    print("UI register called")
-    from ..core.register import iter_classes_to_register
-    # Iterate over the classes to register and register them
-    for cls in iter_classes_to_register():
-        bpy.utils.register_class(cls)
-
-def unregister():
-    print("UI unregister called")
-    from ..core.register import iter_classes_to_register
-    # Iterate over the classes to unregister in reverse order and unregister them
-    for cls in reversed(list(iter_classes_to_register())):
-        bpy.utils.unregister_class(cls)
