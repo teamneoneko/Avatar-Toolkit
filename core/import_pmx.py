@@ -1,5 +1,6 @@
 import bpy
 import struct
+import traceback
 
 def read_pmx_header(file):
     # Read PMX header information
@@ -10,7 +11,7 @@ def read_pmx_header(file):
     version = struct.unpack('<f', file.read(4))[0]
     
     # Read additional header fields
-    data_size = struct.unpack('<i', file.read(4))[0]
+    data_size = struct.unpack('<b', file.read(1))[0]
     encoding = struct.unpack('<b', file.read(1))[0]
     additional_uvs = struct.unpack('<b', file.read(1))[0]
     vertex_index_size = struct.unpack('<b', file.read(1))[0]
@@ -19,13 +20,16 @@ def read_pmx_header(file):
     bone_index_size = struct.unpack('<b', file.read(1))[0]
     morph_index_size = struct.unpack('<b', file.read(1))[0]
     rigid_body_index_size = struct.unpack('<b', file.read(1))[0]
-    
+    print(rigid_body_index_size)
     # Read model name and comments
     model_name = str(file.read(struct.unpack('<i', file.read(4))[0]), 'utf-16-le', errors='replace')
     model_english_name = str(file.read(struct.unpack('<i', file.read(4))[0]), 'utf-16-le', errors='replace')
-    model_comment = str(file.read(struct.unpack('<i', file.read(4))[0]), 'utf-16-le', errors='replace')
-    model_english_comment = str(file.read(struct.unpack('<i', file.read(4))[0]), 'utf-16-le', errors='replace')
     
+    model_comment = str(file.read(struct.unpack('<i', file.read(4))[0]), 'utf-16-le', errors='replace')
+    #print(model_name)
+    #print(model_english_name)
+    model_english_comment = str(file.read(struct.unpack('<i', file.read(4))[0]), 'utf-16-le', errors='replace')
+    #print(model_english_comment)
     return version, encoding, additional_uvs, vertex_index_size, texture_index_size, material_index_size, bone_index_size, morph_index_size, rigid_body_index_size, model_name, model_english_name, model_comment, model_english_comment
 
 def read_vertex(file, vertex_index_size):
@@ -66,6 +70,7 @@ def read_material(file, texture_index_size):
         toon_texture_index = struct.unpack(f'<{texture_index_size}B', file.read(texture_index_size))[0]
     else:
         toon_texture_index = struct.unpack('<b', file.read(1))[0]
+    
     
     comment = str(file.read(struct.unpack('<i', file.read(4))[0]), 'utf-16-le', errors='replace')
     
@@ -175,37 +180,47 @@ def read_morph(file, morph_index_size):
 
 def import_pmx(filepath):
     try:
-        with open(filepath, 'rb') as file:
-            version, encoding, additional_uvs, vertex_index_size, texture_index_size, material_index_size, bone_index_size, morph_index_size, rigid_body_index_size, model_name, model_english_name, model_comment, model_english_comment = read_pmx_header(file)
+        with open(filepath, mode='rb') as file:
             
+            print("stage 1")
+            version, encoding, additional_uvs, vertex_index_size, texture_index_size, material_index_size, bone_index_size, morph_index_size, rigid_body_index_size, model_name, model_english_name, model_comment, model_english_comment = read_pmx_header(file)
+            print("stage 2")
             # Read vertices
+            print("fix 3")
             vertex_count = struct.unpack('<i', file.read(4))[0]
+            print("stage 3")
+            print(vertex_count)
             vertices = []
             for _ in range(vertex_count):
                 position, normal, uv, bone_indices, bone_weights, edge_scale = read_vertex(file, vertex_index_size)
                 vertices.append((position, normal, uv, bone_indices, bone_weights, edge_scale))
             
             # Read faces
+            print("stage 4")
             face_count = struct.unpack('<i', file.read(4))[0]
+            print("stage 5")
+            print(face_count)
+            print(additional_uvs)
+            print(vertex_index_size)
             faces = []
             for _ in range(face_count // 3):
                 face_indices = struct.unpack('<3i', file.read(12))
                 faces.append(face_indices)
-            
+            print("stage 6")
             # Read textures
             texture_count = struct.unpack('<i', file.read(4))[0]
             textures = []
             for _ in range(texture_count):
                 texture_path = str(file.read(struct.unpack('<i', file.read(4))[0]), 'utf-16-le', errors='replace')
                 textures.append(texture_path)
-            
+            print("stage 7")
             # Read materials
             material_count = struct.unpack('<i', file.read(4))[0]
             materials = []
             for _ in range(material_count):
                 material_name, material_english_name, diffuse_color, specular_color, specular_strength, ambient_color, flag, edge_color, edge_size, texture_index, sphere_texture_index, sphere_mode, toon_sharing_flag, toon_texture_index, comment = read_material(file, texture_index_size)
                 materials.append((material_name, material_english_name, diffuse_color, specular_color, specular_strength, ambient_color, flag, edge_color, edge_size, texture_index, sphere_texture_index, sphere_mode, toon_sharing_flag, toon_texture_index, comment))
-            
+            print("stage 8")
         # Read bones
         bone_count = struct.unpack('<i', file.read(4))[0]
         bones = []
@@ -302,4 +317,4 @@ def import_pmx(filepath):
             print(f"Model English Comment: {model_english_comment}")
     except Exception as e:
         print(f"Error importing PMX file: {filepath}")
-        print(f"Error details: {str(e)}")
+        print(f"Error details hhh: {traceback.format_exc()}")

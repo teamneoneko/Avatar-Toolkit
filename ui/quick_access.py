@@ -1,14 +1,9 @@
 import bpy
 from ..core.register import register_wrap
-<<<<<<< Updated upstream
-from ..core.pmx.import_pmx import import_pmx
-from ..core.pmd.import_pmd import import_pmd
-=======
 from .panel import AvatarToolkitPanel
 
 from ..core.import_pmx import import_pmx
 from ..core.import_pmd import import_pmd
->>>>>>> Stashed changes
 
 @register_wrap
 class AvatarToolkitQuickAccessPanel(bpy.types.Panel):

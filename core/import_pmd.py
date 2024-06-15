@@ -1,6 +1,7 @@
 import bpy
 import struct
 import mathutils
+import traceback
 
 def read_pmd_header(file):
     # Read PMD header information
@@ -219,6 +220,6 @@ def import_pmd(filepath):
             print(f"Successfully imported PMD file: {filepath}")
             print(f"Model Name: {model_name}")
             print(f"Comment: {comment}")
-    except Exception as e:
+    except Exception:
         print(f"Error importing PMD file: {filepath}")
-        print(f"Error details: {str(e.stacktrace)}")
+        print(f"Error details: {traceback.format_exc()}")
