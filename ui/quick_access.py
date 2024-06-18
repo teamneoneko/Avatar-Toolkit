@@ -1,5 +1,9 @@
 import bpy
 from ..core.register import register_wrap
+from .panel import AvatarToolkitPanel
+
+from ..core.import_pmx import import_pmx
+from ..core.import_pmd import import_pmd
 
 @register_wrap
 class AvatarToolkitQuickAccessPanel(bpy.types.Panel):
@@ -13,4 +17,38 @@ class AvatarToolkitQuickAccessPanel(bpy.types.Panel):
     def draw(self, context):
         layout = self.layout
         layout.label(text="Quick Access Options")
-        # Add quick access options here
+        
+        # Add import buttons
+        row = layout.row()
+        row.operator("avatar_toolkit.import_pmx", text="Import PMX")
+        row.operator("avatar_toolkit.import_pmd", text="Import PMD")
+
+@register_wrap
+class AVATAR_TOOLKIT_OT_import_pmx(bpy.types.Operator):
+    bl_idname = "avatar_toolkit.import_pmx"
+    bl_label = "Import PMX"
+
+    filepath: bpy.props.StringProperty(subtype="FILE_PATH")
+
+    def execute(self, context):
+        import_pmx(self.filepath)
+        return {'FINISHED'}
+
+    def invoke(self, context, event):
+        context.window_manager.fileselect_add(self)
+        return {'RUNNING_MODAL'}
+
+@register_wrap
+class AVATAR_TOOLKIT_OT_import_pmd(bpy.types.Operator):
+    bl_idname = "avatar_toolkit.import_pmd"
+    bl_label = "Import PMD"
+
+    filepath: bpy.props.StringProperty(subtype="FILE_PATH")
+
+    def execute(self, context):
+        import_pmd(self.filepath)
+        return {'FINISHED'}
+
+    def invoke(self, context, event):
+        context.window_manager.fileselect_add(self)
+        return {'RUNNING_MODAL'}
