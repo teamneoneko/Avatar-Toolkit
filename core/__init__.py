@@ -1,9 +1,7 @@
 # core/__init__.py
 
 from .register import register_wrap
-<<<<<<< Updated upstream
 from . import pmx
-=======
 
 #to reload all things in this directory and import them properly - @989onan
 if "bpy" not in locals():
@@ -21,4 +19,3 @@ else:
     for module_name in [ basename(f)[:-3] for f in modules if isfile(f) and not f.endswith('__init__.py')]:
         exec("importlib.reload("+module_name+")")
         print("reloading " +module_name)
->>>>>>> Stashed changes
