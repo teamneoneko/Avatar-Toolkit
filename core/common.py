@@ -1,11 +1,11 @@
 import bpy
 import numpy as np
 
-from bpy.types import Object, ShapeKey
+from bpy.types import Object, ShapeKey, Mesh, Context
 from functools import lru_cache
 
 ### Clean up material names in the given mesh by removing the '.001' suffix.
-def clean_material_names(mesh):
+def clean_material_names(mesh: Mesh) -> None:
     for j, mat in enumerate(mesh.material_slots):
         if mat.name.endswith(('.0+', ' 0+')):
             mesh.active_material_index = j
@@ -15,7 +15,7 @@ def clean_material_names(mesh):
 # This will fix faulty uv coordinates, cats did this a other way which can have unintended consequences, 
 # this is the best way i could of think of doing this for the time being, however may need improvements.
 
-def fix_uv_coordinates(context):
+def fix_uv_coordinates(context: Context) -> None:
     obj = context.object
 
     # Check if the object is in Edit Mode
