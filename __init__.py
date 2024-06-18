@@ -4,12 +4,14 @@ if "bpy" not in locals():
     import bpy
     from . import ui
     from . import core
+    from . import functions
     from .core import register
     from .core.register import __bl_ordered_classes
 else:
     import importlib
     importlib.reload(ui)
     importlib.reload(core)
+    importlib.reload(functions)
 
 
 def register():
