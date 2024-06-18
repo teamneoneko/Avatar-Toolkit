@@ -1,7 +1,7 @@
 import bpy
 import numpy as np
 
-from bpy.types import Object, ShapeKey
+from bpy.types import Object, ShapeKey, Mesh, Context
 from functools import lru_cache
 
 ### Clean up material names in the given mesh by removing the '.001' suffix.
