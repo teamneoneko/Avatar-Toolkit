@@ -16,12 +16,15 @@ class AvatarToolkitOptimizationPanel(bpy.types.Panel):
         layout.label(text="Optimization Options")
         
         row = layout.row()
+        row.scale_y = 1.2 
         row.operator("avatar_toolkit.combine_materials", text="Combine Materials")
 
-        row = layout.row()
+        layout.separator(factor=0.5)
+        
+        row = layout.row(align=True)
+        row.scale_y = 1.2 
         row.operator("avatar_toolkit.join_all_meshes", text="Join All Meshes")
-
-        row = layout.row()
         row.operator("avatar_toolkit.join_selected_meshes", text="Join Selected Meshes")
 
         # Add optimization options here
+

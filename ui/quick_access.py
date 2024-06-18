@@ -17,11 +17,50 @@ class AvatarToolkitQuickAccessPanel(bpy.types.Panel):
     def draw(self, context):
         layout = self.layout
         layout.label(text="Quick Access Options")
-        
-        # Add import buttons
+    
         row = layout.row()
-        row.operator("avatar_toolkit.import_pmx", text="Import PMX")
-        row.operator("avatar_toolkit.import_pmd", text="Import PMD")
+        row.label(text="Import/Export", icon='IMPORT')
+        
+        layout.separator(factor=0.5)
+
+        row = layout.row(align=True)
+        row.scale_y = 1.5  
+        row.operator("avatar_toolkit.import_menu", text="Import")
+        row.operator("avatar_toolkit.export_menu", text="Export")
+
+@register_wrap
+class AVATAR_TOOLKIT_OT_import_menu(bpy.types.Operator):
+    bl_idname = "avatar_toolkit.import_menu"
+    bl_label = "Import Menu"
+
+    def execute(self, context):
+        return {'FINISHED'}
+
+    def invoke(self, context, event):
+        wm = context.window_manager
+        return wm.invoke_popup(self, width=200)
+
+    def draw(self, context):
+        layout = self.layout
+        layout.label(text="Select Import Method")
+        layout.operator("avatar_toolkit.import_pmx", text="Import PMX")
+        layout.operator("avatar_toolkit.import_pmd", text="Import PMD")
+
+@register_wrap
+class AVATAR_TOOLKIT_OT_export_menu(bpy.types.Operator):
+    bl_idname = "avatar_toolkit.export_menu"
+    bl_label = "Export Menu"
+
+    def execute(self, context):
+        return {'FINISHED'}
+
+    def invoke(self, context, event):
+        wm = context.window_manager
+        return wm.invoke_popup(self, width=200)
+
+    def draw(self, context):
+        layout = self.layout
+        layout.label(text="Export options will go here")
 
 @register_wrap
 class AVATAR_TOOLKIT_OT_import_pmx(bpy.types.Operator):
