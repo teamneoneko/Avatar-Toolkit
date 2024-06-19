@@ -1,0 +1,21 @@
+{
+    "localeCode": "en_us",
+    "authors": ["989onan", "RinaDev"],
+    "messages":{
+        "avatar_toolkit.optimization.title": "Optimization",
+        "avatar_toolkit.optimization.label":"Optimization Options",
+        "avatar_toolkit.join_all_meshes.label":"Join All Meshes",
+        "avatar_toolkit.join_all_meshes.desc":"Join all meshes in the scene",
+        "avatar_toolkit.join_selected_meshes.label":"Join Selected Meshes",
+        "avatar_toolkit.join_selected_meshes.desc":"Join Selected Meshes",
+        "avatar_toolkit.combine_materials.label":"Combine Materials",
+        "avatar_toolkit.combine_materials.desc":"Combine similar materials to optimize the model",
+        "avatar_toolkit.panel.title":"Avatar Toolkit",
+        "avatar_toolkit.panel.welcome":"Welcome to Avatar Toolkit!",
+        "avatar_toolkit.quick_access.title":"Quick Access",
+        "avatar_toolkit.import_pmx.label":"Import PMX",
+        "avatar_toolkit.import_pmd.label":"Import PMD"
+        
+        
+    }
+}

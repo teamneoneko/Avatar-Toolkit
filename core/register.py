@@ -31,8 +31,6 @@ def toposort(deps_dict):
             else:
                 unsorted.append(value)
         deps_dict = {value : deps_dict[value] - sorted_values for value in unsorted}
-    
-    sort_order(sorted_list) #to sort by 'bl_order' so we can choose how things may appear in the ui
     return sorted_list
 
 
@@ -48,7 +46,6 @@ def order_classes():
     for class_obj in toposort(deps_dict):
         __bl_ordered_classes.append(class_obj)
         
-    print(__bl_ordered_classes)
     __bl_classes.clear()
 
 
