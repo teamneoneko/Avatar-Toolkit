@@ -1,6 +1,8 @@
 import bpy
 import numpy as np
+from .dictionaries import bone_names
 
+from typing import List, Optional
 from bpy.types import Object, ShapeKey, Mesh, Context
 from functools import lru_cache
 
@@ -39,3 +41,19 @@ def has_shapekeys(mesh_obj: Object) -> bool:
 @lru_cache(maxsize=None)
 def _get_shape_key_co(shape_key: ShapeKey) -> np.ndarray:
     return np.array([v.co for v in shape_key.data])
+    
+def simplify_bonename(n):
+    return n.lower().translate(dict.fromkeys(map(ord, u" _.")))
+    
+def get_armature(context, armature_name=None) -> Optional[Object]:
+    if armature_name:
+        obj = bpy.data.objects[armature_name]
+        if obj.type == "ARMATURE":
+            return obj
+        else:
+            return None
+    if context.view_layer.objects.active:
+        obj = context.view_layer.objects.active
+        if obj.type == "ARMATURE":
+            return obj
+    return next((obj for obj in context.view_layer.objects if obj.type == 'ARMATURE'), None)
