@@ -19,10 +19,28 @@ def load_translations() -> None:
     dictionary = dict()
     languages = ["auto"]
 
-    language: str = bpy.context.preferences.view.language
-
+    # Populate languages list
     for i in os.listdir(translations_dir):
-        languages.append(i.split(".")[0])
+        lang = i.split(".")[0]
+        if lang != "auto":
+            languages.append(lang)
+
+    # Check if the context and scene are available
+    if hasattr(bpy.context, "scene"):
+        # Check if the property exists before trying to access it
+        if hasattr(bpy.context.scene, "avatar_toolkit_language"):
+            language_index = bpy.context.scene.avatar_toolkit_language
+            if isinstance(language_index, str):
+                language_index = int(language_index)
+            if language_index == 0:  # "auto"
+                language = bpy.context.preferences.view.language
+            else:
+                language = languages[language_index]
+        else:
+            language = bpy.context.preferences.view.language
+    else:
+        # Set a default language if the context or scene is not available
+        language = "en_US"
 
     translation_file: str = os.path.join(translations_dir, language + ".json")
     if os.path.exists(translation_file):
@@ -52,13 +70,23 @@ def t(phrase: str, *args, **kwargs) -> str:
     return output.format(*args, **kwargs)
 
 def get_languages_list(self, context) -> List[Tuple[str, str, str]]:
-    choices: List[Tuple[str, str, str]] = []
-    for language in languages:
-        choices.append((language, language, language))
-    return choices
+    return [(str(i), lang, f"Use {lang} language") for i, lang in enumerate(languages)]
 
-def update_ui(self, context) -> None:
+def refresh_translations():
     load_translations()
-    bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
+    # Force a full UI update
+    for window in bpy.context.window_manager.windows:
+        for area in window.screen.areas:
+            area.tag_redraw()
 
+def update_ui(self, context):
+    refresh_translations()
+    # Force Blender to redraw all UI elements
+    for screen in bpy.data.screens:
+        for area in screen.areas:
+            area.tag_redraw()
+    # Update the Scene to trigger a full UI refresh
+    bpy.context.scene.update_tag()
+
+# Initial load of translations
 load_translations()

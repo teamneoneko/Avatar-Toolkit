@@ -2,7 +2,17 @@
     "messages": {
       "Settings.label": "Settings",
       "Settings.language.label": "Language",
-      "Settings.language.desc": "Select the language for the addon's UI"
+      "Settings.language.desc": "Select the language for the addon's UI",
+      "Export.resonite.label": "Export to Resonite",
+      "Export.resonite.desc": "Export a GLB with all animations and materials. For animation data see:",
+      "Optimization.combinematerials.label": "Combine Materials",
+      "Optimization.combinematerials.desc": "Combine similar materials to optimize the model",
+      "QuickAccess.label": "Quick Access",
+      "QuickAcess.importexport.txt": "Import/Export",
+      "QuickAccess.options": "Quick Access Options",
+      "QuickAccess.importexport.txt": "Import/Export",
+      "QuickAccess.import": "Import",
+      "QuickAccess.export": "Export"
     }
   }
   

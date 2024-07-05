@@ -1,8 +1,17 @@
 {
-    "messages": {
-      "Settings.label": "Settings Ja Test",
-      "Settings.language.label": "Language Ja Test",
-      "Settings.language.desc": "Select the language for the addon's UI Ja Test"
-    }
+  "messages": {
+    "Settings.label": "設定",
+    "Settings.language.label": "言語",
+    "Settings.language.desc": "アドオンのUI言語を選択してください",
+    "Export.resonite.label": "Resoniteにエクスポート",
+    "Export.resonite.desc": "すべてのアニメーションとマテリアルを含むGLBをエクスポートします。アニメーションデータについては以下を参照してください：",
+    "Optimization.combinematerials.label": "マテリアルを結合",
+    "Optimization.combinematerials.desc": "類似したマテリアルを結合してモデルを最適化します",
+    "QuickAccess.label": "クイックアクセス",
+    "QuickAcess.importexport.txt": "インポート/エクスポート",
+    "QuickAccess.options": "クイックアクセスオプション",
+    "QuickAccess.importexport.txt": "インポート/エクスポート",
+    "QuickAccess.import": "インポート",
+    "QuickAccess.export": "エクスポート"
   }
-  
+}

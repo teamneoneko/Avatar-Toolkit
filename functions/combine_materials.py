@@ -4,6 +4,7 @@ from typing import List, Tuple, Optional
 from bpy.types import Material, Operator, Context, Object
 from ..core.common import clean_material_names
 from ..core.register import register_wrap
+from ..functions.translations import t
 
 def textures_match(tex1: bpy.types.ImageTexture, tex2: bpy.types.ImageTexture) -> bool:
     return tex1.image == tex2.image and tex1.extension == tex2.extension
@@ -58,8 +59,8 @@ def report_consolidated(self: Operator, num_combined: int) -> None:
 @register_wrap
 class CombineMaterials(Operator):
     bl_idname = "avatar_toolkit.combine_materials"
-    bl_label = "Combine Materials"
-    bl_description = "Combine similar materials to optimize the model"
+    bl_label = t("Optimization.combinematerials.label")
+    bl_description = t("Optimization.combinematerials.desc")
     bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod

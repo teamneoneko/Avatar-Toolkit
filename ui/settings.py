@@ -14,6 +14,4 @@ class AvatarToolkitSettingsPanel(bpy.types.Panel):
 
     def draw(self, context):
         layout = self.layout
-        props = context.scene
-
-        layout.prop(props, "language")
+        layout.prop(context.scene, "avatar_toolkit_language", text=t("Settings.language.label"))

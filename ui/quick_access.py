@@ -2,13 +2,14 @@ import bpy
 from ..core.register import register_wrap
 from .panel import AvatarToolkitPanel
 from bpy.types import Context
+from ..functions.translations import t
 
 from ..core.import_pmx import import_pmx
 from ..core.import_pmd import import_pmd
 
 @register_wrap
 class AvatarToolkitQuickAccessPanel(bpy.types.Panel):
-    bl_label = "Quick Access"
+    bl_label = t("QuickAccesslabel")
     bl_idname = "OBJECT_PT_avatar_toolkit_quick_access"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
@@ -17,17 +18,17 @@ class AvatarToolkitQuickAccessPanel(bpy.types.Panel):
 
     def draw(self, context: Context):
         layout = self.layout
-        layout.label(text="Quick Access Options")
-    
+        layout.label(text=t("QuickAccess.options"))
+
         row = layout.row()
-        row.label(text="Import/Export", icon='IMPORT')
+        row.label(text=t("QuickAccess.importexport.txt"), icon='IMPORT')
         
         layout.separator(factor=0.5)
 
         row = layout.row(align=True)
         row.scale_y = 1.5  
-        row.operator("avatar_toolkit.import_menu", text="Import")
-        row.operator("avatar_toolkit.export_menu", text="Export")
+        row.operator("avatar_toolkit.import_menu", text=t("QuickAccess.import"))
+        row.operator("avatar_toolkit.export_menu", text=t("QuickAccess.export"))
 
 @register_wrap
 class AVATAR_TOOLKIT_OT_import_menu(bpy.types.Operator):
