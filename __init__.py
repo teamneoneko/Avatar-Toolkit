@@ -17,6 +17,10 @@ def register():
     print("Registering Avatar Toolkit")
     # Register the addon properties
     properties.register()
+
+    # Load the translations
+    functions.translations.load_translations()
+
     # Order the classes before registration
     core.register.order_classes()
     # Register the properties
@@ -26,8 +30,7 @@ def register():
         print("registering " + str(cls))
         bpy.utils.register_class(cls)
 
-    # Load the translations after everything else is registered
-    functions.translations.load_translations()
+
 
 def unregister():
     print("Unregistering Avatar Toolkit")

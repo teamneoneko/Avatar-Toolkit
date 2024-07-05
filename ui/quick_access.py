@@ -34,6 +34,7 @@ class AvatarToolkitQuickAccessPanel(bpy.types.Panel):
 class AVATAR_TOOLKIT_OT_import_menu(bpy.types.Operator):
     bl_idname = "avatar_toolkit.import_menu"
     bl_label = t("Quick_Access.import_menu.label")
+    bl_description = t("Quick_Access.import_menu.desc")
 
     def execute(self, context: Context):
         return {'FINISHED'}
@@ -52,6 +53,7 @@ class AVATAR_TOOLKIT_OT_import_menu(bpy.types.Operator):
 class AVATAR_TOOLKIT_OT_export_menu(bpy.types.Operator):
     bl_idname = "avatar_toolkit.export_menu"
     bl_label = t("Quick_Access.export_menu.label")
+    bl_description = t("Quick_Access.import_pmx.desc")
 
     def execute(self, context: Context):
         return {'FINISHED'}
