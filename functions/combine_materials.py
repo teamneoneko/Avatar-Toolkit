@@ -59,8 +59,8 @@ def report_consolidated(self: Operator, num_combined: int) -> None:
 @register_wrap
 class CombineMaterials(Operator):
     bl_idname = "avatar_toolkit.combine_materials"
-    bl_label = t("Optimization.combinematerials.label")
-    bl_description = t("Optimization.combinematerials.desc")
+    bl_label = t("Optimization.combine_materials.label")
+    bl_description = t("Optimization.combine_materials.desc")
     bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod

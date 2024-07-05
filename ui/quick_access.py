@@ -9,7 +9,7 @@ from ..core.import_pmd import import_pmd
 
 @register_wrap
 class AvatarToolkitQuickAccessPanel(bpy.types.Panel):
-    bl_label = t("QuickAccesslabel")
+    bl_label = t("Quick_Access.label")
     bl_idname = "OBJECT_PT_avatar_toolkit_quick_access"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
@@ -18,22 +18,22 @@ class AvatarToolkitQuickAccessPanel(bpy.types.Panel):
 
     def draw(self, context: Context):
         layout = self.layout
-        layout.label(text=t("QuickAccess.options"))
+        layout.label(text=t("Quick_Access.options"))
 
         row = layout.row()
-        row.label(text=t("QuickAccess.importexport.txt"), icon='IMPORT')
+        row.label(text=t("Quick_Access.import_export.label"), icon='IMPORT')
         
         layout.separator(factor=0.5)
 
         row = layout.row(align=True)
         row.scale_y = 1.5  
-        row.operator("avatar_toolkit.import_menu", text=t("QuickAccess.import"))
-        row.operator("avatar_toolkit.export_menu", text=t("QuickAccess.export"))
+        row.operator("avatar_toolkit.import_menu", text=t("Quick_Access.import"))
+        row.operator("avatar_toolkit.export_menu", text=t("Quick_Access.export"))
 
 @register_wrap
 class AVATAR_TOOLKIT_OT_import_menu(bpy.types.Operator):
     bl_idname = "avatar_toolkit.import_menu"
-    bl_label = "Import Menu"
+    bl_label = t("Quick_Access.import_menu.label")
 
     def execute(self, context: Context):
         return {'FINISHED'}
@@ -45,13 +45,13 @@ class AVATAR_TOOLKIT_OT_import_menu(bpy.types.Operator):
     def draw(self, context: Context):
         layout = self.layout
         layout.label(text="Select Import Method")
-        layout.operator("avatar_toolkit.import_pmx", text="Import PMX")
-        layout.operator("avatar_toolkit.import_pmd", text="Import PMD")
+        layout.operator("avatar_toolkit.import_pmx", text=t("Quick_Access.import_pmx"))
+        layout.operator("avatar_toolkit.import_pmd", text=t("Quick_Access.import_pmd"))
 
 @register_wrap
 class AVATAR_TOOLKIT_OT_export_menu(bpy.types.Operator):
     bl_idname = "avatar_toolkit.export_menu"
-    bl_label = "Export Menu"
+    bl_label = t("Quick_Access.export_menu.label")
 
     def execute(self, context: Context):
         return {'FINISHED'}
@@ -62,13 +62,13 @@ class AVATAR_TOOLKIT_OT_export_menu(bpy.types.Operator):
 
     def draw(self, context: Context):
         layout = self.layout
-        layout.label(text="Select Export Method")
-        layout.operator("avatar_toolkit.export_resonite", text="Export Resonite")
+        layout.label(text=t("Quick_Access.select_export.label"))
+        layout.operator("avatar_toolkit.export_resonite", text=t("Quick_Access.select_export_resonite.label"))
 
 @register_wrap
 class AVATAR_TOOLKIT_OT_import_pmx(bpy.types.Operator):
     bl_idname = "avatar_toolkit.import_pmx"
-    bl_label = "Import PMX"
+    bl_label = t("Quick_Access.import_pmx")
 
     filepath: bpy.props.StringProperty(subtype="FILE_PATH")
 
@@ -83,7 +83,7 @@ class AVATAR_TOOLKIT_OT_import_pmx(bpy.types.Operator):
 @register_wrap
 class AVATAR_TOOLKIT_OT_import_pmd(bpy.types.Operator):
     bl_idname = "avatar_toolkit.import_pmd"
-    bl_label = "Import PMD"
+    bl_label = t("Quick_Access.import_pmd")
 
     filepath: bpy.props.StringProperty(subtype="FILE_PATH")
 
