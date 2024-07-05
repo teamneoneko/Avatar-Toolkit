@@ -1,6 +1,7 @@
 import bpy
 from ..core.register import register_wrap
 from .panel import AvatarToolkitPanel
+from bpy.types import Context
 
 from ..core.import_pmx import import_pmx
 from ..core.import_pmd import import_pmd
@@ -15,7 +16,7 @@ class AvatarToolkitQuickAccessPanel(bpy.types.Panel):
     bl_category = "Avatar Toolkit"
     bl_parent_id = "OBJECT_PT_avatar_toolkit"
 
-    def draw(self, context):
+    def draw(self, context: Context):
         layout = self.layout
         layout.label(text="Quick Access Options")
     
@@ -34,14 +35,14 @@ class AVATAR_TOOLKIT_OT_import_menu(bpy.types.Operator):
     bl_idname = "avatar_toolkit.import_menu"
     bl_label = "Import Menu"
 
-    def execute(self, context):
+    def execute(self, context: Context):
         return {'FINISHED'}
 
-    def invoke(self, context, event):
+    def invoke(self, context: Context, event):
         wm = context.window_manager
         return wm.invoke_popup(self, width=200)
 
-    def draw(self, context):
+    def draw(self, context: Context):
         layout = self.layout
         layout.label(text="Select Import Method")
         layout.operator("avatar_toolkit.import_pmx", text="Import PMX")
@@ -54,16 +55,17 @@ class AVATAR_TOOLKIT_OT_export_menu(bpy.types.Operator):
     bl_idname = "avatar_toolkit.export_menu"
     bl_label = "Export Menu"
 
-    def execute(self, context):
+    def execute(self, context: Context):
         return {'FINISHED'}
 
-    def invoke(self, context, event):
+    def invoke(self, context: Context, event):
         wm = context.window_manager
         return wm.invoke_popup(self, width=200)
 
-    def draw(self, context):
+    def draw(self, context: Context):
         layout = self.layout
-        layout.label(text="Export options will go here")
+        layout.label(text="Select Export Method")
+        layout.operator("avatar_toolkit.export_resonite", text="Export Resonite")
 
 @register_wrap
 class AVATAR_TOOLKIT_OT_import_pmx(bpy.types.Operator):
@@ -72,11 +74,11 @@ class AVATAR_TOOLKIT_OT_import_pmx(bpy.types.Operator):
 
     filepath: bpy.props.StringProperty(subtype="FILE_PATH")
 
-    def execute(self, context):
+    def execute(self, context: Context):
         import_pmx(self.filepath)
         return {'FINISHED'}
 
-    def invoke(self, context, event):
+    def invoke(self, context: Context, event):
         context.window_manager.fileselect_add(self)
         return {'RUNNING_MODAL'}
 
@@ -87,11 +89,11 @@ class AVATAR_TOOLKIT_OT_import_pmd(bpy.types.Operator):
 
     filepath: bpy.props.StringProperty(subtype="FILE_PATH")
 
-    def execute(self, context):
+    def execute(self, context: Context):
         import_pmd(self.filepath)
         return {'FINISHED'}
 
-    def invoke(self, context, event):
+    def invoke(self, context: Context, event):
         context.window_manager.fileselect_add(self)
         return {'RUNNING_MODAL'}
 
