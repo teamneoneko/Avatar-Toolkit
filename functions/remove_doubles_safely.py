@@ -18,6 +18,7 @@ class RemoveDoublesSafely(Operator):
     bl_description = "Remove Doubles on all meshes, making sure to not fuse things like mouths together."
     bl_options = {'REGISTER', 'UNDO'}
     objects_to_do: list[meshEntry] = []
+    merge_distance: bpy.props.FloatProperty(default=0.0001)
 
     @classmethod
     def poll(cls, context: Context) -> bool:
@@ -55,11 +56,17 @@ class RemoveDoublesSafely(Operator):
     def modify_mesh(self, context: Context, mesh: meshEntry):
         mesh["mesh"].select_set(True)
         context.view_layer.objects.active = mesh["mesh"]
+        context.view_layer.objects.active = mesh["mesh"]
+        mesh_data: bpy.types.Mesh = mesh["mesh"].data
         bpy.ops.object.mode_set(mode='EDIT')
         
         
-        
-        
+        bpy.ops.object.mode_set(mode='OBJECT')
+        for index, point in enumerate(mesh["mesh"].active_shape_key.points):
+            if point.co.xyz != mesh_data.shape_keys.key_blocks[0].points[index].co.xyz:
+                mesh_data.vertices[index].select = True
+                print("shapekey has a moved vertex at index \""+str(index)+"\", excluding from double merging!")
+        bpy.ops.object.mode_set(mode='EDIT')
         
         
 
@@ -86,10 +93,38 @@ class RemoveDoublesSafely(Operator):
 
             elif not (mesh_data.shape_keys):
                 print("doing mesh with no shapekeys named \""+mesh['mesh'].name+"\".")
-                self.modify_mesh(context, mesh)
+                mesh["mesh"].select_set(True)
+                context.view_layer.objects.active = mesh["mesh"]
+                bpy.ops.object.mode_set(mode='EDIT')
+                mesh_data.vertices.foreach_set("select",[False]*len(mesh_data.vertices))
+    
+                bpy.ops.mesh.select_all(action="INVERT")
+                bpy.ops.mesh.remove_doubles(threshold=self.merge_distance,use_unselected=False)
+
+                bpy.ops.object.mode_set(mode='OBJECT')
+                mesh["mesh"].select_set(False)
                 self.objects_to_do.pop(0)
             else:
+                mesh["mesh"].select_set(True)
+                context.view_layer.objects.active = mesh["mesh"]
+                bpy.ops.object.mode_set(mode='EDIT')
+
+                bpy.ops.mesh.select_all(action="INVERT")
+                bpy.ops.mesh.remove_doubles(threshold=self.merge_distance,use_unselected=False)
+                
+                bpy.ops.object.mode_set(mode='OBJECT')
+                mesh["mesh"].select_set(False)
+                
                 self.objects_to_do.pop(0)
+                if len(self.objects_to_do) > 0:
+                    mesh = self.objects_to_do[0]
+                    mesh["mesh"].select_set(True)
+                    context.view_layer.objects.active = mesh["mesh"]
+                    bpy.ops.object.mode_set(mode='EDIT')
+                    mesh_data.vertices.foreach_set("select",[False]*len(mesh_data.vertices))
+                    bpy.ops.object.mode_set(mode='OBJECT')
+                    mesh["mesh"].select_set(False)
+
         else:
             return {'FINISHED'}
         
