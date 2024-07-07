@@ -20,3 +20,5 @@ class AvatarToolkitToolsPanel(bpy.types.Panel):
         row = layout.row(align=True)
         row.scale_y = 1.5  
         row.operator("avatar_toolkit.convert_to_resonite", text="Translate to Resonite")
+        row = layout.row(align=True)
+        row.operator("avatar_toolkit.remove_doubles_safely", text="Remove Doubles Safely")
