@@ -5,6 +5,7 @@ import re
 from typing import List, Tuple, Optional, TypedDict
 from bpy.types import Material, Operator, Context, Object
 from ..core.register import register_wrap
+from ..core.common import get_armature
 
 
 class meshEntry(TypedDict):
@@ -31,8 +32,9 @@ class RemoveDoublesSafely(Operator):
 
         bpy.ops.object.mode_set(mode='OBJECT')
         bpy.ops.object.select_all(action='DESELECT')
+        objects: List[Object] =  get_armature(context).children if get_armature(context) else context.view_layer.objects
 
-        meshes: List[Object] = [obj for obj in context.view_layer.objects if obj.type == 'MESH']  
+        meshes: List[Object] = [obj for obj in objects if obj.type == 'MESH']  
         
         for mesh in meshes:
             if mesh.data.name not in [stored_object["mesh"].data.name for stored_object in self.objects_to_do]:
