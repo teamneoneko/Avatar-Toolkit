@@ -1,5 +1,8 @@
 {
     "messages": {
+      "Language.auto": "Automatic",
+      "Language.en_US": "English",
+      "Language.ja_JP": "日本語",
       "Quick_Access.label": "Quick Access",
       "Quick_Access.import_export.label": "Import/Export",
       "Quick_Access.options": "Quick Access Options",

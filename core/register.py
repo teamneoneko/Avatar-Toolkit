@@ -1,5 +1,5 @@
 import bpy
-import typing
+from typing import List, Type
 
 # List to store the classes to register
 __bl_classes = []
@@ -21,8 +21,11 @@ def register_property(prop):
 
 def register_properties():
     for prop in __bl_props:
-        setattr(prop[0], prop[1], prop[2])
-
+        if isinstance(prop[2], bpy.props._PropertyDeferred):
+            setattr(prop[0], prop[1], prop[2])
+        else:
+            prop() 
+            
 def unregister_properties():
     for prop in reversed(__bl_props):
         delattr(prop[0], prop[1])

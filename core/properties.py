@@ -1,16 +1,18 @@
 import bpy
-from ..functions.translations import t, get_languages_list, update_ui
-from ..core.register import register_property
-from typing import Tuple
+from ..functions.translations import t, get_languages_list, update_language
+from ..core.addon_preferences import get_preference
 
 def register():
-    register_property((bpy.types.Scene, "avatar_toolkit_language", bpy.props.EnumProperty(
-        name=t("Settings.language.label"),
-        description=t("Settings.language.desc"),
+    default_language = get_preference("language", 0)
+    
+    bpy.types.Scene.avatar_toolkit_language = bpy.props.EnumProperty(
+        name=t("Settings.language.label", "Language"),
+        description=t("Settings.language.desc", "Select the language for the addon"),
         items=get_languages_list,
-        default=0,
-        update=update_ui
-    )))
+        default=default_language,
+        update=update_language
+    )
 
 def unregister():
-    pass
+    if hasattr(bpy.types.Scene, "avatar_toolkit_language"):
+        del bpy.types.Scene.avatar_toolkit_language
