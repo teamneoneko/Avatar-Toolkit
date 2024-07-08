@@ -57,3 +57,58 @@ def get_armature(context, armature_name=None) -> Optional[Object]:
         if obj.type == "ARMATURE":
             return obj
     return next((obj for obj in context.view_layer.objects if obj.type == 'ARMATURE'), None)
+
+def has_shapekeys(mesh_obj):
+    return mesh_obj.data.shape_keys is not None
+
+def has_shapekeys(mesh_obj):
+    return mesh_obj.data.shape_keys is not None
+
+def sort_shape_keys(mesh):
+    if not has_shapekeys(mesh):
+        return
+
+    order = [
+        'Basis',
+        'vrc.blink_left',
+        'vrc.blink_right',
+        'vrc.lowerlid_left',
+        'vrc.lowerlid_right',
+        'vrc.v_aa',
+        'vrc.v_ch',
+        'vrc.v_dd',
+        'vrc.v_e',
+        'vrc.v_ff',
+        'vrc.v_ih',
+        'vrc.v_kk',
+        'vrc.v_nn',
+        'vrc.v_oh',
+        'vrc.v_ou',
+        'vrc.v_pp',
+        'vrc.v_rr',
+        'vrc.v_sil',
+        'vrc.v_ss',
+        'vrc.v_th',
+    ]
+
+    shape_keys = mesh.data.shape_keys.key_blocks
+    for i, name in enumerate(order):
+        if name in shape_keys:
+            index = shape_keys.find(name)
+            if index != i:
+                bpy.context.object.active_shape_key_index = index
+                for _ in range(abs(index - i)):
+                    bpy.ops.object.shape_key_move(type='UP' if index > i else 'DOWN')
+
+    # Move any remaining shape keys to the end
+    for key in shape_keys:
+        if key.name not in order:
+            index = shape_keys.find(key.name)
+            bpy.context.object.active_shape_key_index = index
+            for _ in range(len(shape_keys) - index - 1):
+                bpy.ops.object.shape_key_move(type='DOWN')
+
+def get_shapekeys(mesh, prefix=''):
+    if not has_shapekeys(mesh):
+        return []
+    return [(key.name, key.name, key.name) for key in mesh.data.shape_keys.key_blocks if key.name != 'Basis' and key.name.startswith(prefix)]
