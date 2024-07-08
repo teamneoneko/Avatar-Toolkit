@@ -1,4 +1,5 @@
 import bpy
+import typing
 from typing import List, Type
 
 # List to store the classes to register
