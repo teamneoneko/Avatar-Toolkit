@@ -7,6 +7,7 @@ if "bpy" not in locals():
     from . import functions
     from .core import register
     from .core.register import __bl_ordered_classes
+    from .core.properties import register_properties
 else:
     import importlib
     importlib.reload(ui)
@@ -18,6 +19,7 @@ def register():
     print("Registering Avatar Toolkit")
     # Order the classes before registration
     core.register.order_classes()
+    register_properties()
     # Register the UI classes
     
     # Iterate over the classes to register and register them
