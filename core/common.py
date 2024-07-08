@@ -42,10 +42,10 @@ def has_shapekeys(mesh_obj: Object) -> bool:
 def _get_shape_key_co(shape_key: ShapeKey) -> np.ndarray:
     return np.array([v.co for v in shape_key.data])
     
-def simplify_bonename(n):
+def simplify_bonename(n: str) -> str:
     return n.lower().translate(dict.fromkeys(map(ord, u" _.")))
     
-def get_armature(context, armature_name=None) -> Optional[Object]:
+def get_armature(context: Context, armature_name: Optional[str] = None) -> Optional[Object]:
     if armature_name:
         obj = bpy.data.objects[armature_name]
         if obj.type == "ARMATURE":
@@ -58,14 +58,16 @@ def get_armature(context, armature_name=None) -> Optional[Object]:
             return obj
     return next((obj for obj in context.view_layer.objects if obj.type == 'ARMATURE'), None)
 
-def has_shapekeys(mesh_obj):
+def has_shapekeys(mesh_obj: Object) -> bool:
     return mesh_obj.data.shape_keys is not None
 
-def has_shapekeys(mesh_obj):
+def has_shapekeys(mesh_obj: Object) -> bool:
     return mesh_obj.data.shape_keys is not None
 
-def sort_shape_keys(mesh):
+def sort_shape_keys(mesh: Object) -> None:
+    print("Starting shape key sorting...")
     if not has_shapekeys(mesh):
+        print("No shape keys found. Exiting sort function.")
         return
 
     order = [
@@ -92,23 +94,38 @@ def sort_shape_keys(mesh):
     ]
 
     shape_keys = mesh.data.shape_keys.key_blocks
-    for i, name in enumerate(order):
-        if name in shape_keys:
-            index = shape_keys.find(name)
-            if index != i:
-                bpy.context.object.active_shape_key_index = index
-                for _ in range(abs(index - i)):
-                    bpy.ops.object.shape_key_move(type='UP' if index > i else 'DOWN')
+    print(f"Total shape keys: {len(shape_keys)}")
 
-    # Move any remaining shape keys to the end
-    for key in shape_keys:
-        if key.name not in order:
-            index = shape_keys.find(key.name)
+    # Create a list of shape key names in their current order
+    current_order = [key.name for key in shape_keys]
+
+    # Create a new order list
+    new_order = []
+
+    # First, add all the keys that are in the predefined order
+    for name in order:
+        if name in current_order:
+            new_order.append(name)
+            current_order.remove(name)
+
+    # Then add any remaining keys that weren't in the predefined order
+    new_order.extend(current_order)
+
+    print("New order:", new_order)
+
+    # Now, rearrange the shape keys based on the new order
+    for i, name in enumerate(new_order):
+        index = shape_keys.find(name)
+        if index != i:
+            print(f"Moving {name} from index {index} to {i}")
             bpy.context.object.active_shape_key_index = index
-            for _ in range(len(shape_keys) - index - 1):
-                bpy.ops.object.shape_key_move(type='DOWN')
+            while bpy.context.object.active_shape_key_index > i:
+                bpy.ops.object.shape_key_move(type='UP')
 
-def get_shapekeys(mesh, prefix=''):
+    print("Shape key sorting completed.")
+
+
+def get_shapekeys(mesh: Object, prefix: str = '') -> List[tuple]:
     if not has_shapekeys(mesh):
         return []
     return [(key.name, key.name, key.name) for key in mesh.data.shape_keys.key_blocks if key.name != 'Basis' and key.name.startswith(prefix)]

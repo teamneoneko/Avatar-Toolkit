@@ -31,6 +31,10 @@
     "Tools.convert_to_resonite.desc": "モデルのボーン名をResoniteと互換性のある名前に変換します",
     "Settings.label": "設定",
     "Settings.language.label": "言語",
-    "Settings.language.desc": "アドオンのUI言語を選択してください"
+    "Settings.language.desc": "アドオンのUI言語を選択してください",
+    "Viseme.label": "ビセーム",
+    "Viseme.error.noMesh": "メッシュが選択されていません",
+    "Viseme.error.noShapekeys": "選択されたメッシュにシェイプキーがありません",
+    "Viseme.info.selectMesh": "ビセームを作成するメッシュを選択してください"
   }
 }

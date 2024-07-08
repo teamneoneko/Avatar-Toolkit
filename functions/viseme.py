@@ -2,6 +2,7 @@ import bpy
 from ..core import common
 from ..core.register import register_wrap
 from ..functions.translations import t
+from typing import List, Tuple
 
 @register_wrap
 class AutoVisemeButton(bpy.types.Operator):
@@ -11,10 +12,11 @@ class AutoVisemeButton(bpy.types.Operator):
     bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod
-    def poll(cls, context):
+    def poll(cls, context: bpy.types.Context) -> bool:
         return context.active_object and context.active_object.type == 'MESH'
 
-    def execute(self, context):
+    def execute(self, context: bpy.types.Context) -> set:
+        print("Starting viseme creation...")
         mesh = context.active_object
         if not mesh or not common.has_shapekeys(mesh):
             self.report({'ERROR'}, t('AutoVisemeButton.error.noShapekeys'))
@@ -24,12 +26,14 @@ class AutoVisemeButton(bpy.types.Operator):
         shape_o = context.scene.mouth_o
         shape_ch = context.scene.mouth_ch
 
+        print(f"Selected shapes: A={shape_a}, O={shape_o}, CH={shape_ch}")
+
         if shape_a == "Basis" or shape_o == "Basis" or shape_ch == "Basis":
             self.report({'ERROR'}, t('AutoVisemeButton.error.selectShapekeys'))
             return {'CANCELLED'}
 
         # Create visemes
-        visemes = [
+        visemes: List[Tuple[str, List[Tuple[str, float]]]] = [
             ('vrc.v_aa', [(shape_a, 0.9998)]),
             ('vrc.v_ch', [(shape_ch, 0.9996)]),
             ('vrc.v_dd', [(shape_a, 0.3), (shape_ch, 0.7)]),
@@ -48,18 +52,24 @@ class AutoVisemeButton(bpy.types.Operator):
         ]
 
         for viseme_name, shape_mix in visemes:
+            print(f"Creating viseme: {viseme_name}")
             self.create_viseme(mesh, viseme_name, shape_mix, context.scene.shape_intensity)
 
-        # Sort shape keys
+        print("Sorting shape keys...")
         common.sort_shape_keys(mesh)
 
+        print("Viseme creation completed.")
         self.report({'INFO'}, t('AutoVisemeButton.success'))
         return {'FINISHED'}
 
-    def create_viseme(self, mesh, viseme_name, shape_mix, intensity):
+    def create_viseme(self, mesh: bpy.types.Object, viseme_name: str, shape_mix: List[Tuple[str, float]], intensity: float) -> None:
+        print(f"  Creating viseme: {viseme_name}")
+        shape_keys = mesh.data.shape_keys.key_blocks
+
         # Remove existing viseme if it exists
-        if viseme_name in mesh.data.shape_keys.key_blocks:
-            mesh.shape_key_remove(mesh.data.shape_keys.key_blocks[viseme_name])
+        if viseme_name in shape_keys:
+            print(f"  Removing existing viseme: {viseme_name}")
+            mesh.shape_key_remove(shape_keys[viseme_name])
 
         # Create new viseme
         new_key = mesh.shape_key_add(name=viseme_name, from_mix=False)
@@ -67,15 +77,12 @@ class AutoVisemeButton(bpy.types.Operator):
 
         # Mix shapes
         for shape_name, value in shape_mix:
-            if shape_name in mesh.data.shape_keys.key_blocks:
-                shape = mesh.data.shape_keys.key_blocks[shape_name]
-                shape.value = value * intensity
+            if shape_name in shape_keys:
+                source_shape = shape_keys[shape_name]
+                print(f"    Mixing shape: {shape_name} with value: {value * intensity}")
+                for i, vert in enumerate(new_key.data):
+                    vert.co += (source_shape.data[i].co - shape_keys['Basis'].data[i].co) * value * intensity
 
-        # Apply mix
-        mesh.shape_key_add(name=viseme_name, from_mix=True)
+        print(f"  Viseme {viseme_name} created successfully.")
 
-        # Reset shape key values
-        for shape in mesh.data.shape_keys.key_blocks:
-            shape.value = 0.0
 
-        new_key.value = 1.0

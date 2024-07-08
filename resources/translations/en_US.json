@@ -31,7 +31,11 @@
       "Tools.convert_to_resonite.desc": "Converts bone names on a model to names compatable with Resonite",
       "Settings.label": "Settings",
       "Settings.language.label": "Language",
-      "Settings.language.desc": "Select the language for the addon's UI"
+      "Settings.language.desc": "Select the language for the addon's UI",
+      "Viseme.label": "Visemes",
+      "Viseme.error.noMesh": "No mesh selected",
+      "Viseme.error.noShapekeys": "Selected mesh has no shape keys",
+      "Viseme.info.selectMesh": "Select a mesh to create visemes"
     }
   }
   
