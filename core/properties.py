@@ -1,11 +1,49 @@
 import bpy
-from bpy.types import Scene, PropertyGroup, Object, Material, TextureNode, Context
+from bpy.types import Scene, PropertyGroup, Object, Material, TextureNode, Context, SceneObjects
 from bpy.props import BoolProperty, EnumProperty, FloatProperty, IntProperty, CollectionProperty, StringProperty, FloatVectorProperty, PointerProperty
 from bpy.utils import register_class
 
 
 
+class material_list_bool:
+    old_list: list[Material] = []
+    bool_material_list_expand: bool = False
+
+    def set_bool(self, value: bool) -> None:
+        material_list_bool.bool_material_list_expand = value
+        if value == False:
+            material_list_bool.old_list = []
+
+    def get_bool(self) -> bool:
+            newlist: list[Material] = []
+            for obj in bpy.context.scene.objects:
+                if len(obj.material_slots)>0:
+                    for mat_slot in obj.material_slots:
+                        if mat_slot.material:
+                            if mat_slot.material not in newlist:
+                                newlist.append(mat_slot.material)
+            
+            still_the_same: bool = True
+            for item in newlist:
+                if item not in material_list_bool.old_list:
+                    still_the_same = False
+                    break
+            for item in material_list_bool.old_list:
+                if item not in newlist:
+                    still_the_same = False
+                    break
+
+            material_list_bool.bool_material_list_expand = still_the_same
+            
+            return material_list_bool.bool_material_list_expand
+
+class SceneMatClass(PropertyGroup):
+    mat: PointerProperty(type=Material)
+
+
 def register_properties():
+
+    register_class(SceneMatClass)
 
     #happy with how compressed this get_texture_node_list method is - @989onan
     def get_texture_node_list(self: Material, context: Context) -> list[set[3]]:
@@ -25,11 +63,14 @@ def register_properties():
     Material.texture_atlas_ambient_occlusion = EnumProperty(name="Ambient Occlusion", description="The texture that will be used for the ambient occlusion map atlas", default=0, items=get_texture_node_list)
     Material.texture_atlas_height = EnumProperty(name="Height", description="The texture that will be used for the height map atlas", default=0, items=get_texture_node_list)
     
-    Scene.texture_atlas_material_index = IntProperty()#default=-1, get=(lambda self : -1), set=(lambda self,context : None)
+    Scene.texture_atlas_material_index = IntProperty(default=-1, get=(lambda self : -1), set=(lambda self,context : None))
 
-    #class Texture_Atlas_PropertyGroup(PropertyGroup):
-    #    materials: CollectionProperty(type=Material)
-    #register_class(Texture_Atlas_PropertyGroup)
+    
+
+
+    Scene.materials = CollectionProperty(type=SceneMatClass)
+
+    Scene.texture_atlas_Has_Mat_List_Shown = BoolProperty(default=False, get=material_list_bool.get_bool, set=material_list_bool.set_bool)
 
     #Scene.texture_atlas_properties = PointerProperty(type=Texture_Atlas_PropertyGroup)
 
