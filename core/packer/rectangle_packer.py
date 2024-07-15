@@ -4,7 +4,7 @@ from __future__ import annotations
 
 
 from typing import Optional
-from bpy.types import Image
+from bpy.types import Image, Material
 
 
 # Copyright (c) 2011, 2012, 2013, 2014, 2015, 2016 Jake Gordon and contributors
@@ -64,7 +64,9 @@ class MaterialImageList:
     emission: Image
     ambient_occlusion: Image
     height: Image
+    roughness: Image
     fit: Rectangle_Obj
+    material: Material
     
     def __init__(self):
         pass

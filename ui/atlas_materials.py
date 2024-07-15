@@ -59,6 +59,8 @@ class MaterialTextureAtlasProperties(UIList):
             col.prop(item.mat, "texture_atlas_ambient_occlusion")
             col = box.row()
             col.prop(item.mat, "texture_atlas_height")
+            col = box.row()
+            col.prop(item.mat, "texture_atlas_roughness")
             
                 
         

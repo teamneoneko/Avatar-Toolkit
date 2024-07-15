@@ -70,6 +70,7 @@ def register_properties():
     Material.texture_atlas_emission = EnumProperty(name="Emission", description="The texture that will be used for the emission map atlas", default=0, items=get_texture_node_list)
     Material.texture_atlas_ambient_occlusion = EnumProperty(name="Ambient Occlusion", description="The texture that will be used for the ambient occlusion map atlas", default=0, items=get_texture_node_list)
     Material.texture_atlas_height = EnumProperty(name="Height", description="The texture that will be used for the height map atlas", default=0, items=get_texture_node_list)
+    Material.texture_atlas_roughness = EnumProperty(name="Roughness", description="The texture that will be used for the roughness map atlas", default=0, items=get_texture_node_list)
     
     Scene.texture_atlas_material_index = IntProperty(default=-1, get=(lambda self : -1), set=(lambda self,context : None))
 

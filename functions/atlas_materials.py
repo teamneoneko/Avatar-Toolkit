@@ -1,9 +1,12 @@
 from pathlib import Path
+
+import numpy
 import bpy
 import re
 import os
 from typing import List, Tuple, Optional
-from bpy.types import Material, Operator, Context, Object, Image
+from mathutils import Vector
+from bpy.types import Material, Operator, Context, Object, Image, Mesh, MeshUVLoopLayer, Float2AttributeValue, ShaderNodeTexImage, ShaderNodeBsdfPrincipled, ShaderNodeNormalMap
 from ..core.register import register_wrap
 from ..core.properties import material_list_bool, SceneMatClass
 from ..core.packer.rectangle_packer import MaterialImageList, BinPacker
@@ -34,6 +37,7 @@ def MaterialImageList_to_Image_list(classitem: MaterialImageList) -> list[Image]
     list_of_images.append(classitem.emission)
     list_of_images.append(classitem.ambient_occlusion)
     list_of_images.append(classitem.height)
+    list_of_images.append(classitem.roughness)
 
     return list_of_images
 
@@ -64,6 +68,7 @@ def get_material_images_from_scene(context: Context) -> list[MaterialImageList]:
             if name in bpy.data.images:
                 bpy.data.images.remove(image=bpy.data.images[name],do_unlink=True)
             new_mat_image_item.emission = bpy.data.images.new(name=name,width=32,height=32, alpha=True)
+            new_mat_image_item.emission.pixels[:] = numpy.tile(numpy.array([0.0,0.0,0.0,1.0]), 32*32)
 
         try:
             new_mat_image_item.ambient_occlusion = bpy.data.images[mat.mat.texture_atlas_ambient_occlusion]
@@ -72,6 +77,7 @@ def get_material_images_from_scene(context: Context) -> list[MaterialImageList]:
             if name in bpy.data.images:
                 bpy.data.images.remove(image=bpy.data.images[name],do_unlink=True)
             new_mat_image_item.ambient_occlusion = bpy.data.images.new(name=name,width=32,height=32, alpha=True)
+            new_mat_image_item.ambient_occlusion.pixels[:] = numpy.tile(numpy.array([1.0,1.0,1.0,1.0]), 32*32)
         try:
             new_mat_image_item.height = bpy.data.images[mat.mat.texture_atlas_height]
         except Exception:
@@ -79,6 +85,17 @@ def get_material_images_from_scene(context: Context) -> list[MaterialImageList]:
             if name in bpy.data.images:
                 bpy.data.images.remove(image=bpy.data.images[name],do_unlink=True)
             new_mat_image_item.height = bpy.data.images.new(name=name,width=32,height=32, alpha=True)
+            new_mat_image_item.height.pixels[:] = numpy.tile(numpy.array([0.5,0.5,0.5,1.0]), 32*32)
+
+        try:
+            new_mat_image_item.roughness = bpy.data.images[mat.mat.texture_atlas_roughness]
+        except Exception:
+            name: str = mat.mat.name+"_roughness_replacement"
+            if name in bpy.data.images:
+                bpy.data.images.remove(image=bpy.data.images[name],do_unlink=True)
+            new_mat_image_item.roughness = bpy.data.images.new(name=name,width=32,height=32, alpha=True)
+            new_mat_image_item.roughness.pixels[:] = numpy.tile(numpy.array([1.0,1.0,1.0,0.0]), 32*32)
+        new_mat_image_item.material = mat.mat
         material_image_list.append(new_mat_image_item)
     return material_image_list
 
@@ -93,17 +110,6 @@ def prep_images_in_scene(context: Context) -> list[MaterialImageList]:
     
 
     return preped_images
-
-
-
-
-
-
-
-
-
-
-
 
 
 @register_wrap
@@ -131,8 +137,30 @@ class Atlas_Materials(Operator):
                     max([matimg.fit.h + matimg.albedo.size[1] for matimg in mat_images])]
             print([matimg.fit.w + matimg.albedo.size[1] for matimg in mat_images])
             
-            for type in ["albedo","normal", "emission","ambient_occlusion","height"]:
-                new_image_name: str= "Atlas_"+type+"_"+bpy.context.scene.name+"_"+Path(bpy.data.filepath).stem
+            atlased_mat: MaterialImageList = MaterialImageList()
+
+            for mat in mat_images:
+                x: int = int(mat.fit.x)
+                y: int = int(mat.fit.y)
+                w: int = int(mat.albedo.size[0])
+                h: int = int(mat.albedo.size[1])
+
+                for obj in bpy.data.objects:
+                    mesh: Mesh = obj.data
+
+
+                    for layer in mesh.polygons:
+                        if obj.material_slots[layer.material_index].material:
+                            if obj.material_slots[layer.material_index].material == mat.material:
+                                for loop_idx in layer.loop_indices:
+                                    layer_loops: MeshUVLoopLayer
+                                    for layer_loops in mesh.uv_layers:
+                                        uv_item: Float2AttributeValue = layer_loops.uv[loop_idx]
+                                        uv_item.vector.x = (uv_item.vector.x*(w/size[0]))+(x/size[0])
+                                        uv_item.vector.y = (uv_item.vector.y*(h/size[1]))+(y/size[1])
+
+            for type in ["albedo","normal", "emission","ambient_occlusion","height", "roughness"]:
+                new_image_name: str= "Atlas_"+type+"_"+context.scene.name+"_"+Path(bpy.data.filepath).stem
 
                 print("Processing "+type+" atlas image")
 
@@ -141,7 +169,7 @@ class Atlas_Materials(Operator):
 
                 canvas: Image = bpy.data.images.new(name=new_image_name, width=int(size[0]),height=int(size[1]), alpha=True)
                 c_w = canvas.size[0]
-                c_h = canvas.size[1]
+                #c_h = canvas.size[1]
                 canvas_pixels: list[float] = list(canvas.pixels[:])
                 for mat in mat_images:
                     x: int = int(mat.fit.x)
@@ -171,6 +199,74 @@ class Atlas_Materials(Operator):
 
                 canvas.pixels[:] = canvas_pixels[:]
                 canvas.save(filepath=os.path.join(os.path.dirname(bpy.data.filepath),new_image_name+".png"))
+                exec("atlased_mat."+type+" = canvas")
+
+
+            atlased_mat.material = bpy.data.materials.new(name="Atlas_Final_"+bpy.context.scene.name+"_"+Path(bpy.data.filepath).stem)
+            atlased_mat.material.use_nodes = True
+            atlased_mat.material.node_tree.nodes.clear()
+
+
+            #I am sorry for the amount of nodes I'm instanciating here and their values.
+            #This is so that the nodes look pretty in the UI, which I think looks kinda nice. - @989onan
+            principled_node: ShaderNodeBsdfPrincipled = atlased_mat.material.node_tree.nodes.new(type="ShaderNodeBsdfPrincipled")
+            principled_node.location.x = 7.29706335067749
+            principled_node.location.y = 298.918212890625
+
+            output_node: ShaderNodeTexImage = atlased_mat.material.node_tree.nodes.new(type="ShaderNodeOutputMaterial")
+            output_node.location.x = 297.29705810546875
+            output_node.location.y = 298.918212890625
+
+            albedo_node: ShaderNodeTexImage = atlased_mat.material.node_tree.nodes.new(type="ShaderNodeTexImage")
+            albedo_node.location.x = -588.6177978515625
+            albedo_node.location.y = 414.1948547363281
+            albedo_node.image = atlased_mat.albedo
+
+            emission_node: ShaderNodeTexImage = atlased_mat.material.node_tree.nodes.new(type="ShaderNodeTexImage")
+            emission_node.location.x = -588.6177978515625
+            emission_node.location.y = -173.9259033203125
+            emission_node.image = atlased_mat.emission
+
+            normal_node: ShaderNodeTexImage = atlased_mat.material.node_tree.nodes.new(type="ShaderNodeTexImage")
+            normal_node.location.x = -941.4189453125
+            normal_node.location.y = -20.8391780853271
+            normal_node.image = atlased_mat.normal
+
+            normal_map_node: ShaderNodeNormalMap = atlased_mat.material.node_tree.nodes.new(type="ShaderNodeNormalMap")
+            normal_map_node.location.x = -545.550537109375
+            normal_map_node.location.y = -0.7543716430664062
+
+            roughness_node: ShaderNodeTexImage = atlased_mat.material.node_tree.nodes.new(type="ShaderNodeTexImage")
+            roughness_node.location.x = -592.1703491210938
+            roughness_node.location.y = 206.74075317382812
+            roughness_node.image = atlased_mat.roughness
+
+            ambient_occlusion_node: ShaderNodeTexImage = atlased_mat.material.node_tree.nodes.new(type="ShaderNodeTexImage")
+            ambient_occlusion_node.location.x = -906.4371337890625
+            ambient_occlusion_node.location.y = -389.9602355957031
+            ambient_occlusion_node.image = atlased_mat.ambient_occlusion
+
+            height_node: ShaderNodeTexImage = atlased_mat.material.node_tree.nodes.new(type="ShaderNodeTexImage")
+            height_node.location.x = -1222.383056640625
+            height_node.location.y = -375.48406982421875
+            height_node.image = atlased_mat.height
+
+            atlased_mat.material.node_tree.links.new(principled_node.inputs["Base Color"], albedo_node.outputs["Color"])
+            atlased_mat.material.node_tree.links.new(principled_node.inputs["Metallic"], roughness_node.outputs["Alpha"])
+            atlased_mat.material.node_tree.links.new(principled_node.inputs["Roughness"], roughness_node.outputs["Color"])
+            atlased_mat.material.node_tree.links.new(principled_node.inputs["Alpha"], albedo_node.outputs["Alpha"])
+            atlased_mat.material.node_tree.links.new(principled_node.inputs["Normal"], normal_map_node.outputs["Normal"])
+            atlased_mat.material.node_tree.links.new(principled_node.inputs["Emission Color"], emission_node.outputs["Color"])
+            atlased_mat.material.node_tree.links.new(output_node.inputs["Surface"], principled_node.outputs["BSDF"])
+            atlased_mat.material.node_tree.links.new(normal_map_node.inputs["Color"], normal_node.outputs["Color"])
+
+
+            for obj in context.scene.objects:
+                mesh: Mesh = obj.data
+                mesh.materials.clear()
+                
+                mesh.materials.append(atlased_mat.material)
+
             return {"FINISHED"}
         except Exception as e:
             raise e
