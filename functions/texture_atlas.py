@@ -16,8 +16,8 @@ rather than just duct taping the textures together like material combiner and th
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context: Context) -> set:
-
         
+
         return {'FINISHED'}
 
 

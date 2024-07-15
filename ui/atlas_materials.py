@@ -3,6 +3,7 @@ import bpy
 from ..core.register import register_wrap
 from .panel import AvatarToolkitPanel
 from ..core.properties import SceneMatClass, material_list_bool
+from ..functions.atlas_materials import Atlas_Materials
 
 
 @register_wrap
@@ -29,7 +30,7 @@ class ExpandSection_Materials(Operator):
                                 newlist.append(mat_slot.material)
                                 newitem: SceneMatClass = context.scene.materials.add()
                                 newitem.mat = mat_slot.material
-            material_list_bool.old_list = newlist
+            material_list_bool.old_list[context.scene.name] = newlist
         else:
             context.scene.texture_atlas_Has_Mat_List_Shown = False
         return {'FINISHED'}
@@ -85,4 +86,5 @@ class TextureAtlasPanel(Panel):
             row = boxoutter.row()
             row.template_list(MaterialTextureAtlasProperties.bl_idname, 'material_list', context.scene, 'materials',
                             context.scene, 'texture_atlas_material_index', rows=12, type='DEFAULT')
-        
+            row = layout.row()
+            row.operator(Atlas_Materials.bl_idname, text="Atlas Materials!")

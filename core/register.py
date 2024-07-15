@@ -32,7 +32,7 @@ def toposort(deps_dict):
                 unsorted.append(value)
         deps_dict = {value : deps_dict[value] - sorted_values for value in unsorted}
     
-    sort_order(sorted_list) #to sort by 'bl_order' so we can choose how things may appear in the ui
+    #sort_order(sorted_list) #to sort by 'bl_order' so we can choose how things may appear in the ui
     return sorted_list
 
 
