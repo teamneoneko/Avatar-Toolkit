@@ -37,4 +37,3 @@ class AVATAR_TOOLKIT_OT_translation_restart_popup(bpy.types.Operator):
         layout = self.layout
         layout.label(text=t("Settings.translation_restart_popup.message1"))
         layout.label(text=t("Settings.translation_restart_popup.message2"))
-
