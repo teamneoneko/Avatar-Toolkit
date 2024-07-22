@@ -5,13 +5,14 @@ from .common import get_armature
 from bpy.types import Object, ShapeKey, Mesh, Context, Operator
 from functools import lru_cache
 from ..core.register import register_wrap
+from ..functions.translations import t
 
 
 @register_wrap
 class ExportResonite(Operator):
     bl_idname = 'avatar_toolkit.export_resonite'
-    bl_label = "Export to Resonite"
-    bl_description = "Export a GLB with all animations and materials. For animation data see: "
+    bl_label = t("Export.resonite.label")
+    bl_description = t("Export.resonite.desc")
     bl_options = {'REGISTER', 'UNDO'}
     filepath: bpy.props.StringProperty()
 

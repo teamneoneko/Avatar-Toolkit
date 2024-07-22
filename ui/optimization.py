@@ -1,10 +1,11 @@
 import bpy
 from ..core.register import register_wrap
 from .panel import AvatarToolkitPanel
+from ..functions.translations import t
 
 @register_wrap
 class AvatarToolkitOptimizationPanel(bpy.types.Panel):
-    bl_label = "Optimization"
+    bl_label = t("Optimization.label")
     bl_idname = "OBJECT_PT_avatar_toolkit_optimization"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
@@ -13,18 +14,19 @@ class AvatarToolkitOptimizationPanel(bpy.types.Panel):
 
     def draw(self, context):
         layout = self.layout
-        layout.label(text="Optimization Options")
+        layout.label(text=t("Optimization.options.label"))
         
         row = layout.row()
         row.scale_y = 1.2 
-        row.operator("avatar_toolkit.combine_materials", text="Combine Materials")
+        row.operator("avatar_toolkit.combine_materials", text=t("Optimization.combine_materials.label"))
+        
 
         layout.separator(factor=0.5)
         
         row = layout.row(align=True)
         row.scale_y = 1.2 
-        row.operator("avatar_toolkit.join_all_meshes", text="Join All Meshes")
-        row.operator("avatar_toolkit.join_selected_meshes", text="Join Selected Meshes")
+        row.operator("avatar_toolkit.join_all_meshes", text=t("Optimization.join_all_meshes.label"))
+        row.operator("avatar_toolkit.join_selected_meshes", text=t("Optimization.join_selected_meshes.label"))
         row.operator("avatar_toolkit.remove_doubles_safely", text="Remove Doubles Safely")
 
         # Add optimization options here

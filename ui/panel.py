@@ -1,5 +1,6 @@
 import bpy
 from ..core.register import register_wrap
+from ..functions.translations import t
 
 @register_wrap
 class AvatarToolkitPanel(bpy.types.Panel):

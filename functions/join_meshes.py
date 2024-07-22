@@ -3,12 +3,13 @@ from typing import List, Optional
 from bpy.types import Operator, Context, Object
 from ..core.register import register_wrap
 from ..core.common import fix_uv_coordinates
+from ..functions.translations import t
 
 @register_wrap
 class JoinAllMeshes(Operator):
     bl_idname = "avatar_toolkit.join_all_meshes"
-    bl_label = "Join All Meshes"
-    bl_description = "Join all meshes in the scene"
+    bl_label = t("Optimization.join_all_meshes.label")
+    bl_description = t("Optimization.join_all_meshes.desc")
     bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod
@@ -45,8 +46,8 @@ class JoinAllMeshes(Operator):
 @register_wrap
 class JoinSelectedMeshes(Operator):
     bl_idname = "avatar_toolkit.join_selected_meshes"
-    bl_label = "Join Selected Meshes"
-    bl_description = "Join selected meshes"
+    bl_label = t("Optimization.join_selected_meshes.label")
+    bl_description = t("Optimization.join_selected_meshes.desc")
     bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod

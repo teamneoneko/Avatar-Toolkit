@@ -1,10 +1,13 @@
 import bpy
 import typing
+from typing import List, Type
 
 # List to store the classes to register
 __bl_classes = []
 # List to store the ordered classes for registration
 __bl_ordered_classes = []
+# List to store props to register
+__bl_props = []
 
 def register_wrap(cls):
     # Check if the class has a 'bl_rna' attribute (indicating it's a Blender class)
@@ -13,6 +16,20 @@ def register_wrap(cls):
         __bl_classes.append(cls)
     return cls
 
+# Register all properties
+def register_property(prop):
+    __bl_props.append(prop)
+
+def register_properties():
+    for prop in __bl_props:
+        if isinstance(prop[2], bpy.props._PropertyDeferred):
+            setattr(prop[0], prop[1], prop[2])
+        else:
+            prop() 
+            
+def unregister_properties():
+    for prop in reversed(__bl_props):
+        delattr(prop[0], prop[1])
 
 #- @989onan had to add this from Cats. This is extremely important else you will be screamed at by register order issues!
 # Find order to register to solve dependencies
@@ -96,4 +113,3 @@ def toposort(deps_dict):
         deps_dict = {value : deps_dict[value] - sorted_values for value in unsorted}
     
     return sorted_list
-
