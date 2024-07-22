@@ -27,6 +27,7 @@ class AvatarToolkitOptimizationPanel(bpy.types.Panel):
         row.scale_y = 1.2 
         row.operator("avatar_toolkit.join_all_meshes", text=t("Optimization.join_all_meshes.label"))
         row.operator("avatar_toolkit.join_selected_meshes", text=t("Optimization.join_selected_meshes.label"))
+        row.operator("avatar_toolkit.remove_doubles_safely", text="Remove Doubles Safely")
 
         # Add optimization options here
 
