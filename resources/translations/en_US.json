@@ -33,10 +33,18 @@
       "Settings.label": "Settings",
       "Settings.language.label": "Language",
       "Settings.language.desc": "Select the language for the addon's UI",
-      "Viseme.label": "Visemes",
+      "VisemePanel.label": "Visemes",
       "VisemePanel.error.noMesh": "No mesh selected",
       "VisemePanel.error.noShapekeys": "Selected mesh has no shape keys",
-      "VisemePanel.info.selectMesh": "Select a mesh to create visemes"
+      "VisemePanel.info.selectMesh": "Select a mesh to create visemes",
+      "VisemePanel.mouth_a.label": "Mouth A",
+      "VisemePanel.mouth_o.label": "Mouth O",
+      "VisemePanel.mouth_ch.label": "Mouth CH",
+      "AutoVisemeButton.label": "Create Visemes",
+      "AutoVisemeButton.desc": "Create visemes automatically, based on shape keys",
+      "AutoVisemeButton.error.noShapekeys": "No shape keys found",
+      "AutoVisemeButton.error.selectShapekeys": "Please Select shape keys",
+      "AutoVisemeButton.success": "Visemes created successfully"
     }
   }
   

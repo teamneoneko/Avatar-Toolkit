@@ -4,7 +4,7 @@ from ..functions.translations import t
 
 @register_wrap
 class AvatarToolkitVisemePanel(bpy.types.Panel):
-    bl_label = t("Viseme.label")
+    bl_label = t("VisemePanel.label")
     bl_idname = "OBJECT_PT_avatar_toolkit_viseme"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
@@ -20,9 +20,9 @@ class AvatarToolkitVisemePanel(bpy.types.Panel):
             
             # Check if the mesh has shape keys
             if mesh.data.shape_keys:
-                layout.prop_search(context.scene, "mouth_a", mesh.data.shape_keys, "key_blocks", text=t('Scene.mouth_a.label'))
-                layout.prop_search(context.scene, "mouth_o", mesh.data.shape_keys, "key_blocks", text=t('Scene.mouth_o.label'))
-                layout.prop_search(context.scene, "mouth_ch", mesh.data.shape_keys, "key_blocks", text=t('Scene.mouth_ch.label'))
+                layout.prop_search(context.scene, "mouth_a", mesh.data.shape_keys, "key_blocks", text=t('VisemePanel.mouth_a.label'))
+                layout.prop_search(context.scene, "mouth_o", mesh.data.shape_keys, "key_blocks", text=t('VisemePanel.mouth_o.label'))
+                layout.prop_search(context.scene, "mouth_ch", mesh.data.shape_keys, "key_blocks", text=t('VisemePanel.mouth_ch.label'))
 
                 layout.prop(context.scene, 'shape_intensity')
 
