@@ -1,7 +1,6 @@
 # core/__init__.py
 
 from .register import register_wrap
-from . import pmx
 
 #to reload all things in this directory and import them properly - @989onan
 if "bpy" not in locals():
