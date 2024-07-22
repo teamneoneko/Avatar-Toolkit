@@ -1,5 +1,6 @@
 {
-    "messages": {
+  "authors": ["Avatar Toolkit Team"],  
+  "messages": {
       "Language.auto": "Automatic",
       "Language.en_US": "English",
       "Language.ja_JP": "日本語",
