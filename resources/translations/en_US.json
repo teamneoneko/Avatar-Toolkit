@@ -9,6 +9,7 @@
       "Quick_Access.import_menu.label": "Import Menu",
       "Quick_Access.import": "Import",
       "Quick_Access.export": "Export",
+      "Quick_Access.import_menu.desc": "Import a Model",
       "Quick_Access.import_pmx": "Import PMX",
       "Quick_Access.import_pmx.desc": "Import MMD PMX Model",
       "Quick_Access.import_pmd": "Import PMD",
@@ -33,9 +34,9 @@
       "Settings.language.label": "Language",
       "Settings.language.desc": "Select the language for the addon's UI",
       "Viseme.label": "Visemes",
-      "Viseme.error.noMesh": "No mesh selected",
-      "Viseme.error.noShapekeys": "Selected mesh has no shape keys",
-      "Viseme.info.selectMesh": "Select a mesh to create visemes"
+      "VisemePanel.error.noMesh": "No mesh selected",
+      "VisemePanel.error.noShapekeys": "Selected mesh has no shape keys",
+      "VisemePanel.info.selectMesh": "Select a mesh to create visemes"
     }
   }
   

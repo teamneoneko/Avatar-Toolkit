@@ -9,6 +9,7 @@
     "Quick_Access.import_menu.label": "インポートメニュー",
     "Quick_Access.import": "インポート",
     "Quick_Access.export": "エクスポート",
+    "Quick_Access.import_menu.desc": "モデルをインポート",
     "Quick_Access.import_pmx": "PMXインポート",
     "Quick_Access.import_pmx.desc": "MMD PMXモデルをインポート",
     "Quick_Access.import_pmd": "PMDインポート",
@@ -33,8 +34,8 @@
     "Settings.language.label": "言語",
     "Settings.language.desc": "アドオンのUI言語を選択してください",
     "Viseme.label": "ビセーム",
-    "Viseme.error.noMesh": "メッシュが選択されていません",
-    "Viseme.error.noShapekeys": "選択されたメッシュにシェイプキーがありません",
-    "Viseme.info.selectMesh": "ビセームを作成するメッシュを選択してください"
+    "VisemePanel.error.noMesh": "メッシュが選択されていません",
+    "VisemePanel.error.noShapekeys": "選択されたメッシュにシェイプキーがありません",
+    "VisemePanel.info.selectMesh": "ビセームを作成するメッシュを選択してください"
   }
 }
