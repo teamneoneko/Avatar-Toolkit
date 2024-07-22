@@ -1,4 +1,5 @@
 {
+  "authors": ["Avatar Toolkit Team"],  
   "messages": {
     "Language.auto": "自動",
     "Language.en_US": "英語",
@@ -45,5 +46,10 @@
     "AutoVisemeButton.error.noShapekeys": "シェイプキーが見つかりません",
     "AutoVisemeButton.error.selectShapekeys": "シェイプキーを選択してください",
     "AutoVisemeButton.success": "ビセームが正常に作成されました"
+    "Settings.language.desc": "アドオンのUI言語を選択してください",
+    "Settings.translation_restart_popup.label": "翻訳の更新",
+    "Settings.translation_restart_popup.description": "翻訳の更新に関する情報",
+    "Settings.translation_restart_popup.message1": "一部の翻訳は適用されない場合があります",
+    "Settings.translation_restart_popup.message2": "Blenderを再起動するまで。"
   }
 }

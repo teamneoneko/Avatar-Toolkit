@@ -1,5 +1,6 @@
 {
-    "messages": {
+  "authors": ["Avatar Toolkit Team"],  
+  "messages": {
       "Language.auto": "Automatic",
       "Language.en_US": "English",
       "Language.ja_JP": "日本語",
@@ -45,6 +46,10 @@
       "AutoVisemeButton.error.noShapekeys": "No shape keys found",
       "AutoVisemeButton.error.selectShapekeys": "Please Select shape keys",
       "AutoVisemeButton.success": "Visemes created successfully"
+      "Settings.translation_restart_popup.label": "Translation Update",
+      "Settings.translation_restart_popup.description": "Information about translation updates",
+      "Settings.translation_restart_popup.message1": "Some translations may not apply",
+      "Settings.translation_restart_popup.message2": "until you restart Blender."
     }
   }
   

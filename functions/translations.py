@@ -87,8 +87,10 @@ def update_language(self, context):
     print(f"Updating language to: {self.avatar_toolkit_language}")  # Debug print
     save_preference("language", int(self.avatar_toolkit_language))
     load_translations()
-    # Reload the addon
-    bpy.ops.script.reload()
+    # Set a flag to indicate that a language change has occurred
+    context.scene.avatar_toolkit_language_changed = True
+    # Show popup after language change
+    bpy.ops.avatar_toolkit.translation_restart_popup('INVOKE_DEFAULT')
 
 # Initial load of translations
 print("Performing initial load of translations")  # Debug print

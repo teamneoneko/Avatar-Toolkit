@@ -12,6 +12,8 @@ def register() -> None:
         default=default_language,
         update=update_language
     )
+    
+    bpy.types.Scene.avatar_toolkit_language_changed = bpy.props.BoolProperty(default=False)
 
     bpy.types.Scene.mouth_a = bpy.props.StringProperty(
         name=t("Scene.mouth_a.label"),
@@ -34,8 +36,20 @@ def register() -> None:
     )
 
 def unregister() -> None:
-    del bpy.types.Scene.avatar_toolkit_language
-    del bpy.types.Scene.mouth_a
-    del bpy.types.Scene.mouth_o
-    del bpy.types.Scene.mouth_ch
-    del bpy.types.Scene.shape_intensity
+    if hasattr(bpy.types.Scene, "avatar_toolkit_language"):
+        del bpy.types.Scene.avatar_toolkit_language
+    
+    if hasattr(bpy.types.Scene, "avatar_toolkit_language_changed"):
+        del bpy.types.Scene.avatar_toolkit_language_changed
+    
+    if hasattr(bpy.types.Scene, "mouth_a"):
+        del bpy.types.Scene.mouth_a
+    
+    if hasattr(bpy.types.Scene, "mouth_o"):
+        del bpy.types.Scene.mouth_o
+    
+    if hasattr(bpy.types.Scene, "mouth_ch"):
+        del bpy.types.Scene.mouth_ch
+    
+    if hasattr(bpy.types.Scene, "shape_intensity"):
+        del bpy.types.Scene.shape_intensity
