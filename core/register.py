@@ -5,6 +5,8 @@ import typing
 __bl_classes = []
 # List to store the ordered classes for registration
 __bl_ordered_classes = []
+# List to store props to register
+__bl_props = []
 
 def register_wrap(cls):
     # Check if the class has a 'bl_rna' attribute (indicating it's a Blender class)
@@ -13,6 +15,17 @@ def register_wrap(cls):
         __bl_classes.append(cls)
     return cls
 
+# Register all properties
+def register_property(prop):
+    __bl_props.append(prop)
+
+def register_properties():
+    for prop in __bl_props:
+        setattr(prop[0], prop[1], prop[2])
+
+def unregister_properties():
+    for prop in reversed(__bl_props):
+        delattr(prop[0], prop[1])
 
 #- @989onan had to add this from Cats. This is extremely important else you will be screamed at by register order issues!
 # Find order to register to solve dependencies
