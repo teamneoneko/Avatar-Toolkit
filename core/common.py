@@ -57,3 +57,15 @@ def get_armature(context, armature_name=None) -> Optional[Object]:
         if obj.type == "ARMATURE":
             return obj
     return next((obj for obj in context.view_layer.objects if obj.type == 'ARMATURE'), None)
+
+def get_armatures(self, context):
+    return [(obj.name, obj.name, "") for obj in bpy.data.objects if obj.type == 'ARMATURE']
+
+def get_selected_armature(context):
+    if context.scene.selected_armature:
+        return bpy.data.objects.get(context.scene.selected_armature)
+    return None
+
+def set_selected_armature(context, armature):
+    context.scene.selected_armature = armature.name if armature else ""
+

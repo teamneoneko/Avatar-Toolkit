@@ -5,7 +5,7 @@ import re
 from typing import List, Tuple, Optional, TypedDict
 from bpy.types import Material, Operator, Context, Object
 from ..core.register import register_wrap
-from ..core.common import get_armature
+from ..core.common import get_selected_armature
 
 
 class meshEntry(TypedDict):
@@ -23,20 +23,19 @@ class RemoveDoublesSafely(Operator):
 
     @classmethod
     def poll(cls, context: Context) -> bool:
-        return context.mode == 'OBJECT'
+        return context.mode == 'OBJECT' and get_selected_armature(context) is not None
 
     def execute(self, context: Context) -> set:
-        if not bpy.data.objects:
-            self.report({'INFO'}, "No objects in the scene")
-            return
+        armature = get_selected_armature(context)
+        if not armature:
+            self.report({'WARNING'}, "No armature selected")
+            return {'CANCELLED'}
 
         bpy.ops.object.mode_set(mode='OBJECT')
         bpy.ops.object.select_all(action='DESELECT')
-        objects: List[Object] =  get_armature(context).children if get_armature(context) else context.view_layer.objects
+        objects: List[Object] = [obj for obj in armature.children if obj.type == 'MESH']
 
-        meshes: List[Object] = [obj for obj in objects if obj.type == 'MESH']  
-        
-        for mesh in meshes:
+        for mesh in objects:
             if mesh.data.name not in [stored_object["mesh"].data.name for stored_object in self.objects_to_do]:
                 mesh_shapekeys = {"mesh":mesh,"shapekeys":[]}
                 mesh_data: bpy.types.Mesh = mesh.data
@@ -45,12 +44,10 @@ class RemoveDoublesSafely(Operator):
                     for shape in mesh_data.shape_keys.key_blocks:
                         mesh_shapekeys["shapekeys"].append(shape.name)
                 self.objects_to_do.append(mesh_shapekeys)
-                
         
         return {'FINISHED'}
         
     def invoke(self, context: Context, event: bpy.types.Event) -> set:
-
         self.execute(context)
         context.window_manager.modal_handler_add(self)
         return {'RUNNING_MODAL'}
@@ -62,7 +59,6 @@ class RemoveDoublesSafely(Operator):
         mesh_data: bpy.types.Mesh = mesh["mesh"].data
         bpy.ops.object.mode_set(mode='EDIT')
         
-        
         bpy.ops.object.mode_set(mode='OBJECT')
         for index, point in enumerate(mesh["mesh"].active_shape_key.points):
             if point.co.xyz != mesh_data.shape_keys.key_blocks[0].points[index].co.xyz:
@@ -70,18 +66,10 @@ class RemoveDoublesSafely(Operator):
                 print("shapekey has a moved vertex at index \""+str(index)+"\", excluding from double merging!")
         bpy.ops.object.mode_set(mode='EDIT')
         
-        
-
-
         bpy.ops.object.mode_set(mode='OBJECT')
         mesh["mesh"].select_set(False)
 
-
     def modal(self, context: Context, event: bpy.types.Event) -> set:
-        
-        
-        
-
         if len(self.objects_to_do) > 0:
             mesh = self.objects_to_do[0]
             mesh_data: bpy.types.Mesh = mesh["mesh"].data
@@ -131,10 +119,3 @@ class RemoveDoublesSafely(Operator):
             return {'FINISHED'}
         
         return {'RUNNING_MODAL'}
-                
-                
-                
-
-
-
-

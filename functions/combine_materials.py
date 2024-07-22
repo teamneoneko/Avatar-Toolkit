@@ -2,7 +2,7 @@ import bpy
 import re
 from typing import List, Tuple, Optional
 from bpy.types import Material, Operator, Context, Object
-from ..core.common import clean_material_names
+from ..core.common import clean_material_names, get_selected_armature
 from ..core.register import register_wrap
 from ..functions.translations import t
 
@@ -65,17 +65,19 @@ class CombineMaterials(Operator):
 
     @classmethod
     def poll(cls, context: Context) -> bool:
-        return context.active_object is not None
+        return context.active_object is not None and get_selected_armature(context) is not None
     
     def execute(self, context: Context) -> set:
         bpy.ops.object.mode_set(mode='OBJECT')
         
-        armature: Optional[Object] = next((obj for obj in bpy.data.objects if obj.type == 'ARMATURE'), None)
+        armature = get_selected_armature(context)
         if not armature:
+            self.report({'WARNING'}, "No armature selected")
             return {'CANCELLED'}
         
         meshes: List[Object] = [obj for obj in bpy.data.objects if obj.type == 'MESH' and 'Armature' in obj.modifiers and obj.modifiers['Armature'].object == armature]
         if not meshes:
+            self.report({'WARNING'}, "No meshes found for the selected armature")
             return {'CANCELLED'}
         
         bpy.ops.object.mode_set(mode='OBJECT')
@@ -125,4 +127,3 @@ class CombineMaterials(Operator):
         for obj in bpy.data.objects:
             if obj.type == 'MESH':
                 clean_material_names(obj)
-
