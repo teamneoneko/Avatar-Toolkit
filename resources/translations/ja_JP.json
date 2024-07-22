@@ -31,6 +31,10 @@
     "Tools.convert_to_resonite.desc": "モデルのボーン名をResoniteと互換性のある名前に変換します",
     "Settings.label": "設定",
     "Settings.language.label": "言語",
-    "Settings.language.desc": "アドオンのUI言語を選択してください"
+    "Settings.language.desc": "アドオンのUI言語を選択してください",
+    "Settings.translation_restart_popup.label": "翻訳の更新",
+    "Settings.translation_restart_popup.description": "翻訳の更新に関する情報",
+    "Settings.translation_restart_popup.message1": "一部の翻訳は適用されない場合があります",
+    "Settings.translation_restart_popup.message2": "Blenderを再起動するまで。"
   }
 }

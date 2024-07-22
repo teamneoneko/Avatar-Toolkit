@@ -31,7 +31,11 @@
       "Tools.convert_to_resonite.desc": "Converts bone names on a model to names compatable with Resonite",
       "Settings.label": "Settings",
       "Settings.language.label": "Language",
-      "Settings.language.desc": "Select the language for the addon's UI"
+      "Settings.language.desc": "Select the language for the addon's UI",
+      "Settings.translation_restart_popup.label": "Translation Update",
+      "Settings.translation_restart_popup.description": "Information about translation updates",
+      "Settings.translation_restart_popup.message1": "Some translations may not apply",
+      "Settings.translation_restart_popup.message2": "until you restart Blender."
     }
   }
   

@@ -12,7 +12,12 @@ def register():
         default=default_language,
         update=update_language
     )
+    
+    bpy.types.Scene.avatar_toolkit_language_changed = bpy.props.BoolProperty(default=False)
 
 def unregister():
     if hasattr(bpy.types.Scene, "avatar_toolkit_language"):
         del bpy.types.Scene.avatar_toolkit_language
+        
+    if hasattr(bpy.types.Scene, "avatar_toolkit_language_changed"):
+        del bpy.types.Scene.avatar_toolkit_language_changed
