@@ -1,8 +1,41 @@
 {
-    "messages": {
-      "Settings.label": "Settings Ja Test",
-      "Settings.language.label": "Language Ja Test",
-      "Settings.language.desc": "Select the language for the addon's UI Ja Test"
-    }
+  "authors": ["Avatar Toolkit Team"],  
+  "messages": {
+    "Language.auto": "Automatic",
+    "Language.en_US": "English",
+    "Language.ja_JP": "日本語",
+    "Quick_Access.label": "クイックアクセス",
+    "Quick_Access.import_export.label": "インポート/エクスポート",
+    "Quick_Access.options": "クイックアクセスオプション",
+    "Quick_Access.import_menu.label": "インポートメニュー",
+    "Quick_Access.import": "インポート",
+    "Quick_Access.export": "エクスポート",
+    "Quick_Access.import_pmx": "PMXインポート",
+    "Quick_Access.import_pmx.desc": "MMD PMXモデルをインポート",
+    "Quick_Access.import_pmd": "PMDインポート",
+    "Quick_Access.import_pmd.desc": "MMD PMDモデルをインポート",
+    "Quick_Access.export_menu.label": "エクスポートメニュー",
+    "Quick_Access.select_export.label": "エクスポート方法を選択",
+    "Quick_Access.select_export_resonite.label": "Resonite",
+    "Export.resonite.label": "Resoniteにエクスポート",
+    "Export.resonite.desc": "すべてのアニメーションとマテリアルを含むGLBをエクスポートします。アニメーションデータについては以下を参照してください：",
+    "Optimization.label": "最適化",
+    "Optimization.options.label": "最適化オプション",
+    "Optimization.combine_materials.label": "マテリアルを結合",
+    "Optimization.combine_materials.desc": "類似したマテリアルを結合してモデルを最適化します",
+    "Optimization.join_all_meshes.label": "すべてのメッシュを結合",
+    "Optimization.join_all_meshes.desc": "すべてのメッシュを1つに結合します",
+    "Optimization.join_selected_meshes.label": "選択したメッシュを結合",
+    "Optimization.join_selected_meshes.desc": "現在選択されているすべてのメッシュを1つに結合します",
+    "Tools.tools_title.label": "ツール",
+    "Tools.convert_to_resonite.label": "Resoniteに変換",
+    "Tools.convert_to_resonite.desc": "モデルのボーン名をResoniteと互換性のある名前に変換します",
+    "Settings.label": "設定",
+    "Settings.language.label": "言語",
+    "Settings.language.desc": "アドオンのUI言語を選択してください",
+    "Settings.translation_restart_popup.label": "翻訳の更新",
+    "Settings.translation_restart_popup.description": "翻訳の更新に関する情報",
+    "Settings.translation_restart_popup.message1": "一部の翻訳は適用されない場合があります",
+    "Settings.translation_restart_popup.message2": "Blenderを再起動するまで。"
   }
-  
+}

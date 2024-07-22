@@ -2,6 +2,7 @@ import bpy
 from ..core.register import register_wrap
 from .panel import AvatarToolkitPanel
 from bpy.types import Context
+from ..functions.translations import t
 
 @register_wrap
 class AvatarToolkitToolsPanel(bpy.types.Panel):
@@ -14,9 +15,9 @@ class AvatarToolkitToolsPanel(bpy.types.Panel):
 
     def draw(self, context: Context):
         layout = self.layout
-        layout.label(text="Tools")
+        layout.label(text=t("Tools.tools_title.label"))
         layout.separator(factor=0.5)
 
         row = layout.row(align=True)
         row.scale_y = 1.5  
-        row.operator("avatar_toolkit.convert_to_resonite", text="Translate to Resonite")
+        row.operator("avatar_toolkit.convert_to_resonite", text=t("Tools.convert_to_resonite.label"))
