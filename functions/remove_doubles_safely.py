@@ -5,7 +5,7 @@ import re
 from typing import List, Tuple, Optional, TypedDict
 from bpy.types import Material, Operator, Context, Object
 from ..core.register import register_wrap
-from ..core.common import get_selected_armature
+from ..core.common import get_selected_armature, is_valid_armature, select_current_armature, get_all_meshes
 
 
 class meshEntry(TypedDict):
@@ -23,17 +23,18 @@ class RemoveDoublesSafely(Operator):
 
     @classmethod
     def poll(cls, context: Context) -> bool:
-        return context.mode == 'OBJECT' and get_selected_armature(context) is not None
+        armature = get_selected_armature(context)
+        return armature is not None and is_valid_armature(armature)
 
     def execute(self, context: Context) -> set:
-        armature = get_selected_armature(context)
-        if not armature:
+        if not select_current_armature(context):
             self.report({'WARNING'}, "No armature selected")
             return {'CANCELLED'}
 
+        armature = get_selected_armature(context)
         bpy.ops.object.mode_set(mode='OBJECT')
         bpy.ops.object.select_all(action='DESELECT')
-        objects: List[Object] = [obj for obj in armature.children if obj.type == 'MESH']
+        objects: List[Object] = get_all_meshes(context)
 
         for mesh in objects:
             if mesh.data.name not in [stored_object["mesh"].data.name for stored_object in self.objects_to_do]:

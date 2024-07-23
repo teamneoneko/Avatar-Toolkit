@@ -4,7 +4,7 @@ from typing import List, Optional
 import re
 from bpy.types import Operator, Context, Object
 from ..core.dictionaries import bone_names
-from ..core.common import get_selected_armature, simplify_bonename
+from ..core.common import get_selected_armature, simplify_bonename, is_valid_armature
 from ..functions.translations import t
 
 @register_wrap
@@ -16,7 +16,8 @@ class ConvertToResonite(Operator):
 
     @classmethod
     def poll(cls, context: Context) -> bool:
-        return get_selected_armature(context) is not None
+        armature = get_selected_armature(context)
+        return armature is not None and is_valid_armature(armature)
         
     def execute(self, context: Context) -> set:
         armature = get_selected_armature(context)

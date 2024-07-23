@@ -2,7 +2,7 @@ import bpy
 from typing import List, Optional
 from bpy.types import Operator, Context, Object
 from ..core.register import register_wrap
-from ..core.common import fix_uv_coordinates, get_selected_armature
+from ..core.common import fix_uv_coordinates, get_selected_armature, is_valid_armature, select_current_armature, get_all_meshes
 from ..functions.translations import t
 
 @register_wrap
@@ -14,22 +14,23 @@ class JoinAllMeshes(Operator):
 
     @classmethod
     def poll(cls, context: Context) -> bool:
-        return context.mode == 'OBJECT' and get_selected_armature(context) is not None
+        armature = get_selected_armature(context)
+        return armature is not None and is_valid_armature(armature)
 
     def execute(self, context: Context) -> set:
         self.join_all_meshes(context)
         return {'FINISHED'}
 
     def join_all_meshes(self, context: Context) -> None:
-        armature = get_selected_armature(context)
-        if not armature:
+        if not select_current_armature(context):
             self.report({'WARNING'}, "No armature selected")
             return
 
+        armature = get_selected_armature(context)
         bpy.ops.object.mode_set(mode='OBJECT')
         bpy.ops.object.select_all(action='DESELECT')
 
-        meshes: List[Object] = [obj for obj in bpy.data.objects if obj.type == 'MESH' and 'Armature' in obj.modifiers and obj.modifiers['Armature'].object == armature]
+        meshes: List[Object] = get_all_meshes(context)
         for mesh in meshes:
             mesh.select_set(True)
 
@@ -43,6 +44,8 @@ class JoinAllMeshes(Operator):
             self.report({'INFO'}, "Meshes joined successfully")
         else:
             self.report({'WARNING'}, "No mesh objects selected")
+
+        context.view_layer.objects.active = armature
 
 @register_wrap
 class JoinSelectedMeshes(Operator):

@@ -22,7 +22,6 @@ class AvatarToolkitQuickAccessPanel(bpy.types.Panel):
         layout = self.layout
         layout.label(text=t("Quick_Access.options"))
 
-        # Add Armature Selection
         layout.prop(context.scene, "selected_armature", text="Select Armature")
 
         row = layout.row()

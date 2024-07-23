@@ -63,9 +63,33 @@ def get_armatures(self, context):
 
 def get_selected_armature(context):
     if context.scene.selected_armature:
-        return bpy.data.objects.get(context.scene.selected_armature)
+        armature = bpy.data.objects.get(context.scene.selected_armature)
+        if is_valid_armature(armature):
+            return armature
     return None
 
 def set_selected_armature(context, armature):
     context.scene.selected_armature = armature.name if armature else ""
+
+def is_valid_armature(armature: Object) -> bool:
+    if not armature or armature.type != 'ARMATURE':
+        return False
+    if not armature.data or not armature.data.bones:
+        return False
+    return True
+
+def select_current_armature(context):
+    armature = get_selected_armature(context)
+    if armature:
+        bpy.ops.object.select_all(action='DESELECT')
+        armature.select_set(True)
+        context.view_layer.objects.active = armature
+        return True
+    return False
+
+def get_all_meshes(context: Context) -> List[Object]:
+    armature = get_selected_armature(context)
+    if armature and is_valid_armature(armature):
+        return [obj for obj in bpy.data.objects if obj.type == 'MESH' and obj.parent == armature]
+    return []
 
