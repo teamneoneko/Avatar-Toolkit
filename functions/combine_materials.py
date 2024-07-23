@@ -1,6 +1,6 @@
 import bpy
 import re
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Set
 from bpy.types import Material, Operator, Context, Object
 from ..core.common import clean_material_names, get_selected_armature, is_valid_armature, get_all_meshes
 from ..core.register import register_wrap
@@ -68,7 +68,7 @@ class CombineMaterials(Operator):
         armature = get_selected_armature(context)
         return armature is not None and is_valid_armature(armature)
     
-    def execute(self, context: Context) -> set:
+    def execute(self, context: Context) -> Set[str]:
         armature = get_selected_armature(context)
         if not armature:
             self.report({'WARNING'}, "No armature selected")
@@ -90,7 +90,7 @@ class CombineMaterials(Operator):
         return {'FINISHED'}
 
     def consolidate_materials(self, meshes: List[Object]) -> None:
-        mat_mapping: dict = {}
+        mat_mapping: Dict[str, Material] = {}
         num_combined: int = 0
         for mesh in meshes:
             for slot in mesh.material_slots:

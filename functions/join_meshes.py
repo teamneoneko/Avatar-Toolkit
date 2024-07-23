@@ -1,5 +1,5 @@
 import bpy
-from typing import List, Optional
+from typing import List, Optional, Set
 from bpy.types import Operator, Context, Object
 from ..core.register import register_wrap
 from ..core.common import fix_uv_coordinates, get_selected_armature, is_valid_armature, select_current_armature, get_all_meshes
@@ -17,7 +17,7 @@ class JoinAllMeshes(Operator):
         armature = get_selected_armature(context)
         return armature is not None and is_valid_armature(armature)
 
-    def execute(self, context: Context) -> set:
+    def execute(self, context: Context) -> Set[str]:
         self.join_all_meshes(context)
         return {'FINISHED'}
 
@@ -58,7 +58,7 @@ class JoinSelectedMeshes(Operator):
     def poll(cls, context: Context) -> bool:
         return context.mode == 'OBJECT' and len([obj for obj in context.selected_objects if obj.type == 'MESH']) > 1
 
-    def execute(self, context: Context) -> set:
+    def execute(self, context: Context) -> Set[str]:
         self.join_selected_meshes(context)
         return {'FINISHED'}
 
@@ -85,3 +85,4 @@ class JoinSelectedMeshes(Operator):
             self.report({'INFO'}, "Selected meshes joined successfully")
         else:
             self.report({'WARNING'}, "No mesh objects selected")
+
