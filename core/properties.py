@@ -5,6 +5,8 @@ from typing import Tuple
 from bpy.types import Scene, PropertyGroup, Object, Material, TextureNode, Context, SceneObjects
 from bpy.props import BoolProperty, EnumProperty, FloatProperty, IntProperty, CollectionProperty, StringProperty, FloatVectorProperty, PointerProperty
 from bpy.utils import register_class
+from ..functions.translations import t, get_languages_list, update_language
+from ..core.addon_preferences import get_preference
 
 
 class material_list_bool:
