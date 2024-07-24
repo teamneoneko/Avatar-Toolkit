@@ -7,6 +7,7 @@ from ..functions.translations import t
 from ..core.import_pmx import import_pmx
 from ..core.import_pmd import import_pmd
 from ..core.importer import import_fbx
+from ..core.common import get_selected_armature, set_selected_armature
 
 @register_wrap
 class AvatarToolkitQuickAccessPanel(bpy.types.Panel):
@@ -20,6 +21,8 @@ class AvatarToolkitQuickAccessPanel(bpy.types.Panel):
     def draw(self, context: Context):
         layout = self.layout
         layout.label(text=t("Quick_Access.options"))
+
+        layout.prop(context.scene, "selected_armature", text="Select Armature")
 
         row = layout.row()
         row.label(text=t("Quick_Access.import_export.label"), icon='IMPORT')
@@ -129,5 +132,3 @@ class AVATAR_TOOLKIT_OT_export_fbx(bpy.types.Operator):
     def execute(self, context):
         bpy.ops.export_scene.fbx('INVOKE_DEFAULT')
         return {'FINISHED'}
-
-

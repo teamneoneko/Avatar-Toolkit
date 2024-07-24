@@ -2,6 +2,7 @@ import bpy
 from ..core.register import register_wrap
 from .panel import AvatarToolkitPanel
 from ..functions.translations import t
+from ..core.common import get_selected_armature
 
 @register_wrap
 class AvatarToolkitOptimizationPanel(bpy.types.Panel):
@@ -14,20 +15,21 @@ class AvatarToolkitOptimizationPanel(bpy.types.Panel):
 
     def draw(self, context):
         layout = self.layout
-        layout.label(text=t("Optimization.options.label"))
+        armature = get_selected_armature(context)
         
-        row = layout.row()
-        row.scale_y = 1.2 
-        row.operator("avatar_toolkit.combine_materials", text=t("Optimization.combine_materials.label"))
-        
-
-        layout.separator(factor=0.5)
-        
-        row = layout.row(align=True)
-        row.scale_y = 1.2 
-        row.operator("avatar_toolkit.join_all_meshes", text=t("Optimization.join_all_meshes.label"))
-        row.operator("avatar_toolkit.join_selected_meshes", text=t("Optimization.join_selected_meshes.label"))
-        row.operator("avatar_toolkit.remove_doubles_safely", text="Remove Doubles Safely")
-
-        # Add optimization options here
-
+        if armature:
+            layout.label(text=t("Optimization.options.label"))
+            
+            row = layout.row()
+            row.scale_y = 1.2 
+            row.operator("avatar_toolkit.combine_materials", text=t("Optimization.combine_materials.label"))
+            
+            layout.separator(factor=0.5)
+            
+            row = layout.row(align=True)
+            row.scale_y = 1.2 
+            row.operator("avatar_toolkit.join_all_meshes", text=t("Optimization.join_all_meshes.label"))
+            row.operator("avatar_toolkit.join_selected_meshes", text=t("Optimization.join_selected_meshes.label"))
+            row.operator("avatar_toolkit.remove_doubles_safely", text="Remove Doubles Safely")
+        else:
+            layout.label(text="Please select an armature in Quick Access")
