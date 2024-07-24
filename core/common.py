@@ -1,6 +1,10 @@
 import bpy
 import numpy as np
 from .dictionaries import bone_names
+import threading
+import time
+import webbrowser
+import typing
 
 from typing import List, Optional
 from bpy.types import Object, ShapeKey, Mesh, Context
@@ -57,3 +61,14 @@ def get_armature(context, armature_name=None) -> Optional[Object]:
         if obj.type == "ARMATURE":
             return obj
     return next((obj for obj in context.view_layer.objects if obj.type == 'ARMATURE'), None)
+
+
+def open_web_after_delay_multi_threaded(delay: typing.Optional[float] = 1.0, url: typing.Union[str, typing.Any] = ""):
+    thread = threading.Thread(target=open_web_after_delay,args=[delay,url],name="open_browser_thread")
+    thread.start()
+
+def open_web_after_delay(delay, url):
+    print("opening browser in "+str(delay)+" seconds.")
+    time.sleep(delay)
+    
+    webbrowser.open_new_tab(url)
