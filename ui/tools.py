@@ -4,6 +4,7 @@ from .panel import AvatarToolkitPanel
 from bpy.types import Context
 from ..functions.digitigrade_legs import CreateDigitigradeLegs
 from ..functions.translations import t
+from ..core.common import get_selected_armature
 
 @register_wrap
 class AvatarToolkitToolsPanel(bpy.types.Panel):
@@ -16,13 +17,18 @@ class AvatarToolkitToolsPanel(bpy.types.Panel):
 
     def draw(self, context: Context):
         layout = self.layout
-        layout.label(text=t("Tools.tools_title.label"))
-        layout.separator(factor=0.5)
+        armature = get_selected_armature(context)
+        
+        if armature:
+            layout.label(text=t("Tools.tools_title.label"))
+            layout.separator(factor=0.5)
 
-        row = layout.row(align=True)
-        row.scale_y = 1.5  
-        row.operator("avatar_toolkit.convert_to_resonite", text=t("Tools.convert_to_resonite.label"))
-        row = layout.row(align=True)
-        row.operator("avatar_toolkit.remove_doubles_safely", text="Remove Doubles Safely")
-        row = layout.row(align=True)
-        row.operator(CreateDigitigradeLegs.bl_idname, text="Create Digitigrade Legs")
+            row = layout.row(align=True)
+            row.scale_y = 1.5  
+            row.operator("avatar_toolkit.convert_to_resonite", text=t("Tools.convert_to_resonite.label"))
+            row = layout.row(align=True)
+            row.operator("avatar_toolkit.remove_doubles_safely", text="Remove Doubles Safely")
+            row = layout.row(align=True)
+            row.operator(CreateDigitigradeLegs.bl_idname, text="Create Digitigrade Legs")
+        else:
+            layout.label(text="Please select an armature in Quick Access")
