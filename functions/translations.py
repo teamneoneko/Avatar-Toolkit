@@ -63,9 +63,10 @@ def load_translations() -> bool:
                 print(f"Loaded default translations: {dictionary}")  # Debug print
             else:
                 print("Default translation file 'en_US.json' not found.")
+
     return dictionary != old_dictionary
 
-def t(phrase: str, *args, **kwargs) -> str:
+def t(phrase: str, default: str = None) -> str:
     output: str = dictionary.get(phrase)
     if output is None:
         if verbose:

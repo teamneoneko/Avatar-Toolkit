@@ -1,4 +1,6 @@
 import bpy
+from ..functions.translations import t, get_languages_list, update_language
+from ..core.addon_preferences import get_preference
 
 def register():
     default_language = get_preference("language", 0)
@@ -12,6 +14,7 @@ def register():
     )
     
     bpy.types.Scene.avatar_toolkit_language_changed = bpy.props.BoolProperty(default=False)
+
 def unregister():
     if hasattr(bpy.types.Scene, "avatar_toolkit_language"):
         del bpy.types.Scene.avatar_toolkit_language
