@@ -5,12 +5,13 @@ import re
 from bpy.types import Operator, Context, Object
 from ..core.dictionaries import bone_names
 from ..core.common import get_armature, simplify_bonename
+from ..functions.translations import t
 
 @register_wrap
 class ConvertToResonite(Operator):
     bl_idname = 'avatar_toolkit.convert_to_resonite'
-    bl_label = "Convert to Resonite" #t('Tools.convert_to_resonite.label')
-    bl_description = "Converts bone names on a model to names compatable with Resonite" #t('Tools.convert_to_resonite.desc')
+    bl_label = t('Tools.convert_to_resonite.label')
+    bl_description = t('Tools.convert_to_resonite.desc')
     bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod
