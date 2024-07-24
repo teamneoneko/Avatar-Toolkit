@@ -2,6 +2,7 @@ import bpy
 from ..core.register import register_wrap
 from .panel import AvatarToolkitPanel
 from bpy.types import Context
+from ..functions.digitigrade_legs import CreateDigitigradeLegs
 
 @register_wrap
 class AvatarToolkitToolsPanel(bpy.types.Panel):
@@ -20,3 +21,4 @@ class AvatarToolkitToolsPanel(bpy.types.Panel):
         row = layout.row(align=True)
         row.scale_y = 1.5  
         row.operator("avatar_toolkit.convert_to_resonite", text="Translate to Resonite")
+        row.operator(CreateDigitigradeLegs.bl_idname, text="Create Digitigrade Legs")

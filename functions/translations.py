@@ -44,7 +44,7 @@ def load_translations() -> None:
                 print("Default translation file 'en_US.json' not found.")
 
 def t(phrase: str, *args, **kwargs) -> str:
-    output: str = dictionary.get(phrase)
+    output: str = dictionary.get(phrase, None)
     if output is None:
         if verbose:
             print('Warning: Unknown phrase: ' + phrase)

@@ -57,3 +57,14 @@ def get_armature(context, armature_name=None) -> Optional[Object]:
         if obj.type == "ARMATURE":
             return obj
     return next((obj for obj in context.view_layer.objects if obj.type == 'ARMATURE'), None)
+
+
+def duplicatebone(b: bpy.types.EditBone) -> bpy.types.EditBone:
+    arm = bpy.context.object.data
+    cb = arm.edit_bones.new(b.name)
+
+    cb.head = b.head
+    cb.tail = b.tail
+    cb.matrix = b.matrix
+    cb.parent = b.parent
+    return cb
