@@ -1,12 +1,12 @@
 import bpy
-from bpy.types import Operator, ImportHelper
+from bpy.types import Operator
+from bpy_extras.io_utils import ImportHelper
 from ..core.register import register_wrap
-from ..core.import_dictionary import imports, import_types
+from ..core.importer import imports, import_types
 from ..functions.translations import t
 import pathlib
 import os
 from ..core import common
-from ..core.dictionaries import bone_names
 
 @register_wrap
 class ImportAnyModel(Operator, ImportHelper):
