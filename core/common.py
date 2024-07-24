@@ -105,3 +105,13 @@ def open_web_after_delay(delay, url):
     time.sleep(delay)
     
     webbrowser.open_new_tab(url)
+
+def duplicatebone(b: bpy.types.EditBone) -> bpy.types.EditBone:
+    arm = bpy.context.object.data
+    cb = arm.edit_bones.new(b.name)
+
+    cb.head = b.head
+    cb.tail = b.tail
+    cb.matrix = b.matrix
+    cb.parent = b.parent
+    return cb

@@ -2,6 +2,7 @@ import bpy
 from ..core.register import register_wrap
 from .panel import AvatarToolkitPanel
 from bpy.types import Context
+from ..functions.digitigrade_legs import CreateDigitigradeLegs
 from ..functions.translations import t
 from ..core.common import get_selected_armature
 
@@ -27,5 +28,7 @@ class AvatarToolkitToolsPanel(bpy.types.Panel):
             row.operator("avatar_toolkit.convert_to_resonite", text=t("Tools.convert_to_resonite.label"))
             row = layout.row(align=True)
             row.operator("avatar_toolkit.remove_doubles_safely", text="Remove Doubles Safely")
+            row = layout.row(align=True)
+            row.operator(CreateDigitigradeLegs.bl_idname, text="Create Digitigrade Legs")
         else:
             layout.label(text="Please select an armature in Quick Access")
