@@ -1,6 +1,10 @@
 import bpy
 import numpy as np
 from .dictionaries import bone_names
+import threading
+import time
+import webbrowser
+import typing
 
 from typing import List, Optional, Tuple
 from bpy.types import Object, ShapeKey, Mesh, Context
@@ -12,7 +16,6 @@ def clean_material_names(mesh: Mesh) -> None:
         if mat.name.endswith(('.0+', ' 0+')):
             mesh.active_material_index = j
             mesh.active_material.name = mat.name[:-len(mat.name.rstrip('0')) - 1]
-
 
 # This will fix faulty uv coordinates, cats did this a other way which can have unintended consequences, 
 # this is the best way i could of think of doing this for the time being, however may need improvements.
@@ -57,7 +60,7 @@ def get_armature(context: Context, armature_name: Optional[str] = None) -> Optio
         if obj.type == "ARMATURE":
             return obj
     return next((obj for obj in context.view_layer.objects if obj.type == 'ARMATURE'), None)
-
+    
 def get_armatures(self, context: Context) -> List[Tuple[str, str, str]]:
     return [(obj.name, obj.name, "") for obj in bpy.data.objects if obj.type == 'ARMATURE']
 
@@ -92,3 +95,13 @@ def get_all_meshes(context: Context) -> List[Object]:
     if armature and is_valid_armature(armature):
         return [obj for obj in bpy.data.objects if obj.type == 'MESH' and obj.parent == armature]
     return []
+
+def open_web_after_delay_multi_threaded(delay: typing.Optional[float] = 1.0, url: typing.Union[str, typing.Any] = ""):
+    thread = threading.Thread(target=open_web_after_delay,args=[delay,url],name="open_browser_thread")
+    thread.start()
+
+def open_web_after_delay(delay, url):
+    print("opening browser in "+str(delay)+" seconds.")
+    time.sleep(delay)
+    
+    webbrowser.open_new_tab(url)
