@@ -1,8 +1,12 @@
 import bpy
 import numpy as np
 from .dictionaries import bone_names
+import threading
+import time
+import webbrowser
+import typing
 
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from bpy.types import Object, ShapeKey, Mesh, Context
 from functools import lru_cache
 
@@ -12,7 +16,6 @@ def clean_material_names(mesh: Mesh) -> None:
         if mat.name.endswith(('.0+', ' 0+')):
             mesh.active_material_index = j
             mesh.active_material.name = mat.name[:-len(mat.name.rstrip('0')) - 1]
-
 
 # This will fix faulty uv coordinates, cats did this a other way which can have unintended consequences, 
 # this is the best way i could of think of doing this for the time being, however may need improvements.
@@ -57,6 +60,61 @@ def get_armature(context: Context, armature_name: Optional[str] = None) -> Optio
         if obj.type == "ARMATURE":
             return obj
     return next((obj for obj in context.view_layer.objects if obj.type == 'ARMATURE'), None)
+    
+def get_armatures(self, context: Context) -> List[Tuple[str, str, str]]:
+    return [(obj.name, obj.name, "") for obj in bpy.data.objects if obj.type == 'ARMATURE']
+
+def get_selected_armature(context: Context) -> Optional[Object]:
+    if context.scene.selected_armature:
+        armature = bpy.data.objects.get(context.scene.selected_armature)
+        if is_valid_armature(armature):
+            return armature
+    return None
+
+def set_selected_armature(context: Context, armature: Optional[Object]) -> None:
+    context.scene.selected_armature = armature.name if armature else ""
+
+def is_valid_armature(armature: Object) -> bool:
+    if not armature or armature.type != 'ARMATURE':
+        return False
+    if not armature.data or not armature.data.bones:
+        return False
+    return True
+
+def select_current_armature(context: Context) -> bool:
+    armature = get_selected_armature(context)
+    if armature:
+        bpy.ops.object.select_all(action='DESELECT')
+        armature.select_set(True)
+        context.view_layer.objects.active = armature
+        return True
+    return False
+
+def get_all_meshes(context: Context) -> List[Object]:
+    armature = get_selected_armature(context)
+    if armature and is_valid_armature(armature):
+        return [obj for obj in bpy.data.objects if obj.type == 'MESH' and obj.parent == armature]
+    return []
+
+def open_web_after_delay_multi_threaded(delay: typing.Optional[float] = 1.0, url: typing.Union[str, typing.Any] = ""):
+    thread = threading.Thread(target=open_web_after_delay,args=[delay,url],name="open_browser_thread")
+    thread.start()
+
+def open_web_after_delay(delay, url):
+    print("opening browser in "+str(delay)+" seconds.")
+    time.sleep(delay)
+    
+    webbrowser.open_new_tab(url)
+
+def duplicatebone(b: bpy.types.EditBone) -> bpy.types.EditBone:
+    arm = bpy.context.object.data
+    cb = arm.edit_bones.new(b.name)
+
+    cb.head = b.head
+    cb.tail = b.tail
+    cb.matrix = b.matrix
+    cb.parent = b.parent
+    return cb
 
 def has_shapekeys(mesh_obj: Object) -> bool:
     return mesh_obj.data.shape_keys is not None

@@ -4,7 +4,7 @@ from typing import List, Optional
 import re
 from bpy.types import Operator, Context, Object
 from ..core.dictionaries import bone_names
-from ..core.common import get_armature, simplify_bonename
+from ..core.common import get_selected_armature, simplify_bonename, is_valid_armature
 from ..functions.translations import t
 
 @register_wrap
@@ -16,12 +16,14 @@ class ConvertToResonite(Operator):
 
     @classmethod
     def poll(cls, context: Context) -> bool:
-        if not get_armature(context):
-            return False
-        return True
+        armature = get_selected_armature(context)
+        return armature is not None and is_valid_armature(armature)
         
     def execute(self, context: Context) -> set:
-        armature = get_armature(context)
+        armature = get_selected_armature(context)
+        if not armature:
+            self.report({'WARNING'}, "No armature selected")
+            return {'CANCELLED'}
 
         translate_bone_fails = 0
         untranslated_bones = set()
@@ -89,8 +91,6 @@ class ConvertToResonite(Operator):
             'thumb_3_r': "thumb3.R"
         }
 
-                
-
         context.view_layer.objects.active = armature
         bpy.ops.object.mode_set(mode='EDIT')
 
@@ -110,6 +110,5 @@ class ConvertToResonite(Operator):
             self.report({'INFO'}, "Failed to translate {translate_bone_fails} bones to humanoid names. Adding \"<noik>\" to their names.".format(translate_bone_fails=translate_bone_fails))
         else:
             self.report({'INFO'}, "Successfully translated all bones to humanoid names")
-
 
         return {'FINISHED'}

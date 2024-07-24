@@ -1,6 +1,8 @@
 import bpy
+
 from ..functions.translations import t, get_languages_list, update_language
 from ..core.addon_preferences import get_preference
+from .common import get_armatures
 
 def register() -> None:
     default_language = get_preference("language", 0)
@@ -35,6 +37,12 @@ def register() -> None:
         max=2.0
     )
 
+    bpy.types.Scene.selected_armature = bpy.props.EnumProperty(
+        items=get_armatures,
+        name="Selected Armature",
+        description="The currently selected armature for Avatar Toolkit operations"
+    )
+
 def unregister() -> None:
     if hasattr(bpy.types.Scene, "avatar_toolkit_language"):
         del bpy.types.Scene.avatar_toolkit_language
@@ -53,3 +61,7 @@ def unregister() -> None:
     
     if hasattr(bpy.types.Scene, "shape_intensity"):
         del bpy.types.Scene.shape_intensity
+
+    if hasattr(bpy.types.Scene, "selected_armature"):
+        del bpy.types.Scene.selected_armature
+        

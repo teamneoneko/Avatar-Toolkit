@@ -1,8 +1,8 @@
 import bpy
 import re
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Set
 from bpy.types import Material, Operator, Context, Object
-from ..core.common import clean_material_names
+from ..core.common import clean_material_names, get_selected_armature, is_valid_armature, get_all_meshes
 from ..core.register import register_wrap
 from ..functions.translations import t
 
@@ -65,49 +65,54 @@ class CombineMaterials(Operator):
 
     @classmethod
     def poll(cls, context: Context) -> bool:
-        return context.active_object is not None
+        armature = get_selected_armature(context)
+        return armature is not None and is_valid_armature(armature)
     
-    def execute(self, context: Context) -> set:
-        bpy.ops.object.mode_set(mode='OBJECT')
-        
-        armature: Optional[Object] = next((obj for obj in bpy.data.objects if obj.type == 'ARMATURE'), None)
+    def execute(self, context: Context) -> Set[str]:
+        armature = get_selected_armature(context)
         if not armature:
+            self.report({'WARNING'}, "No armature selected")
             return {'CANCELLED'}
         
-        meshes: List[Object] = [obj for obj in bpy.data.objects if obj.type == 'MESH' and 'Armature' in obj.modifiers and obj.modifiers['Armature'].object == armature]
-        if not meshes:
-            return {'CANCELLED'}
-        
+        context.view_layer.objects.active = armature
         bpy.ops.object.mode_set(mode='OBJECT')
+        
+        meshes = get_all_meshes(context)
+        if not meshes:
+            self.report({'WARNING'}, "No meshes found for the selected armature")
+            return {'CANCELLED'}
+        
         self.consolidate_materials(meshes)
         self.remove_unused_materials()
         self.cleanmatslots()
         self.clean_material_names()
-        bpy.ops.object.mode_set(mode='OBJECT')
-        bpy.context.view_layer.objects.active = armature
         
         return {'FINISHED'}
 
-    def consolidate_materials(self, objects: List[Object]) -> None:
-        mat_mapping: dict = {}
+    def consolidate_materials(self, meshes: List[Object]) -> None:
+        mat_mapping: Dict[str, Material] = {}
         num_combined: int = 0
-        for ob in objects:
-            for slot in ob.material_slots:
+        for mesh in meshes:
+            for slot in mesh.material_slots:
                 mat: Optional[Material] = slot.material
                 if mat:
                     base_name: str = get_base_name(mat.name)
                     
                     if base_name in mat_mapping:
                         base_mat: Material = mat_mapping[base_name]
-                        if materials_match(base_mat, mat):
-                            consolidate_textures(base_mat, mat)
-                            num_combined += 1
-                            slot.material = base_mat
+                        try:
+                            if materials_match(base_mat, mat):
+                                consolidate_textures(base_mat, mat)
+                                num_combined += 1
+                                slot.material = base_mat
+                        except AttributeError:
+                            # Skip this material if there's an attribute mismatch
+                            continue
                     else:
                         mat_mapping[base_name] = mat
         
         report_consolidated(self, num_combined)
-    
+
     def remove_unused_materials(self) -> None:
         for mat in bpy.data.materials:
             if not any(obj for obj in bpy.data.objects if obj.material_slots and mat.name in obj.material_slots):
@@ -125,4 +130,3 @@ class CombineMaterials(Operator):
         for obj in bpy.data.objects:
             if obj.type == 'MESH':
                 clean_material_names(obj)
-

@@ -1,8 +1,8 @@
 import bpy
-from typing import List, Optional
+from typing import List, Optional, Set
 from bpy.types import Operator, Context, Object
 from ..core.register import register_wrap
-from ..core.common import fix_uv_coordinates
+from ..core.common import fix_uv_coordinates, get_selected_armature, is_valid_armature, select_current_armature, get_all_meshes
 from ..functions.translations import t
 
 @register_wrap
@@ -14,21 +14,23 @@ class JoinAllMeshes(Operator):
 
     @classmethod
     def poll(cls, context: Context) -> bool:
-        return context.mode == 'OBJECT'
+        armature = get_selected_armature(context)
+        return armature is not None and is_valid_armature(armature)
 
-    def execute(self, context: Context) -> set:
+    def execute(self, context: Context) -> Set[str]:
         self.join_all_meshes(context)
         return {'FINISHED'}
 
     def join_all_meshes(self, context: Context) -> None:
-        if not bpy.data.objects:
-            self.report({'INFO'}, "No objects in the scene")
+        if not select_current_armature(context):
+            self.report({'WARNING'}, "No armature selected")
             return
 
+        armature = get_selected_armature(context)
         bpy.ops.object.mode_set(mode='OBJECT')
         bpy.ops.object.select_all(action='DESELECT')
 
-        meshes: List[Object] = [obj for obj in bpy.data.objects if obj.type == 'MESH']
+        meshes: List[Object] = get_all_meshes(context)
         for mesh in meshes:
             mesh.select_set(True)
 
@@ -43,6 +45,8 @@ class JoinAllMeshes(Operator):
         else:
             self.report({'WARNING'}, "No mesh objects selected")
 
+        context.view_layer.objects.active = armature
+
 @register_wrap
 class JoinSelectedMeshes(Operator):
     bl_idname = "avatar_toolkit.join_selected_meshes"
@@ -52,17 +56,17 @@ class JoinSelectedMeshes(Operator):
 
     @classmethod
     def poll(cls, context: Context) -> bool:
-        return context.mode == 'OBJECT'
+        return context.mode == 'OBJECT' and len([obj for obj in context.selected_objects if obj.type == 'MESH']) > 1
 
-    def execute(self, context: Context) -> set:
+    def execute(self, context: Context) -> Set[str]:
         self.join_selected_meshes(context)
         return {'FINISHED'}
 
     def join_selected_meshes(self, context: Context) -> None:
         selected_objects: List[Object] = [obj for obj in bpy.context.selected_objects if obj.type == 'MESH']
 
-        if not selected_objects:
-            self.report({'WARNING'}, "No mesh objects selected")
+        if len(selected_objects) < 2:
+            self.report({'WARNING'}, "Please select at least two mesh objects")
             return
 
         bpy.ops.object.mode_set(mode='OBJECT')

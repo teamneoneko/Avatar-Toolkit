@@ -49,7 +49,16 @@
       "Settings.translation_restart_popup.label": "Translation Update",
       "Settings.translation_restart_popup.description": "Information about translation updates",
       "Settings.translation_restart_popup.message1": "Some translations may not apply",
-      "Settings.translation_restart_popup.message2": "until you restart Blender."
+      "Settings.translation_restart_popup.message2": "until you restart Blender.",
+      "Importing.need_importer":"You do not have the required importer for the {extension} type! Opening web browser for importer search term...",
+      "Importer.mmd_anim_importer.label":"MMD Animation",
+      "Importer.mmd_anim_importer.desc":"Import a MMD Animation (.vmd)",
+      "Importing.importer_search_term":"https://search.brave.com/search?q=blender+{extension}+importer+addon&source=web",
+      "Importer.export_resonite.label":"Export to Resonite",
+      "Importer.export_resonite.desc":"Export to Resonite as a GLTF. Make sure your model is to scale in blender, and import as meters in Resonite.",
+
+      "Importer.export_vrchat.label":"Export to VRChat",
+      "Importer.export_vrchat.desc":"Export to VRChat, may also work for ChilloutVR. Is similar to Cats export."
     }
   }
   
