@@ -122,9 +122,6 @@ def duplicatebone(b: bpy.types.EditBone) -> bpy.types.EditBone:
 def has_shapekeys(mesh_obj: Object) -> bool:
     return mesh_obj.data.shape_keys is not None
 
-def has_shapekeys(mesh_obj: Object) -> bool:
-    return mesh_obj.data.shape_keys is not None
-
 def sort_shape_keys(mesh: Object) -> None:
     print("Starting shape key sorting...")
     if not has_shapekeys(mesh):
