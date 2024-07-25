@@ -6,10 +6,11 @@ import time
 import webbrowser
 import typing
 
+from ..core.register import register_wrap
 from typing import List, Optional, Tuple
 from bpy.types import Object, ShapeKey, Mesh, Context, Material, PropertyGroup
 from functools import lru_cache
-from bpy.props import PointerProperty
+from bpy.props import PointerProperty, IntProperty, StringProperty
 from bpy.utils import register_class
 
 
@@ -245,3 +246,19 @@ def remove_default_objects():
     for obj in bpy.data.objects:
         if obj.name in ["Camera", "Light", "Cube"]:
             bpy.data.objects.remove(obj, do_unlink=True)
+
+def init_progress(context, steps):
+    context.window_manager.progress_begin(0, 100)
+    context.scene.avatar_toolkit_progress_steps = steps
+    context.scene.avatar_toolkit_progress_current = 0
+
+def update_progress(self, context, message):
+    context.scene.avatar_toolkit_progress_current += 1
+    progress = (context.scene.avatar_toolkit_progress_current / context.scene.avatar_toolkit_progress_steps) * 100
+    context.window_manager.progress_update(progress)
+    context.area.header_text_set(message)
+    self.report({'INFO'}, message)
+
+def finish_progress(context):
+    context.window_manager.progress_end()
+    context.area.header_text_set(None)

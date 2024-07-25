@@ -2,7 +2,7 @@ import bpy
 import re
 from typing import List, Tuple, Optional, Set, Dict
 from bpy.types import Material, Operator, Context, Object, NodeTree
-from ..core.common import clean_material_names, get_selected_armature, is_valid_armature, get_all_meshes
+from ..core.common import clean_material_names, get_selected_armature, is_valid_armature, get_all_meshes, init_progress, update_progress, finish_progress
 from ..core.register import register_wrap
 from ..functions.translations import t
 
@@ -78,10 +78,22 @@ class CombineMaterials(Operator):
             self.report({'WARNING'}, t("Optimization.no_meshes_found"))
             return {'CANCELLED'}
         
+        init_progress(context, 5)  # 5 steps in total
+        
+        update_progress(self, context, t("Optimization.consolidating_materials"))
         self.consolidate_materials(meshes)
+        
+        update_progress(self, context, t("Optimization.cleaning_material_slots"))
         self.clean_material_slots(meshes)
+        
+        update_progress(self, context, t("Optimization.cleaning_material_names"))
         self.clean_material_names()
+        
+        update_progress(self, context, t("Optimization.clearing_unused_data"))
         self.clear_unused_data_blocks()
+        
+        update_progress(self, context, t("Optimization.finalizing"))
+        finish_progress(context)
         
         return {'FINISHED'}
 
@@ -123,3 +135,4 @@ class CombineMaterials(Operator):
 
     def clear_unused_data_blocks(self) -> None:
         bpy.ops.outliner.orphans_purge(do_local_ids=True, do_linked_ids=True, do_recursive=True)
+

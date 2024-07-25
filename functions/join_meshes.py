@@ -2,7 +2,7 @@ import bpy
 from typing import List, Optional, Set
 from bpy.types import Operator, Context, Object
 from ..core.register import register_wrap
-from ..core.common import fix_uv_coordinates, get_selected_armature, is_valid_armature, select_current_armature, get_all_meshes
+from ..core.common import fix_uv_coordinates, get_selected_armature, is_valid_armature, select_current_armature, get_all_meshes, init_progress, update_progress, finish_progress
 from ..functions.translations import t
 
 @register_wrap
@@ -37,22 +37,31 @@ class JoinAllMeshes(Operator):
         if not meshes:
             raise ValueError(t("Optimization.no_meshes_found"))
 
+        init_progress(context, 5)  # 5 steps in total
+
+        update_progress(self, context, t("Optimization.selecting_meshes"))
         for mesh in meshes:
             mesh.select_set(True)
 
         if bpy.context.selected_objects:
             bpy.context.view_layer.objects.active = bpy.context.selected_objects[0]
+            
+            update_progress(self, context, t("Optimization.joining_meshes"))
             try:
                 bpy.ops.object.join()
             except RuntimeError as e:
                 raise RuntimeError(f"{t('Optimization.join_operation_failed')}: {str(e)}")
 
+            update_progress(self, context, t("Optimization.applying_transforms"))
             try:
                 bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
             except RuntimeError as e:
                 raise RuntimeError(f"{t('Optimization.transform_apply_failed')}: {str(e)}")
 
+            update_progress(self, context, t("Optimization.fixing_uv_coordinates"))
             fix_uv_coordinates(context)
+            
+            update_progress(self, context, t("Optimization.finalizing"))
             bpy.ops.object.mode_set(mode='OBJECT')
             bpy.ops.object.select_all(action='DESELECT')
             self.report({'INFO'}, t("Optimization.meshes_joined"))
@@ -60,6 +69,7 @@ class JoinAllMeshes(Operator):
             raise ValueError(t("Optimization.no_mesh_selected"))
 
         context.view_layer.objects.active = armature
+        finish_progress(context)
 
 @register_wrap
 class JoinSelectedMeshes(Operator):
@@ -86,24 +96,32 @@ class JoinSelectedMeshes(Operator):
         if len(selected_objects) < 2:
             raise ValueError(t("Optimization.select_at_least_two_meshes"))
 
+        init_progress(context, 5)  # 5 steps in total
+
+        update_progress(self, context, t("Optimization.preparing_meshes"))
         bpy.ops.object.mode_set(mode='OBJECT')
         bpy.ops.object.select_all(action='DESELECT')
 
+        update_progress(self, context, t("Optimization.selecting_meshes"))
         for obj in selected_objects:
             obj.select_set(True)
 
         if bpy.context.selected_objects:
             bpy.context.view_layer.objects.active = bpy.context.selected_objects[0]
+            
+            update_progress(self, context, t("Optimization.joining_meshes"))
             try:
                 bpy.ops.object.join()
             except RuntimeError as e:
                 raise RuntimeError(f"{t('Optimization.join_operation_failed')}: {str(e)}")
 
+            update_progress(self, context, t("Optimization.applying_transforms"))
             try:
                 bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
             except RuntimeError as e:
                 raise RuntimeError(f"{t('Optimization.transform_apply_failed')}: {str(e)}")
 
+            update_progress(self, context, t("Optimization.fixing_uv_coordinates"))
             fix_uv_coordinates(context)
             bpy.ops.object.mode_set(mode='OBJECT')
             bpy.ops.object.select_all(action='DESELECT')
@@ -111,3 +129,4 @@ class JoinSelectedMeshes(Operator):
         else:
             raise ValueError(t("Optimization.no_mesh_selected"))
 
+        finish_progress(context)
