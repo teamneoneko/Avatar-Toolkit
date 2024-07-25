@@ -52,6 +52,7 @@
     "Optimization.processing_mesh_no_shapekeys": "Processing mesh with no shapekeys named \"{mesh_name}\"",
     "Optimization.remove_doubles_completed": "Remove doubles operation completed",
     "Optimization.select_armature": "Please select an armature",
+    "Optimization.material_attribute_mismatch": "Attribute mismatch in material {material_name}, skipping",
     "Tools.select_armature": "Please select an armature",
     "Tools.label": "Tools",
     "Tools.tools_title.label": "Tools:",
