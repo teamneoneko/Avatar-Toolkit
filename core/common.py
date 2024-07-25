@@ -240,3 +240,8 @@ def get_shapekeys(mesh: Object, prefix: str = '') -> List[tuple]:
     if not has_shapekeys(mesh):
         return []
     return [(key.name, key.name, key.name) for key in mesh.data.shape_keys.key_blocks if key.name != 'Basis' and key.name.startswith(prefix)]
+
+def remove_default_objects():
+    for obj in bpy.data.objects:
+        if obj.name in ["Camera", "Light", "Cube"]:
+            bpy.data.objects.remove(obj, do_unlink=True)
