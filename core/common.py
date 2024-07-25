@@ -7,8 +7,58 @@ import webbrowser
 import typing
 
 from typing import List, Optional, Tuple
-from bpy.types import Object, ShapeKey, Mesh, Context
+from bpy.types import Object, ShapeKey, Mesh, Context, Material, PropertyGroup
 from functools import lru_cache
+from bpy.props import PointerProperty
+from bpy.utils import register_class
+
+
+
+
+class SceneMatClass(PropertyGroup):
+    mat: PointerProperty(type=Material)
+
+register_class(SceneMatClass)
+
+class material_list_bool:
+    #For the love that is holy do not ever touch these. If this was java I would make these private
+    #They should only be accessed via context.scene.texture_atlas_Has_Mat_List_Shown
+    #This is so we know if the materials are up to date. messing with these variables directly will make the thing blow up.
+    
+    #The only exception to this is the ExpandSection_Materials operator which populates this with new data once the materials have changed and need reloading.
+    old_list: dict[str,list[Material]] = {}
+    bool_material_list_expand: dict[str,bool] = {}
+
+    def set_bool(self, value: bool) -> None:
+        material_list_bool.bool_material_list_expand[bpy.context.scene.name] = value
+        if value == False:
+            material_list_bool.old_list[bpy.context.scene.name] = []
+
+    def get_bool(self) -> bool:
+            newlist: list[Material] = []
+            for obj in bpy.context.scene.objects:
+                if len(obj.material_slots)>0:
+                    for mat_slot in obj.material_slots:
+                        if mat_slot.material:
+                            if mat_slot.material not in newlist:
+                                newlist.append(mat_slot.material)
+            
+            still_the_same: bool = True
+            if bpy.context.scene.name in material_list_bool.old_list:
+                for item in newlist:
+                    if item not in material_list_bool.old_list[bpy.context.scene.name]:
+                        still_the_same = False
+                        break
+                for item in material_list_bool.old_list[bpy.context.scene.name]:
+                    if item not in newlist:
+                        still_the_same = False
+                        break
+            else:
+                still_the_same = False
+            material_list_bool.bool_material_list_expand[bpy.context.scene.name] = still_the_same
+            
+            return material_list_bool.bool_material_list_expand[bpy.context.scene.name]
+
 
 ### Clean up material names in the given mesh by removing the '.001' suffix.
 def clean_material_names(mesh: Mesh) -> None:
