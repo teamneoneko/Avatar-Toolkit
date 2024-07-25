@@ -10,10 +10,7 @@ from bpy.types import Material, Operator, Context, Object, Image, Mesh, MeshUVLo
 from ..core.register import register_wrap
 from ..core.common import SceneMatClass, material_list_bool
 from ..core.packer.rectangle_packer import MaterialImageList, BinPacker
-
-
-
-
+from ..functions.translations import t
 
 def scale_images_to_largest(images:list[Image]) -> set:
     print([image.name for image in images])
@@ -270,11 +267,11 @@ class Atlas_Materials(Operator):
                 
                 mesh.materials.append(atlased_mat.material)
 
-        self.report({'INFO'}, t("TextureAtlas.atlas_completed"))
+            self.report({'INFO'}, t("TextureAtlas.atlas_completed"))
             return {"FINISHED"}
         except Exception as e:
             self.report({'ERROR'}, t("TextureAtlas.atlas_error"))
             raise e
-            return {"FINISHED"}
+        return {"FINISHED"}
          
          

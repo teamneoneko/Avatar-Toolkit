@@ -28,8 +28,6 @@ class AvatarToolkitToolsPanel(bpy.types.Panel):
             row.scale_y = 1.5  
             row.operator("avatar_toolkit.convert_to_resonite", text=t("Tools.convert_to_resonite.label"))
             row = layout.row(align=True)
-            row.operator("avatar_toolkit.remove_doubles_safely", text=t("Tools.remove_doubles_safely.label"))
-            row = layout.row(align=True)
             row.operator(CreateDigitigradeLegs.bl_idname, text=t("Tools.create_digitigrade_legs.label"))
         else:
             layout.label(text=t("Tools.select_armature"))

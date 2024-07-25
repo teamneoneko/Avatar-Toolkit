@@ -39,7 +39,7 @@ class AvatarToolkitQuickAccessPanel(bpy.types.Panel):
 class AVATAR_TOOLKIT_OT_export_menu(bpy.types.Operator):
     bl_idname = "avatar_toolkit.export_menu"
     bl_label = t("Quick_Access.export_menu.label")
-    bl_description = t("Quick_Access.import_pmx.desc")
+    bl_description = t("Quick_Access.export_menu.desc")
 
     @classmethod
     def poll(cls, context):
