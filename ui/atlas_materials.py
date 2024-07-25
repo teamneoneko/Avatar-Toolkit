@@ -73,6 +73,7 @@ class TextureAtlasPanel(Panel):
     bl_region_type = 'UI'
     bl_category = "Avatar Toolkit"
     bl_parent_id = "OBJECT_PT_avatar_toolkit"
+    bl_order = 4
 
     def draw(self, context: Context):
         layout = self.layout

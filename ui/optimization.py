@@ -12,6 +12,7 @@ class AvatarToolkitOptimizationPanel(bpy.types.Panel):
     bl_region_type = 'UI'
     bl_category = "Avatar Toolkit"
     bl_parent_id = "OBJECT_PT_avatar_toolkit"
+    bl_order = 2
 
     def draw(self, context):
         layout = self.layout
