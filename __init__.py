@@ -25,12 +25,13 @@ def register():
 
     # Order the classes before registration
     core.register.order_classes()
-    # Register the properties
-    core.register.register_properties()
     # Register the UI classes
-    for cls in __bl_ordered_classes:
-        print("registering" + str(cls))
-        bpy.utils.register_class(cls)   
+    for cls in core.register.__bl_ordered_classes:
+        print("registering " + str(cls))
+        bpy.utils.register_class(cls)
+
+    #finally register properties that may use some classes.
+    core.register.register_properties()
 
 def unregister():
     print("Unregistering Avatar Toolkit")
