@@ -23,7 +23,7 @@ class JoinAllMeshes(Operator):
 
     def join_all_meshes(self, context: Context) -> None:
         if not select_current_armature(context):
-            self.report({'WARNING'}, "No armature selected")
+            self.report({'WARNING'}, t("Optimization.no_armature_selected"))
             return
 
         armature = get_selected_armature(context)
@@ -41,9 +41,9 @@ class JoinAllMeshes(Operator):
             fix_uv_coordinates(context)
             bpy.ops.object.mode_set(mode='OBJECT')
             bpy.ops.object.select_all(action='DESELECT')
-            self.report({'INFO'}, "Meshes joined successfully")
+            self.report({'INFO'}, t("Optimization.meshes_joined"))
         else:
-            self.report({'WARNING'}, "No mesh objects selected")
+            self.report({'WARNING'}, t("Optimization.no_mesh_selected"))
 
         context.view_layer.objects.active = armature
 
@@ -66,7 +66,7 @@ class JoinSelectedMeshes(Operator):
         selected_objects: List[Object] = [obj for obj in bpy.context.selected_objects if obj.type == 'MESH']
 
         if len(selected_objects) < 2:
-            self.report({'WARNING'}, "Please select at least two mesh objects")
+            self.report({'WARNING'}, t("Optimization.select_at_least_two_meshes"))
             return
 
         bpy.ops.object.mode_set(mode='OBJECT')
@@ -82,7 +82,6 @@ class JoinSelectedMeshes(Operator):
             fix_uv_coordinates(context)
             bpy.ops.object.mode_set(mode='OBJECT')
             bpy.ops.object.select_all(action='DESELECT')
-            self.report({'INFO'}, "Selected meshes joined successfully")
+            self.report({'INFO'}, t("Optimization.selected_meshes_joined"))
         else:
-            self.report({'WARNING'}, "No mesh objects selected")
-
+            self.report({'WARNING'}, t("Optimization.no_mesh_selected"))

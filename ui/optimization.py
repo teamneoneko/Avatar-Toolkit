@@ -12,6 +12,7 @@ class AvatarToolkitOptimizationPanel(bpy.types.Panel):
     bl_region_type = 'UI'
     bl_category = "Avatar Toolkit"
     bl_parent_id = "OBJECT_PT_avatar_toolkit"
+    bl_order = 2
 
     def draw(self, context):
         layout = self.layout
@@ -30,6 +31,7 @@ class AvatarToolkitOptimizationPanel(bpy.types.Panel):
             row.scale_y = 1.2 
             row.operator("avatar_toolkit.join_all_meshes", text=t("Optimization.join_all_meshes.label"))
             row.operator("avatar_toolkit.join_selected_meshes", text=t("Optimization.join_selected_meshes.label"))
-            row.operator("avatar_toolkit.remove_doubles_safely", text="Remove Doubles Safely")
+            row.operator("avatar_toolkit.remove_doubles_safely", text=t("Optimization.remove_doubles_safely.label"))
         else:
-            layout.label(text="Please select an armature in Quick Access")
+            layout.label(text=t("Optimization.select_armature"))
+

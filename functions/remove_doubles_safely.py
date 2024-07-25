@@ -6,7 +6,7 @@ from typing import List, Tuple, Optional, TypedDict
 from bpy.types import Material, Operator, Context, Object
 from ..core.register import register_wrap
 from ..core.common import get_selected_armature, is_valid_armature, select_current_armature, get_all_meshes
-
+from ..functions.translations import t
 
 class meshEntry(TypedDict):
     mesh: bpy.types.Object
@@ -15,8 +15,8 @@ class meshEntry(TypedDict):
 @register_wrap
 class RemoveDoublesSafely(Operator):
     bl_idname = "avatar_toolkit.remove_doubles_safely"
-    bl_label = "Remove Doubles Safely"
-    bl_description = "Remove Doubles on all meshes, making sure to not fuse things like mouths together."
+    bl_label = t("Optimization.remove_doubles_safely.label")
+    bl_description = t("Optimization.remove_doubles_safely.desc")
     bl_options = {'REGISTER', 'UNDO'}
     objects_to_do: list[meshEntry] = []
     merge_distance: bpy.props.FloatProperty(default=0.0001)
@@ -28,7 +28,7 @@ class RemoveDoublesSafely(Operator):
 
     def execute(self, context: Context) -> set:
         if not select_current_armature(context):
-            self.report({'WARNING'}, "No armature selected")
+            self.report({'WARNING'}, t("Optimization.no_armature_selected"))
             return {'CANCELLED'}
 
         armature = get_selected_armature(context)
@@ -117,6 +117,7 @@ class RemoveDoublesSafely(Operator):
                     mesh["mesh"].select_set(False)
 
         else:
+            self.report({'INFO'}, t("Optimization.remove_doubles_completed"))
             return {'FINISHED'}
         
         return {'RUNNING_MODAL'}

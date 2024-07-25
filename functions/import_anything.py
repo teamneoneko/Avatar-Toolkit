@@ -77,6 +77,7 @@ class ImportAnyModel(Operator, ImportHelper):
                 print("importer error was:")
                 print(e)
 
+        self.report({'INFO'}, t('Quick_Access.import_success'))
         return {'FINISHED'}
 
 

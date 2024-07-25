@@ -22,7 +22,7 @@ class ConvertToResonite(Operator):
     def execute(self, context: Context) -> set:
         armature = get_selected_armature(context)
         if not armature:
-            self.report({'WARNING'}, "No armature selected")
+            self.report({'WARNING'}, t("Tools.no_armature_selected"))
             return {'CANCELLED'}
 
         translate_bone_fails = 0
@@ -107,8 +107,8 @@ class ConvertToResonite(Operator):
         bpy.ops.object.mode_set(mode='OBJECT')
 
         if translate_bone_fails > 0:
-            self.report({'INFO'}, "Failed to translate {translate_bone_fails} bones to humanoid names. Adding \"<noik>\" to their names.".format(translate_bone_fails=translate_bone_fails))
+            self.report({'INFO'}, t("Tools.bones_translated_with_fails").format(translate_bone_fails=translate_bone_fails))
         else:
-            self.report({'INFO'}, "Successfully translated all bones to humanoid names")
+            self.report({'INFO'}, t("Tools.bones_translated_success"))
 
         return {'FINISHED'}

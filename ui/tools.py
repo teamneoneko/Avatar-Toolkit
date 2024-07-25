@@ -8,12 +8,13 @@ from ..core.common import get_selected_armature
 
 @register_wrap
 class AvatarToolkitToolsPanel(bpy.types.Panel):
-    bl_label = "Tools"
+    bl_label = t("Tools.label")
     bl_idname = "OBJECT_PT_avatar_toolkit_tools"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = "Avatar Toolkit"
     bl_parent_id = "OBJECT_PT_avatar_toolkit"
+    bl_order = 3
 
     def draw(self, context: Context):
         layout = self.layout
@@ -27,8 +28,6 @@ class AvatarToolkitToolsPanel(bpy.types.Panel):
             row.scale_y = 1.5  
             row.operator("avatar_toolkit.convert_to_resonite", text=t("Tools.convert_to_resonite.label"))
             row = layout.row(align=True)
-            row.operator("avatar_toolkit.remove_doubles_safely", text="Remove Doubles Safely")
-            row = layout.row(align=True)
-            row.operator(CreateDigitigradeLegs.bl_idname, text="Create Digitigrade Legs")
+            row.operator(CreateDigitigradeLegs.bl_idname, text=t("Tools.create_digitigrade_legs.label"))
         else:
-            layout.label(text="Please select an armature in Quick Access")
+            layout.label(text=t("Tools.select_armature"))

@@ -32,7 +32,7 @@ class CreateDigitigradeLegs(bpy.types.Operator):
                 digi2 = digi1.children[0]
                 digi3 = digi2.children[0]
             except:
-                print("bone format incorrect! Please select a chain of 4 continious bones!") #TODO: Show this to user. this is an error.
+                self.report({'ERROR'}, t('Tools.digitigrade_legs.error.bone_format'))
                 return {'CANCELLED'}
             digi4 = None
             try:
@@ -114,4 +114,6 @@ class CreateDigitigradeLegs(bpy.types.Operator):
             digi1.name = re.compile(re.escape("<noik>"), re.IGNORECASE).sub("",digi1.name)+"<noik>"
             digi2.name = re.compile(re.escape("<noik>"), re.IGNORECASE).sub("",digi2.name)+"<noik>"
             #finally fully done!
+
+        self.report({'INFO'}, t('Tools.digitigrade_legs.success'))
         return {'FINISHED'}

@@ -8,10 +8,6 @@ from ..core.register import register_wrap
 from ..core.addon_preferences import get_preference
 from ..core.common import SceneMatClass, material_list_bool, get_armatures, get_mesh_items
 
-
-
-
-
 def register() -> None:
     default_language = get_preference("language", 0)
     bpy.types.Scene.avatar_toolkit_language = bpy.props.EnumProperty(
@@ -31,20 +27,20 @@ def register() -> None:
     bpy.types.Scene.avatar_toolkit_language_changed = bpy.props.BoolProperty(default=False)
 
     bpy.types.Scene.mouth_a = bpy.props.StringProperty(
-        name=t("Scene.mouth_a.label"),
-        description=t("Scene.mouth_a.desc")
+        name=t("VisemePanel.mouth_a.label"),
+        description=t("VisemePanel.mouth_a.desc")
     )
     bpy.types.Scene.mouth_o = bpy.props.StringProperty(
-        name=t("Scene.mouth_o.label"),
-        description=t("Scene.mouth_o.desc")
+        name=t("VisemePanel.mouth_o.label"),
+        description=t("VisemePanel.mouth_o.desc")
     )
     bpy.types.Scene.mouth_ch = bpy.props.StringProperty(
-        name=t("Scene.mouth_ch.label"),
-        description=t("Scene.mouth_ch.desc")
+        name=t("VisemePanel.mouth_ch.label"),
+        description=t("VisemePanel.mouth_ch.desc")
     )
     bpy.types.Scene.shape_intensity = bpy.props.FloatProperty(
-        name=t("Scene.shape_intensity.label"),
-        description=t("Scene.shape_intensity.desc"),
+        name=t("VisemePanel.shape_intensity"),
+        description=t("VisemePanel.shape_intensity_desc"),
         default=1.0,
         min=0.0,
         max=2.0

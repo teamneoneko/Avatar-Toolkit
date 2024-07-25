@@ -11,8 +11,8 @@ from ..functions.translations import t
 @register_wrap
 class ExportResonite(Operator):
     bl_idname = 'avatar_toolkit.export_resonite'
-    bl_label = t("Export.resonite.label")
-    bl_description = t("Export.resonite.desc")
+    bl_label = t("Importer.export_resonite.label")
+    bl_description = t("Importer.export_resonite.desc")
     bl_options = {'REGISTER', 'UNDO'}
     filepath: bpy.props.StringProperty()
 
