@@ -3,6 +3,7 @@ from ..core import common
 from ..core.register import register_wrap
 from ..functions.translations import t
 from typing import List, Tuple
+from ..core.common import get_selected_armature, is_valid_armature, get_all_meshes
 
 @register_wrap
 class AutoVisemeButton(bpy.types.Operator):
@@ -13,14 +14,18 @@ class AutoVisemeButton(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context: bpy.types.Context) -> bool:
-        return context.active_object and context.active_object.type == 'MESH'
+        armature = get_selected_armature(context)
+        return armature is not None and is_valid_armature(armature) and get_all_meshes(context)
 
     def execute(self, context: bpy.types.Context) -> set:
         print("Starting viseme creation...")
-        mesh = context.active_object
+        mesh = bpy.data.objects.get(context.scene.selected_mesh)
         if not mesh or not common.has_shapekeys(mesh):
             self.report({'ERROR'}, t('AutoVisemeButton.error.noShapekeys'))
             return {'CANCELLED'}
+
+        # Remove existing VRC shape keys
+        self.remove_existing_vrc_shapekeys(mesh)
 
         shape_a = context.scene.mouth_a
         shape_o = context.scene.mouth_o
@@ -73,7 +78,7 @@ class AutoVisemeButton(bpy.types.Operator):
 
         # Create new viseme
         new_key = mesh.shape_key_add(name=viseme_name, from_mix=False)
-        new_key.value = 1.0
+        new_key.value = 0.0
 
         # Mix shapes
         for shape_name, value in shape_mix:
@@ -85,4 +90,9 @@ class AutoVisemeButton(bpy.types.Operator):
 
         print(f"  Viseme {viseme_name} created successfully.")
 
-
+    def remove_existing_vrc_shapekeys(self, mesh: bpy.types.Object) -> None:
+        vrc_prefixes = ['vrc.v_', 'vrc.blink_', 'vrc.lowerlid_']
+        shape_keys = mesh.data.shape_keys.key_blocks
+        for key in reversed(shape_keys):
+            if any(key.name.startswith(prefix) for prefix in vrc_prefixes):
+                mesh.shape_key_remove(key)

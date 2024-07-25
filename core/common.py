@@ -96,6 +96,9 @@ def get_all_meshes(context: Context) -> List[Object]:
         return [obj for obj in bpy.data.objects if obj.type == 'MESH' and obj.parent == armature]
     return []
 
+def get_mesh_items(self, context):
+    return [(obj.name, obj.name, "") for obj in get_all_meshes(context)]
+
 def open_web_after_delay_multi_threaded(delay: typing.Optional[float] = 1.0, url: typing.Union[str, typing.Any] = ""):
     thread = threading.Thread(target=open_web_after_delay,args=[delay,url],name="open_browser_thread")
     thread.start()
@@ -127,6 +130,10 @@ def sort_shape_keys(mesh: Object) -> None:
     if not has_shapekeys(mesh):
         print("No shape keys found. Exiting sort function.")
         return
+
+    # Set the mesh as the active object
+    bpy.context.view_layer.objects.active = mesh
+    bpy.ops.object.mode_set(mode='OBJECT')
 
     order = [
         'Basis',
@@ -176,12 +183,11 @@ def sort_shape_keys(mesh: Object) -> None:
         index = shape_keys.find(name)
         if index != i:
             print(f"Moving {name} from index {index} to {i}")
-            bpy.context.object.active_shape_key_index = index
-            while bpy.context.object.active_shape_key_index > i:
+            mesh.active_shape_key_index = index
+            while mesh.active_shape_key_index > i:
                 bpy.ops.object.shape_key_move(type='UP')
 
     print("Shape key sorting completed.")
-
 
 def get_shapekeys(mesh: Object, prefix: str = '') -> List[tuple]:
     if not has_shapekeys(mesh):

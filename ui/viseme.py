@@ -1,6 +1,7 @@
 import bpy
 from ..core.register import register_wrap
 from ..functions.translations import t
+from ..core.common import get_selected_armature
 
 @register_wrap
 class AvatarToolkitVisemePanel(bpy.types.Panel):
@@ -14,24 +15,28 @@ class AvatarToolkitVisemePanel(bpy.types.Panel):
     def draw(self, context: bpy.types.Context) -> None:
         layout = self.layout
         
-        # Check if there's an active object and it's a mesh
-        if context.active_object and context.active_object.type == 'MESH':
-            mesh = context.active_object
+        armature = get_selected_armature(context)
+        if armature:
+            layout.prop(context.scene, "selected_mesh", text="Select Mesh")
             
-            # Check if the mesh has shape keys
-            if mesh.data.shape_keys:
-                layout.prop_search(context.scene, "mouth_a", mesh.data.shape_keys, "key_blocks", text=t('VisemePanel.mouth_a.label'))
-                layout.prop_search(context.scene, "mouth_o", mesh.data.shape_keys, "key_blocks", text=t('VisemePanel.mouth_o.label'))
-                layout.prop_search(context.scene, "mouth_ch", mesh.data.shape_keys, "key_blocks", text=t('VisemePanel.mouth_ch.label'))
+            mesh = bpy.data.objects.get(context.scene.selected_mesh)
+            if mesh and mesh.type == 'MESH':
+                if mesh.data.shape_keys:
+                    layout.prop_search(context.scene, "mouth_a", mesh.data.shape_keys, "key_blocks", text=t('VisemePanel.mouth_a.label'))
+                    layout.prop_search(context.scene, "mouth_o", mesh.data.shape_keys, "key_blocks", text=t('VisemePanel.mouth_o.label'))
+                    layout.prop_search(context.scene, "mouth_ch", mesh.data.shape_keys, "key_blocks", text=t('VisemePanel.mouth_ch.label'))
 
-                layout.prop(context.scene, 'shape_intensity')
+                    layout.prop(context.scene, 'shape_intensity')
 
-                layout.operator("avatar_toolkit.create_visemes", icon='TRIA_RIGHT')
+                    layout.operator("avatar_toolkit.create_visemes", icon='TRIA_RIGHT')
+                else:
+                    layout.label(text=t('VisemePanel.error.noShapekeys'), icon='ERROR')
             else:
-                layout.label(text=t('VisemePanel.error.noShapekeys'), icon='ERROR')
+                layout.label(text=t('VisemePanel.error.selectMesh'), icon='INFO')
         else:
-            layout.label(text=t('VisemePanel.error.noMesh'), icon='ERROR')
+            layout.label(text=t('VisemePanel.error.noArmature'), icon='ERROR')
 
-        # Always show some information or options
         layout.separator()
         layout.label(text=t('VisemePanel.info.selectMesh'))
+
+

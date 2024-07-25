@@ -2,7 +2,7 @@ import bpy
 
 from ..functions.translations import t, get_languages_list, update_language
 from ..core.addon_preferences import get_preference
-from .common import get_armatures
+from .common import get_armatures, get_mesh_items
 
 def register() -> None:
     default_language = get_preference("language", 0)
@@ -13,6 +13,12 @@ def register() -> None:
         items=get_languages_list,
         default=default_language,
         update=update_language
+    )
+
+    bpy.types.Scene.selected_mesh = bpy.props.EnumProperty(
+        items=get_mesh_items,
+        name="Selected Mesh",
+        description="The currently selected mesh for viseme operations"
     )
     
     bpy.types.Scene.avatar_toolkit_language_changed = bpy.props.BoolProperty(default=False)
