@@ -2,7 +2,7 @@ from bpy.types import UIList, Panel, UILayout, Object, Context,Material, Operato
 import bpy
 from ..core.register import register_wrap
 from .panel import AvatarToolkitPanel
-from ..core.common import SceneMatClass, material_list_bool
+from ..core.common import SceneMatClass, material_list_bool, get_selected_armature
 from ..functions.atlas_materials import Atlas_Materials
 from ..functions.translations import t
 
@@ -70,14 +70,19 @@ class TextureAtlasPanel(Panel):
 
     def draw(self, context: Context):
         layout = self.layout
-        row = layout.row()
-        boxoutter = row.box()
-        direction_icon = 'RIGHTARROW' if not context.scene.texture_atlas_Has_Mat_List_Shown else 'DOWNARROW_HLT'
-        row = boxoutter.row()
-        row.operator(ExpandSection_Materials.bl_idname, text=(t("TextureAtlas.reload_list") if not context.scene.texture_atlas_Has_Mat_List_Shown else t("TextureAtlas.loaded_list")), icon=direction_icon)
-        if context.scene.texture_atlas_Has_Mat_List_Shown:
-            row = boxoutter.row()
-            row.template_list(MaterialTextureAtlasProperties.bl_idname, 'material_list', context.scene, 'materials',
-                            context.scene, 'texture_atlas_material_index', rows=12, type='DEFAULT')
+        armature = get_selected_armature(context)
+        
+        if armature:
             row = layout.row()
-            row.operator(Atlas_Materials.bl_idname, text=t("TextureAtlas.atlas_materials"))
+            boxoutter = row.box()
+            direction_icon = 'RIGHTARROW' if not context.scene.texture_atlas_Has_Mat_List_Shown else 'DOWNARROW_HLT'
+            row = boxoutter.row()
+            row.operator(ExpandSection_Materials.bl_idname, text=(t("TextureAtlas.reload_list") if not context.scene.texture_atlas_Has_Mat_List_Shown else t("TextureAtlas.loaded_list")), icon=direction_icon)
+            if context.scene.texture_atlas_Has_Mat_List_Shown:
+                row = boxoutter.row()
+                row.template_list(MaterialTextureAtlasProperties.bl_idname, 'material_list', context.scene, 'materials',
+                                context.scene, 'texture_atlas_material_index', rows=12, type='DEFAULT')
+                row = layout.row()
+                row.operator(Atlas_Materials.bl_idname, text=t("TextureAtlas.atlas_materials"))
+        else:
+            layout.label(text=t("Tools.select_armature"), icon='ERROR')

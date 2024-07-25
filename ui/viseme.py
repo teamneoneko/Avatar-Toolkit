@@ -18,18 +18,21 @@ class AvatarToolkitVisemePanel(bpy.types.Panel):
         
         armature = get_selected_armature(context)
         if armature:
-            layout.prop(context.scene, "selected_mesh", text=t("VisemePanel.select_mesh"))
+            layout.prop(context.scene, "selected_mesh", text=t("VisemePanel.select_mesh"), icon='OUTLINER_OB_MESH')
             
+            row = layout.row()
             mesh = bpy.data.objects.get(context.scene.selected_mesh)
             if mesh and mesh.type == 'MESH':
                 if mesh.data.shape_keys:
-                    layout.prop_search(context.scene, "mouth_a", mesh.data.shape_keys, "key_blocks", text=t('VisemePanel.mouth_a.label'))
-                    layout.prop_search(context.scene, "mouth_o", mesh.data.shape_keys, "key_blocks", text=t('VisemePanel.mouth_o.label'))
-                    layout.prop_search(context.scene, "mouth_ch", mesh.data.shape_keys, "key_blocks", text=t('VisemePanel.mouth_ch.label'))
+                    layout.prop_search(context.scene, "mouth_a", mesh.data.shape_keys, "key_blocks", text=t('VisemePanel.mouth_a.label'), icon='SHAPEKEY_DATA')
+                    layout.prop_search(context.scene, "mouth_o", mesh.data.shape_keys, "key_blocks", text=t('VisemePanel.mouth_o.label'), icon='SHAPEKEY_DATA')
+                    layout.prop_search(context.scene, "mouth_ch", mesh.data.shape_keys, "key_blocks", text=t('VisemePanel.mouth_ch.label'), icon='SHAPEKEY_DATA')
 
-                    layout.prop(context.scene, 'shape_intensity', text=t('VisemePanel.shape_intensity'))
+                    layout.prop(context.scene, 'shape_intensity', text=t('VisemePanel.shape_intensity'), icon='FORCE_LENNARDJONES')
 
-                    layout.operator("avatar_toolkit.create_visemes", text=t('VisemePanel.create_visemes'), icon='TRIA_RIGHT')
+                    row = layout.row()
+                    row.scale_y = 1.2
+                    row.operator("avatar_toolkit.create_visemes", text=t('VisemePanel.create_visemes'), icon='TRIA_RIGHT')
                 else:
                     layout.label(text=t('VisemePanel.error.noShapekeys'), icon='ERROR')
             else:
@@ -38,4 +41,4 @@ class AvatarToolkitVisemePanel(bpy.types.Panel):
             layout.label(text=t('VisemePanel.error.noArmature'), icon='ERROR')
 
         layout.separator()
-        layout.label(text=t('VisemePanel.info.selectMesh'))
+        layout.label(text=t('VisemePanel.info.selectMesh'), icon='HELP')

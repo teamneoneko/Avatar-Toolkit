@@ -19,19 +19,24 @@ class AvatarToolkitOptimizationPanel(bpy.types.Panel):
         armature = get_selected_armature(context)
         
         if armature:
-            layout.label(text=t("Optimization.options.label"))
+            layout.label(text=t("Optimization.options.label"), icon='SETTINGS')
             
             row = layout.row()
             row.scale_y = 1.2 
-            row.operator("avatar_toolkit.combine_materials", text=t("Optimization.combine_materials.label"))
-            
-            layout.separator(factor=0.5)
-            
+            row.operator("avatar_toolkit.combine_materials", text=t("Optimization.combine_materials.label"), icon='MATERIAL')
             row = layout.row(align=True)
             row.scale_y = 1.2 
-            row.operator("avatar_toolkit.join_all_meshes", text=t("Optimization.join_all_meshes.label"))
-            row.operator("avatar_toolkit.join_selected_meshes", text=t("Optimization.join_selected_meshes.label"))
-            row.operator("avatar_toolkit.remove_doubles_safely", text=t("Optimization.remove_doubles_safely.label"))
+            row.operator("avatar_toolkit.remove_doubles_safely", text=t("Optimization.remove_doubles_safely.label"), icon='SNAP_VERTEX')
+
+            layout.separator(factor=0.5)
+            
+            layout.label(text=t("Optimization.joinmeshes.label"), icon='SETTINGS')
+            row = layout.row(align=True)
+            row.scale_y = 1.2 
+            row.operator("avatar_toolkit.join_all_meshes", text=t("Optimization.join_all_meshes.label"), icon='OUTLINER_OB_MESH')
+            row.operator("avatar_toolkit.join_selected_meshes", text=t("Optimization.join_selected_meshes.label"), icon='STICKY_UVS_LOC')
+            
         else:
-            layout.label(text=t("Optimization.select_armature"))
+            layout.label(text=t("Optimization.select_armature"), icon='ERROR')
+
 
