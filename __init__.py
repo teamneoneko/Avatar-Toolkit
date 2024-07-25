@@ -26,13 +26,6 @@ def register():
     # Order the classes before registration
     core.register.order_classes()
     # Register the UI classes
-    for cls in __bl_ordered_classes:
-        print("registering" + str(cls))
-        bpy.utils.register_class(cls)   
-    
-    
-    
-    # Register the properties
     for cls in core.register.__bl_ordered_classes:
         print("registering " + str(cls))
         bpy.utils.register_class(cls)
