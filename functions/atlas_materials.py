@@ -119,8 +119,8 @@ def prep_images_in_scene(context: Context) -> list[MaterialImageList]:
 class Atlas_Materials(Operator):
 
     bl_idname = "avatar_toolkit.atlas_materials"
-    bl_label = "Atlas Materials"
-    bl_description = "Atlas materials to optimize the model"
+    bl_label = t("TextureAtlas.atlas_materials")
+    bl_description = t("TextureAtlas.atlas_materials_desc")
     bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod
@@ -270,8 +270,10 @@ class Atlas_Materials(Operator):
                 
                 mesh.materials.append(atlased_mat.material)
 
+        self.report({'INFO'}, t("TextureAtlas.atlas_completed"))
             return {"FINISHED"}
         except Exception as e:
+            self.report({'ERROR'}, t("TextureAtlas.atlas_error"))
             raise e
             return {"FINISHED"}
          

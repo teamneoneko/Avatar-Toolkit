@@ -63,7 +63,6 @@ class AutoVisemeButton(bpy.types.Operator):
         print("Sorting shape keys...")
         common.sort_shape_keys(mesh)
 
-        print("Viseme creation completed.")
         self.report({'INFO'}, t('AutoVisemeButton.success'))
         return {'FINISHED'}
 

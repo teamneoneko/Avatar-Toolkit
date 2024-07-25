@@ -71,7 +71,7 @@ class CombineMaterials(Operator):
     def execute(self, context: Context) -> Set[str]:
         armature = get_selected_armature(context)
         if not armature:
-            self.report({'WARNING'}, "No armature selected")
+            self.report({'WARNING'}, t("Optimization.no_armature_selected"))
             return {'CANCELLED'}
         
         context.view_layer.objects.active = armature
@@ -79,7 +79,7 @@ class CombineMaterials(Operator):
         
         meshes = get_all_meshes(context)
         if not meshes:
-            self.report({'WARNING'}, "No meshes found for the selected armature")
+            self.report({'WARNING'}, t("Optimization.no_meshes_found"))
             return {'CANCELLED'}
         
         self.consolidate_materials(meshes)
@@ -111,7 +111,7 @@ class CombineMaterials(Operator):
                     else:
                         mat_mapping[base_name] = mat
         
-        report_consolidated(self, num_combined)
+        self.report({'INFO'}, t("Optimization.materials_combined").format(num_combined=num_combined))
 
     def remove_unused_materials(self) -> None:
         for mat in bpy.data.materials:
