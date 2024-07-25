@@ -146,6 +146,9 @@ def get_all_meshes(context: Context) -> List[Object]:
         return [obj for obj in bpy.data.objects if obj.type == 'MESH' and obj.parent == armature]
     return []
 
+def get_mesh_items(self, context):
+    return [(obj.name, obj.name, "") for obj in get_all_meshes(context)]
+
 def open_web_after_delay_multi_threaded(delay: typing.Optional[float] = 1.0, url: typing.Union[str, typing.Any] = ""):
     thread = threading.Thread(target=open_web_after_delay,args=[delay,url],name="open_browser_thread")
     thread.start()
@@ -165,3 +168,75 @@ def duplicatebone(b: bpy.types.EditBone) -> bpy.types.EditBone:
     cb.matrix = b.matrix
     cb.parent = b.parent
     return cb
+
+def has_shapekeys(mesh_obj: Object) -> bool:
+    return mesh_obj.data.shape_keys is not None
+
+def sort_shape_keys(mesh: Object) -> None:
+    print("Starting shape key sorting...")
+    if not has_shapekeys(mesh):
+        print("No shape keys found. Exiting sort function.")
+        return
+
+    # Set the mesh as the active object
+    bpy.context.view_layer.objects.active = mesh
+    bpy.ops.object.mode_set(mode='OBJECT')
+
+    order = [
+        'Basis',
+        'vrc.blink_left',
+        'vrc.blink_right',
+        'vrc.lowerlid_left',
+        'vrc.lowerlid_right',
+        'vrc.v_aa',
+        'vrc.v_ch',
+        'vrc.v_dd',
+        'vrc.v_e',
+        'vrc.v_ff',
+        'vrc.v_ih',
+        'vrc.v_kk',
+        'vrc.v_nn',
+        'vrc.v_oh',
+        'vrc.v_ou',
+        'vrc.v_pp',
+        'vrc.v_rr',
+        'vrc.v_sil',
+        'vrc.v_ss',
+        'vrc.v_th',
+    ]
+
+    shape_keys = mesh.data.shape_keys.key_blocks
+    print(f"Total shape keys: {len(shape_keys)}")
+
+    # Create a list of shape key names in their current order
+    current_order = [key.name for key in shape_keys]
+
+    # Create a new order list
+    new_order = []
+
+    # First, add all the keys that are in the predefined order
+    for name in order:
+        if name in current_order:
+            new_order.append(name)
+            current_order.remove(name)
+
+    # Then add any remaining keys that weren't in the predefined order
+    new_order.extend(current_order)
+
+    print("New order:", new_order)
+
+    # Now, rearrange the shape keys based on the new order
+    for i, name in enumerate(new_order):
+        index = shape_keys.find(name)
+        if index != i:
+            print(f"Moving {name} from index {index} to {i}")
+            mesh.active_shape_key_index = index
+            while mesh.active_shape_key_index > i:
+                bpy.ops.object.shape_key_move(type='UP')
+
+    print("Shape key sorting completed.")
+
+def get_shapekeys(mesh: Object, prefix: str = '') -> List[tuple]:
+    if not has_shapekeys(mesh):
+        return []
+    return [(key.name, key.name, key.name) for key in mesh.data.shape_keys.key_blocks if key.name != 'Basis' and key.name.startswith(prefix)]
