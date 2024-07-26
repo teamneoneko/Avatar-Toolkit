@@ -3,6 +3,7 @@ from bpy.types import Operator
 from bpy_extras.io_utils import ImportHelper
 from ..core.register import register_wrap
 from ..core.importer import imports, import_types
+from ..core.common import remove_default_objects
 from ..functions.translations import t
 import pathlib
 import os
@@ -23,7 +24,7 @@ class ImportAnyModel(Operator, ImportHelper):
     #since I wrote this myself, a bit more efficent than cats. mostly - @989onan
     def execute(self, context: bpy.types.Context):
         file_grouping_dict: dict[str, list[dict[str,str]]] = dict()#group our files so our importers can import them together. in the case of OBJ+MTL and others that need grouped files, this is extremely important.
-
+        common.remove_default_objects()
         #check if we are importing multiple files
         is_multi = False
         try:

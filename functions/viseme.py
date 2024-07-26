@@ -3,7 +3,7 @@ from ..core import common
 from ..core.register import register_wrap
 from ..functions.translations import t
 from typing import List, Tuple
-from ..core.common import get_selected_armature, is_valid_armature, get_all_meshes
+from ..core.common import get_selected_armature, is_valid_armature, get_all_meshes, init_progress, update_progress, finish_progress
 
 @register_wrap
 class AutoVisemeButton(bpy.types.Operator):
@@ -18,26 +18,32 @@ class AutoVisemeButton(bpy.types.Operator):
         return armature is not None and is_valid_armature(armature) and get_all_meshes(context)
 
     def execute(self, context: bpy.types.Context) -> set:
-        print("Starting viseme creation...")
-        mesh = bpy.data.objects.get(context.scene.selected_mesh)
-        if not mesh or not common.has_shapekeys(mesh):
-            self.report({'ERROR'}, t('AutoVisemeButton.error.noShapekeys'))
+        try:
+            self.create_visemes(context)
+            return {'FINISHED'}
+        except Exception as e:
+            self.report({'ERROR'}, str(e))
             return {'CANCELLED'}
 
-        # Remove existing VRC shape keys
+    def create_visemes(self, context: bpy.types.Context) -> None:
+        init_progress(context, 5)  # 5 main steps
+
+        update_progress(self, context, t("VisemePanel.start_viseme_creation"))
+        mesh = bpy.data.objects.get(context.scene.selected_mesh)
+        if not mesh or not common.has_shapekeys(mesh):
+            raise ValueError(t('AutoVisemeButton.error.noShapekeys'))
+
+        update_progress(self, context, t("VisemePanel.removing_existing_visemes"))
         self.remove_existing_vrc_shapekeys(mesh)
 
         shape_a = context.scene.mouth_a
         shape_o = context.scene.mouth_o
         shape_ch = context.scene.mouth_ch
 
-        print(f"Selected shapes: A={shape_a}, O={shape_o}, CH={shape_ch}")
-
         if shape_a == "Basis" or shape_o == "Basis" or shape_ch == "Basis":
-            self.report({'ERROR'}, t('AutoVisemeButton.error.selectShapekeys'))
-            return {'CANCELLED'}
+            raise ValueError(t('AutoVisemeButton.error.selectShapekeys'))
 
-        # Create visemes
+        update_progress(self, context, t("VisemePanel.creating_visemes"))
         visemes: List[Tuple[str, List[Tuple[str, float]]]] = [
             ('vrc.v_aa', [(shape_a, 0.9998)]),
             ('vrc.v_ch', [(shape_ch, 0.9996)]),
@@ -57,37 +63,28 @@ class AutoVisemeButton(bpy.types.Operator):
         ]
 
         for viseme_name, shape_mix in visemes:
-            print(f"Creating viseme: {viseme_name}")
             self.create_viseme(mesh, viseme_name, shape_mix, context.scene.shape_intensity)
 
-        print("Sorting shape keys...")
+        update_progress(self, context, t("VisemePanel.sorting_shapekeys"))
         common.sort_shape_keys(mesh)
 
-        self.report({'INFO'}, t('AutoVisemeButton.success'))
-        return {'FINISHED'}
+        update_progress(self, context, t("VisemePanel.viseme_creation_completed"))
+        finish_progress(context)
 
     def create_viseme(self, mesh: bpy.types.Object, viseme_name: str, shape_mix: List[Tuple[str, float]], intensity: float) -> None:
-        print(f"  Creating viseme: {viseme_name}")
         shape_keys = mesh.data.shape_keys.key_blocks
 
-        # Remove existing viseme if it exists
         if viseme_name in shape_keys:
-            print(f"  Removing existing viseme: {viseme_name}")
             mesh.shape_key_remove(shape_keys[viseme_name])
 
-        # Create new viseme
         new_key = mesh.shape_key_add(name=viseme_name, from_mix=False)
         new_key.value = 0.0
 
-        # Mix shapes
         for shape_name, value in shape_mix:
             if shape_name in shape_keys:
                 source_shape = shape_keys[shape_name]
-                print(f"    Mixing shape: {shape_name} with value: {value * intensity}")
                 for i, vert in enumerate(new_key.data):
                     vert.co += (source_shape.data[i].co - shape_keys['Basis'].data[i].co) * value * intensity
-
-        print(f"  Viseme {viseme_name} created successfully.")
 
     def remove_existing_vrc_shapekeys(self, mesh: bpy.types.Object) -> None:
         vrc_prefixes = ['vrc.v_', 'vrc.blink_', 'vrc.lowerlid_']

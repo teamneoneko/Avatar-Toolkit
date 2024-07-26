@@ -15,7 +15,9 @@ class AvatarToolkitSettingsPanel(bpy.types.Panel):
 
     def draw(self, context):
         layout = self.layout
-        layout.prop(context.scene, "avatar_toolkit_language", text=t("Settings.language.label"))
+        
+        layout.label(text=t("Settings.language.label"))
+        layout.prop(context.scene, "avatar_toolkit_language", text="", icon='WORLD')
 
 @register_wrap
 class AVATAR_TOOLKIT_OT_translation_restart_popup(bpy.types.Operator):
@@ -26,7 +28,6 @@ class AVATAR_TOOLKIT_OT_translation_restart_popup(bpy.types.Operator):
 
     def execute(self, context):
         if context.scene.avatar_toolkit_language_changed:
-            # Reload the addon after the popup is closed
             bpy.ops.script.reload()
             context.scene.avatar_toolkit_language_changed = False
         return {'FINISHED'}
@@ -36,5 +37,6 @@ class AVATAR_TOOLKIT_OT_translation_restart_popup(bpy.types.Operator):
 
     def draw(self, context):
         layout = self.layout
-        layout.label(text=t("Settings.translation_restart_popup.message1"))
-        layout.label(text=t("Settings.translation_restart_popup.message2"))
+        layout.label(text=t("Settings.translation_restart_popup.message1"), icon='INFO')
+        layout.label(text=t("Settings.translation_restart_popup.message2"), icon='FILE_REFRESH')
+

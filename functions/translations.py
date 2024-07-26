@@ -30,7 +30,7 @@ def load_translations() -> bool:
             languages.append(lang)
 
     language_index = get_preference("language", 0)
-    print(f"Loading translations for language index: {language_index}")  # Debug print
+    # print(f"Loading translations for language index: {language_index}")  # Debug print
 
     if language_index == 0:  # "auto"
         language = bpy.context.preferences.view.language
@@ -40,27 +40,27 @@ def load_translations() -> bool:
         except IndexError:
             language = bpy.context.preferences.view.language
 
-    print(f"Selected language: {language}")  # Debug print
+    # print(f"Selected language: {language}")  # Debug print
 
     translation_file: str = os.path.join(translations_dir, language + ".json")
     if os.path.exists(translation_file):
         with open(translation_file, 'r', encoding='utf-8') as file:
             dictionary = json.load(file)["messages"]
-        print(f"Loaded translations: {dictionary}")  # Debug print
+        # print(f"Loaded translations: {dictionary}")  # Debug print
     else:
         custom_language: str = language.split("_")[0]
         custom_translation_file: str = os.path.join(translations_dir, custom_language + ".json")
         if os.path.exists(custom_translation_file):
             with open(custom_translation_file, 'r', encoding='utf-8') as file:
                 dictionary = json.load(file)["messages"]
-            print(f"Loaded custom translations: {dictionary}")  # Debug print
+            # print(f"Loaded custom translations: {dictionary}")  # Debug print
         else:
             print(f"Translation file not found for language: {language}")
             default_file: str = os.path.join(translations_dir, "en_US.json")
             if os.path.exists(default_file):
                 with open(default_file, 'r', encoding='utf-8') as file:
                     dictionary = json.load(file)["messages"]
-                print(f"Loaded default translations: {dictionary}")  # Debug print
+                # print(f"Loaded default translations: {dictionary}")  # Debug print
             else:
                 print("Default translation file 'en_US.json' not found.")
 
@@ -72,7 +72,7 @@ def t(phrase: str, default: str = None) -> str:
         if verbose:
             print(f'Warning: Unknown phrase: {phrase}')
         return default if default is not None else phrase
-    print(f"Translating '{phrase}' to '{output}'")  # Debug print
+    # print(f"Translating '{phrase}' to '{output}'")  # Debug print
     return output
 
 def get_language_display_name(lang: str) -> str:
@@ -93,5 +93,5 @@ def update_language(self, context):
     bpy.ops.avatar_toolkit.translation_restart_popup('INVOKE_DEFAULT')
 
 # Initial load of translations
-print("Performing initial load of translations")  # Debug print
+# print("Performing initial load of translations")  # Debug print
 load_translations()

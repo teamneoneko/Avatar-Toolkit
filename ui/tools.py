@@ -21,13 +21,13 @@ class AvatarToolkitToolsPanel(bpy.types.Panel):
         armature = get_selected_armature(context)
         
         if armature:
-            layout.label(text=t("Tools.tools_title.label"))
+            layout.label(text=t("Tools.tools_title.label"), icon='TOOL_SETTINGS')
             layout.separator(factor=0.5)
 
             row = layout.row(align=True)
             row.scale_y = 1.5  
-            row.operator("avatar_toolkit.convert_to_resonite", text=t("Tools.convert_to_resonite.label"))
+            row.operator("avatar_toolkit.convert_to_resonite", text=t("Tools.convert_to_resonite.label"), icon='SCENE_DATA')
             row = layout.row(align=True)
-            row.operator(CreateDigitigradeLegs.bl_idname, text=t("Tools.create_digitigrade_legs.label"))
+            row.operator(CreateDigitigradeLegs.bl_idname, text=t("Tools.create_digitigrade_legs.label"), icon='BONE_DATA')
         else:
-            layout.label(text=t("Tools.select_armature"))
+            layout.label(text=t("Tools.select_armature"), icon='ERROR')

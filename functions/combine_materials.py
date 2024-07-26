@@ -1,8 +1,8 @@
 import bpy
 import re
-from typing import List, Tuple, Optional, Set
-from bpy.types import Material, Operator, Context, Object
-from ..core.common import clean_material_names, get_selected_armature, is_valid_armature, get_all_meshes
+from typing import List, Tuple, Optional, Set, Dict
+from bpy.types import Material, Operator, Context, Object, NodeTree
+from ..core.common import clean_material_names, get_selected_armature, is_valid_armature, get_all_meshes, init_progress, update_progress, finish_progress
 from ..core.register import register_wrap
 from ..functions.translations import t
 
@@ -21,40 +21,36 @@ def copy_tex_nodes(mat1: Material, mat2: Material) -> None:
                 node2.mapping = node1.mapping
                 node2.projection = node1.projection
 
-def consolidate_textures(mat1: Material, mat2: Material) -> None:
-    if mat1.node_tree and mat2.node_tree:
-        for node1 in mat1.node_tree.nodes:
-            if node1.type == 'TEX_IMAGE':
-                if node1.node_tree:
-                    consolidate_textures(node1.node_tree, mat2.node_tree)
-                
-                for node2 in mat2.node_tree.nodes:
-                    if (node2.type == 'TEX_IMAGE' and
-                        node1.image == node2.image):
-                        consolidate_nodes(node1, node2)
-                        node2.image = node1.image
-                        copy_tex_nodes(mat1, mat2)
+def consolidate_textures(node_tree1: NodeTree, node_tree2: NodeTree) -> None:
+    for node1 in node_tree1.nodes:
+        if node1.type == 'TEX_IMAGE':
+            for node2 in node_tree2.nodes:
+                if (node2.type == 'TEX_IMAGE' and
+                    node1.image == node2.image):
+                    consolidate_nodes(node1, node2)
+                    node2.image = node1.image
+        elif node1.type == 'GROUP':
+            if node1.node_tree and node2.node_tree:
+                consolidate_textures(node1.node_tree, node2.node_tree)
 
 def color_match(col1: Tuple[float, float, float, float], col2: Tuple[float, float, float, float], tolerance: float = 0.01) -> bool:
-    return abs(col1[0] - col2[0]) < tolerance
+    return all(abs(c1 - c2) < tolerance for c1, c2 in zip(col1, col2))
 
 def materials_match(mat1: Material, mat2: Material, tolerance: float = 0.01) -> bool:
     if not color_match(mat1.diffuse_color, mat2.diffuse_color, tolerance):
         return False
     
-    if mat1.roughness != mat2.roughness:
+    if abs(mat1.roughness - mat2.roughness) > tolerance:
         return False
     
-    consolidate_textures(mat1, mat2)
+    if mat1.node_tree and mat2.node_tree:
+        consolidate_textures(mat1.node_tree, mat2.node_tree)
     
     return True
 
 def get_base_name(name: str) -> str:
     mat_match = re.match(r"^(.*)\.\d{3}$", name)
     return mat_match.group(1) if mat_match else name
-
-def report_consolidated(self: Operator, num_combined: int) -> None:
-    self.report({'INFO'}, f"Combined {num_combined} materials")
 
 @register_wrap
 class CombineMaterials(Operator):
@@ -82,10 +78,22 @@ class CombineMaterials(Operator):
             self.report({'WARNING'}, t("Optimization.no_meshes_found"))
             return {'CANCELLED'}
         
+        init_progress(context, 5)  # 5 steps in total
+        
+        update_progress(self, context, t("Optimization.consolidating_materials"))
         self.consolidate_materials(meshes)
-        self.remove_unused_materials()
-        self.cleanmatslots()
+        
+        update_progress(self, context, t("Optimization.cleaning_material_slots"))
+        self.clean_material_slots(meshes)
+        
+        update_progress(self, context, t("Optimization.cleaning_material_names"))
         self.clean_material_names()
+        
+        update_progress(self, context, t("Optimization.clearing_unused_data"))
+        self.clear_unused_data_blocks()
+        
+        update_progress(self, context, t("Optimization.finalizing"))
+        finish_progress(context)
         
         return {'FINISHED'}
 
@@ -102,31 +110,29 @@ class CombineMaterials(Operator):
                         base_mat: Material = mat_mapping[base_name]
                         try:
                             if materials_match(base_mat, mat):
-                                consolidate_textures(base_mat, mat)
+                                consolidate_textures(base_mat.node_tree, mat.node_tree)
                                 num_combined += 1
                                 slot.material = base_mat
                         except AttributeError:
-                            # Skip this material if there's an attribute mismatch
+                            self.report({'WARNING'}, t("Optimization.material_attribute_mismatch").format(material_name=mat.name))
                             continue
                     else:
                         mat_mapping[base_name] = mat
         
         self.report({'INFO'}, t("Optimization.materials_combined").format(num_combined=num_combined))
 
-    def remove_unused_materials(self) -> None:
-        for mat in bpy.data.materials:
-            if not any(obj for obj in bpy.data.objects if obj.material_slots and mat.name in obj.material_slots):
-                bpy.data.materials.remove(mat, do_unlink=True)
-    
-    def cleanmatslots(self) -> None:
-        for obj in bpy.data.objects:
-            if obj.type == 'MESH':
-                obj.select_set(True)
-                bpy.context.view_layer.objects.active = obj
-                bpy.ops.object.material_slot_remove_unused()
-                obj.select_set(False)
-    
+    def clean_material_slots(self, meshes: List[Object]) -> None:
+        for obj in meshes:
+            obj.select_set(True)
+            bpy.context.view_layer.objects.active = obj
+            bpy.ops.object.material_slot_remove_unused()
+            obj.select_set(False)
+
     def clean_material_names(self) -> None:
         for obj in bpy.data.objects:
             if obj.type == 'MESH':
                 clean_material_names(obj)
+
+    def clear_unused_data_blocks(self) -> None:
+        bpy.ops.outliner.orphans_purge(do_local_ids=True, do_linked_ids=True, do_recursive=True)
+

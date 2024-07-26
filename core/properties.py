@@ -26,6 +26,9 @@ def register() -> None:
     
     bpy.types.Scene.avatar_toolkit_language_changed = bpy.props.BoolProperty(default=False)
 
+    bpy.types.Scene.avatar_toolkit_progress_steps = bpy.props.IntProperty(default=0)
+    bpy.types.Scene.avatar_toolkit_progress_current = bpy.props.IntProperty(default=0)
+
     bpy.types.Scene.mouth_a = bpy.props.StringProperty(
         name=t("VisemePanel.mouth_a.label"),
         description=t("VisemePanel.mouth_a.desc")

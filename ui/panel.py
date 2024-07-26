@@ -15,5 +15,5 @@ class AvatarToolkitPanel(bpy.types.Panel):
         layout.label(text=t("AvatarToolkit.welcome"))
         layout.label(text=t("AvatarToolkit.description"))
         layout.label(text=t("AvatarToolkit.alpha_warning"))
-        #print("Avatar Toolkit Panel is being drawn")
+
         
