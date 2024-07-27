@@ -108,6 +108,7 @@
     "Tools.no_armature_selected": "アーマチュアが選択されていません",
     "Tools.select_armature": "アーマチュアを選択してください",
     "Tools.tools_title.label": "ツール：",
+    "Tools.separate_by.label": "別:",
     "Tools.separate_by_materials.label": "マテリアルで分離",
     "Tools.separate_by_materials.desc": "選択されたメッシュをマテリアルごとに分離します",
     "Tools.separate_by_materials.success": "メッシュがマテリアルごとに正常に分離されました",

@@ -108,6 +108,7 @@
     "Tools.no_armature_selected": "No armature selected",
     "Tools.select_armature": "Please select an armature",
     "Tools.tools_title.label": "Tools:",
+    "Tools.separate_by.label": "Separate By:",
     "Tools.separate_by_materials.label": "Separate by Materials",
     "Tools.separate_by_materials.desc": "Separate the selected mesh by materials",
     "Tools.separate_by_materials.success": "Mesh separated by materials successfully",
