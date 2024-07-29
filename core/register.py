@@ -94,22 +94,3 @@ def get_dependency_from_annotation(value):
         if value[0] in (bpy.props.PointerProperty, bpy.props.CollectionProperty):
             return value[1]["type"]
     return None
-
-
-# Find order to register to solve dependencies
-#################################################
-
-def toposort(deps_dict):
-    sorted_list = []
-    sorted_values = set()
-    while len(deps_dict) > 0:
-        unsorted = []
-        for value, deps in deps_dict.items():
-            if len(deps) == 0:
-                sorted_list.append(value)
-                sorted_values.add(value)
-            else:
-                unsorted.append(value)
-        deps_dict = {value : deps_dict[value] - sorted_values for value in unsorted}
-    
-    return sorted_list
