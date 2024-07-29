@@ -24,11 +24,11 @@ class AvatarToolkitVisemePanel(bpy.types.Panel):
             mesh = bpy.data.objects.get(context.scene.selected_mesh)
             if mesh and mesh.type == 'MESH':
                 if mesh.data.shape_keys:
-                    layout.prop_search(context.scene, "mouth_a", mesh.data.shape_keys, "key_blocks", text=t('VisemePanel.mouth_a.label'), icon='SHAPEKEY_DATA')
-                    layout.prop_search(context.scene, "mouth_o", mesh.data.shape_keys, "key_blocks", text=t('VisemePanel.mouth_o.label'), icon='SHAPEKEY_DATA')
-                    layout.prop_search(context.scene, "mouth_ch", mesh.data.shape_keys, "key_blocks", text=t('VisemePanel.mouth_ch.label'), icon='SHAPEKEY_DATA')
+                    layout.prop_search(context.scene, "avatar_toolkit_mouth_a", mesh.data.shape_keys, "key_blocks", text=t('VisemePanel.mouth_a.label'), icon='SHAPEKEY_DATA')
+                    layout.prop_search(context.scene, "avatar_toolkit_mouth_o", mesh.data.shape_keys, "key_blocks", text=t('VisemePanel.mouth_o.label'), icon='SHAPEKEY_DATA')
+                    layout.prop_search(context.scene, "avatar_toolkit_mouth_ch", mesh.data.shape_keys, "key_blocks", text=t('VisemePanel.mouth_ch.label'), icon='SHAPEKEY_DATA')
 
-                    layout.prop(context.scene, 'shape_intensity', text=t('VisemePanel.shape_intensity'), icon='FORCE_LENNARDJONES')
+                    layout.prop(context.scene, 'avatar_toolkit_shape_intensity', text=t('VisemePanel.shape_intensity'), icon='FORCE_LENNARDJONES')
 
                     row = layout.row()
                     row.scale_y = 1.2

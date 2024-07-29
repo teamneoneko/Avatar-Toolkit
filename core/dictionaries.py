@@ -78,7 +78,7 @@ bone_names = {
     "left_ankle": ["leftankle", "anklel", "rankle", "leftfoot", "footl", "lfoot", "leftfoot", "leftfeet", "feetleft", "lfeet", "feetl", "valvebipedbip01lfoot"],
     "left_toe": ["lefttoe", "toeleft", "toel", "ltoe", "toesl", "ltoes", "valvebipedbip01ltoe0"],
 
-    "hips": ["pelvis", "hips", "valvebipedbip01pelvis"],
+    "hips": ["pelvis", "hips", "hip", "valvebipedbip01pelvis"],
     "spine": ["torso", "spine", "valvebipedbip01spine"],
     "chest": ["chest", "valvebipedbip01spine1"],
     "upper_chest": ["upperchest", "valvebipedbip01spine4"],

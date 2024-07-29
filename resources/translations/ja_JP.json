@@ -18,7 +18,7 @@
     "Importer.export_vrchat.label": "VRChatにエクスポート",
     "Importer.mmd_anim_importer.desc": "MMDアニメーション（.vmd）をインポート",
     "Importer.mmd_anim_importer.label": "MMDアニメーション",
-    "Importing.importer_search_term": "https://search.brave.com/search?q=blender+{extension}+importer+addon&source=web",
+    "Importing.importer_search_term": "https://search.brave.com/search?q=Blender+{extension}+インポーターアドオン&source=web",
     "Importing.need_importer": "{extension}タイプに必要なインポーターがありません！インポーター検索用のウェブブラウザを開きます...",
     "Language.auto": "自動",
     "Language.en_US": "English",

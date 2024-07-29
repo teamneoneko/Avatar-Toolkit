@@ -36,9 +36,9 @@ class AutoVisemeButton(bpy.types.Operator):
         update_progress(self, context, t("VisemePanel.removing_existing_visemes"))
         self.remove_existing_vrc_shapekeys(mesh)
 
-        shape_a = context.scene.mouth_a
-        shape_o = context.scene.mouth_o
-        shape_ch = context.scene.mouth_ch
+        shape_a = context.scene.avatar_toolkit_mouth_a
+        shape_o = context.scene.avatar_toolkit_mouth_o
+        shape_ch = context.scene.avatar_toolkit_mouth_ch
 
         if shape_a == "Basis" or shape_o == "Basis" or shape_ch == "Basis":
             raise ValueError(t('AutoVisemeButton.error.selectShapekeys'))
@@ -63,7 +63,7 @@ class AutoVisemeButton(bpy.types.Operator):
         ]
 
         for viseme_name, shape_mix in visemes:
-            self.create_viseme(mesh, viseme_name, shape_mix, context.scene.shape_intensity)
+            self.create_viseme(mesh, viseme_name, shape_mix, context.scene.avatar_toolkit_shape_intensity)
 
         update_progress(self, context, t("VisemePanel.sorting_shapekeys"))
         common.sort_shape_keys(mesh)

@@ -95,13 +95,14 @@ class ConvertToResonite(Operator):
         bpy.ops.object.mode_set(mode='EDIT')
 
         bpy.ops.object.mode_set(mode='OBJECT')
+        bone.name = re.compile(re.escape("<noik>"), re.IGNORECASE).sub("",bone.name) #remove "NOIK" from bones before translating again, in case an update was done that fixes a translation.
         for bone in armature.data.bones:
             if simplify_bonename(bone.name) in reverse_bone_lookup and reverse_bone_lookup[simplify_bonename(bone.name)] in resonite_translations:
                 bone.name = resonite_translations[reverse_bone_lookup[simplify_bonename(bone.name)]]
             else:
                 untranslated_bones.add(bone.name)
                 
-                bone.name =  re.compile(re.escape("<noik>"), re.IGNORECASE).sub("",bone.name)+"<noik>"
+                bone.name = bone.name+"<noik>"
                 translate_bone_fails += 1
             
         bpy.ops.object.mode_set(mode='OBJECT')
