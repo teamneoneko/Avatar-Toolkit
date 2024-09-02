@@ -1,9 +1,6 @@
-from ast import Dict
-from itertools import count
 import bpy
-import re
-from typing import List, Tuple, Optional, TypedDict, Any
-from bpy.types import Material, Operator, Context, Object
+from typing import List, TypedDict, Any
+from bpy.types import Operator, Context, Object
 from ..core.register import register_wrap
 from ..core.common import get_selected_armature, is_valid_armature, select_current_armature, get_all_meshes
 from ..functions.translations import t
@@ -13,8 +10,25 @@ class meshEntry(TypedDict):
     shapekeys: list[str]
     vertices: int
     cur_vertex_pass: int
-    mesh_shapekeys: dict[str, Object]
 
+@register_wrap
+class RemoveDoublesSafelyAdvanced(Operator):
+    bl_idname = "avatar_toolkit.remove_doubles_safely_advanced"
+    bl_label = t("Optimization.remove_doubles_safely_advanced.label")
+    bl_description = t("Optimization.remove_doubles_safely_advanced.desc")
+    bl_options = {'REGISTER', 'UNDO'}
+
+
+    merge_distance: bpy.props.FloatProperty(default=0.0001)
+
+    @classmethod
+    def poll(cls, context: Context) -> bool:
+        armature = get_selected_armature(context)
+        return armature is not None and is_valid_armature(armature)
+
+    def execute(self, context: Context):
+        bpy.ops.avatar_toolkit.remove_doubles_safely('INVOKE_DEFAULT',advanced=True,merge_distance=self.merge_distance)
+        return {'FINISHED'}
 @register_wrap
 class RemoveDoublesSafely(Operator):
     bl_idname = "avatar_toolkit.remove_doubles_safely"
@@ -44,13 +58,12 @@ class RemoveDoublesSafely(Operator):
         for mesh in objects:
             if mesh.data.name not in [stored_object["mesh"].data.name for stored_object in self.objects_to_do]:
                 print("setting up data for object" + mesh.name)
-                mesh_shapekeys = {"mesh":mesh,"shapekeys":[],"vertices":0,"cur_vertex_pass":0,"mesh_shapekeys":{}}
+                mesh_shapekeys = {"mesh":mesh,"shapekeys":[],"vertices":0,"cur_vertex_pass":0}
                 mesh_data: bpy.types.Mesh = mesh.data
                 shape: bpy.types.ShapeKey = None
                 mesh_shapekeys["vertices"] = len(mesh_data.vertices)
-                bpy.ops.object.mode_set(mode='EDIT')
-                mesh_data.vertices.foreach_set("select",[False]*len(mesh_data.vertices))
                 bpy.ops.object.mode_set(mode='OBJECT')
+                mesh_data.vertices.foreach_set("select",[False]*len(mesh_data.vertices))
                 
                 if mesh_data.shape_keys:
                     for shape in mesh_data.shape_keys.key_blocks:
@@ -58,20 +71,6 @@ class RemoveDoublesSafely(Operator):
                         if self.advanced:
                             bpy.ops.object.mode_set(mode='OBJECT')
                             bpy.ops.object.select_all(action='DESELECT')
-                            context.view_layer.objects.active = mesh
-                            mesh.select_set(True)
-                            mesh.active_shape_key_index = mesh_data.shape_keys.key_blocks.find(shape.name)
-                            bpy.ops.object.duplicate()
-                            newobj = context.view_layer.objects.active
-                            bpy.ops.object.shape_key_move(type='TOP')
-                            
-                            bpy.ops.object.mode_set(mode='EDIT')
-                            bpy.ops.object.mode_set(mode='OBJECT')
-
-                            bpy.ops.object.shape_key_remove(all=True, apply_mix=False)
-                            newobj.name = shape.name+"_object_is_"+mesh.name
-                            mesh_shapekeys["mesh_shapekeys"][shape.name] = newobj
-
                             context.view_layer.objects.active = mesh
                             bpy.ops.object.select_all(action='DESELECT')
                 print("queued data for "+mesh.name+" is: ")
@@ -81,7 +80,15 @@ class RemoveDoublesSafely(Operator):
         return {'FINISHED'}
         
     def invoke(self, context: Context, event: bpy.types.Event) -> set:
+        print("==================")
+        print("==================")
+        print("==================")
+        print("==================")
         print("starting modal execution of merge doubles safely.")
+        print("==================")
+        print("==================")
+        print("==================")
+        print("==================")
         self.execute(context)
         context.window_manager.modal_handler_add(self)
         return {'RUNNING_MODAL'}
@@ -96,7 +103,7 @@ class RemoveDoublesSafely(Operator):
         for index, point in enumerate(mesh["mesh"].active_shape_key.points):
             if point.co.xyz != mesh_data.shape_keys.key_blocks[0].points[index].co.xyz:
                 mesh_data.vertices[index].select = True
-                print("shapekey has a moved vertex at index \""+str(index)+"\", excluding from double merging!")
+                print("shapekey has a moved vertex at index \""+str(index)+"\", excluding from simple double merging!")
         bpy.ops.object.mode_set(mode='EDIT')
         
         bpy.ops.object.mode_set(mode='OBJECT')
@@ -106,10 +113,10 @@ class RemoveDoublesSafely(Operator):
     def modify_mesh_advanced(self, context: Context, mesh_entry: meshEntry):
         
         final_merged_vertex_group: list[int] = []
-        
+        initialized_final: bool = False
 
         for shapekey_name in mesh_entry["shapekeys"]:
-            mesh = mesh_entry["mesh_shapekeys"][shapekey_name]
+            mesh = mesh_entry["mesh"]
 
             
 
@@ -122,8 +129,17 @@ class RemoveDoublesSafely(Operator):
             vertices_original: dict[int,Any] = {}
             original_count: int  = len(mesh_data.vertices)
             mesh.select_set(True)
+            mesh.active_shape_key_index = mesh_data.shape_keys.key_blocks.find(shapekey_name)
             bpy.ops.object.duplicate()
+            bpy.ops.object.shape_key_move(type='TOP')
+                            
+            bpy.ops.object.mode_set(mode='EDIT')
+            bpy.ops.object.mode_set(mode='OBJECT')
+
+            bpy.ops.object.shape_key_remove(all=True, apply_mix=False)
+            
             mesh = context.view_layer.objects.active
+            mesh.name = shapekey_name+"_object_is_"+mesh.name
             bpy.ops.object.mode_set(mode='OBJECT')
             bpy.ops.object.select_all(action='DESELECT')
 
@@ -139,15 +155,8 @@ class RemoveDoublesSafely(Operator):
                 vertices_original[index] = merged_point.co.xyz
                 
                 
-                #if point.co.xyz != original_mesh_data.shape_keys.key_blocks[0].points[index].co.xyz:
-                #    mesh_data.vertices[index].select = True
-                #    break
-            print("vertex indices and their positions.")
-            print(vertices_original)
-            print("vertex positions end.")
-            bpy.ops.object.mode_set(mode='EDIT')
-            mesh_data.vertices.foreach_set("select",[False]*len(mesh_data.vertices))
             bpy.ops.object.mode_set(mode='OBJECT')
+            mesh_data.vertices.foreach_set("select",[False]*len(mesh_data.vertices))
             
             select_target_vertex = [False]*len(mesh_data.vertices)
             try:
@@ -155,53 +164,83 @@ class RemoveDoublesSafely(Operator):
             except:
                 bpy.ops.object.delete() #remove our double merge testing object for this shapekey, since we merged doubles on it, it will be useless.
                 return True
-            print("vertex select list:")
-            print(select_target_vertex)
             
             
-            bpy.ops.object.mode_set(mode='EDIT')
-            mesh_data.vertices.foreach_set("select",select_target_vertex)
-            bpy.ops.mesh.remove_doubles(threshold=self.merge_distance, use_unselected=True, use_sharp_edge_from_normals=False)
             bpy.ops.object.mode_set(mode='OBJECT')
-            #this doesn't keep in mind vertices that are exactly in the same place in the shapekey positional wise that also appear right after one another in the array
-            #Based on my internal thoughts and theories, this will cause problems. I don't know the solution to this, so it's fine for now.
-            # besides, the chance of this happening should be very very slim, and will require user input to fix. - @989onan
-            # {
-            # "1":"0,0,0"
-            # "2":"0,0,0"  
-            # "3":"1,0,0"
-            # }
+            mesh_data.vertices.foreach_set("select",select_target_vertex)
+            bpy.ops.object.mode_set(mode='EDIT')
+            for i in range(0,20): #for some reason, if using merge to unselected on a vertex, the vertex will only merge to 1 other vertex. so we gotta spam it to fix it.
+                bpy.ops.mesh.remove_doubles(threshold=self.merge_distance, use_unselected=True, use_sharp_edge_from_normals=False)
+            bpy.ops.object.mode_set(mode='OBJECT')
 
             merged_vertices: list[int] = []
+            mesh_data_vertices: dict[int,Any] = {}
+            for idx,vertex in enumerate(mesh_data.vertices):
+                mesh_data_vertices[idx] = vertex.co.xyz
+            
+            #I'm loosing my mind with indices because I cannot keep so many numbers in my head. I will have to use 2 pointers 
+            # yes this can be simplified more, but the mountains of errors with using a normal for statement are making me
+            # loose my mind. This is hard. - @989onan
+            #Below is the magic that determines whether or not vertices were merged and then puts the vertices
+            #that were merged into a list. - @989onan
 
-            for i in range(0,original_count):
-                if mesh_data.vertices[i+len(merged_vertices)].co.xyz != vertices_original[i]:
+            i = 0
+            j = 0
+            while(i<len(vertices_original)):
+                if j+1 > len(mesh_data.vertices):
+                    merged_vertices.append(i)
+                    j = j-1
+                elif mesh_data.vertices[j].co.xyz != vertices_original[i]:
+                    merged_vertices.append(i)
+                    j = j-1
+                elif vertices_original[i] == vertices_original[mesh_entry["cur_vertex_pass"]]:
                     merged_vertices.append(i)
 
+                i = i+1
+                j = j+1
+
+            
+
+            #give our final set of points some inital data. we're looking for points that are merged on every shape key (and therefore appear in every version of merged_vertices). 
+            # If we initialize the array with points from the first version of merged_vertices, then we can remove the vertices from final that don't get merged from
+            #every future version of merged_vertices with the "if merged_point not in merged_vertices:" code.
+            if initialized_final == False:
+                for point in merged_vertices:
+                    final_merged_vertex_group.append(point)
+                initialized_final = True
             #iterate through a copy of final vertex groups to prevent crash. If a vertex was merged before, but didn't merge in this vertex,
             #  then the vertex shouldn't be merged because it moves away from the vertex we are double merging now (ex: bottom of mouth moving away from top when opening on a shapekey) - @989onan
             for merged_point in final_merged_vertex_group[:]:
                 if merged_point not in merged_vertices:
                     final_merged_vertex_group.remove(merged_point)
-                else:
-                    final_merged_vertex_group.append(merged_point)
+                
+                    
 
-            bpy.ops.object.mode_set(mode='EDIT')
+            bpy.ops.object.mode_set(mode='OBJECT')
             mesh_data.vertices.foreach_set("select",[False]*len(mesh_data.vertices))
             bpy.ops.object.mode_set(mode='OBJECT')
             bpy.ops.object.delete() #remove our double merge testing object for this shapekey, since we merged doubles on it, it will be useless.
         context.view_layer.objects.active = mesh_entry["mesh"]
-        bpy.ops.object.mode_set(mode='EDIT')
+        bpy.ops.object.mode_set(mode='OBJECT')
+        bpy.ops.object.select_all(action='DESELECT')
+        context.view_layer.objects.active = mesh_entry["mesh"]
+        mesh_entry["mesh"].select_set(True)
+
         original_mesh_data: bpy.types.Mesh = mesh_entry["mesh"].data
-        select_target_group = [False]*len(mesh_data.vertices)
+        select_target_group = [False]*len(original_mesh_data.vertices)
+
+
         for vertex_index in final_merged_vertex_group:
             select_target_group[vertex_index] = True
-        original_mesh_data.vertices.foreach_set("select",select_target_group)
-        bpy.ops.mesh.remove_doubles(threshold=self.merge_distance, use_unselected=False, use_sharp_edge_from_normals=False)
-        mesh_data.vertices.foreach_set("select",[False]*len(mesh_data.vertices))
+        
         bpy.ops.object.mode_set(mode='OBJECT')
-        print("finished shapekey advanced.")
-        return not (len(final_merged_vertex_group) > 0)
+        original_mesh_data.vertices.foreach_set("select",select_target_group)
+        bpy.ops.object.mode_set(mode='EDIT')
+        bpy.ops.mesh.remove_doubles(threshold=self.merge_distance, use_unselected=False, use_sharp_edge_from_normals=False)
+        bpy.ops.object.mode_set(mode='OBJECT')
+        original_mesh_data.vertices.foreach_set("select",[False]*len(original_mesh_data.vertices))
+        print("finished advanced merge doubles for single vertex at index: "+str(mesh_entry["cur_vertex_pass"]))
+        return not (len(final_merged_vertex_group) > 1)
 
     def modal(self, context: Context, event: bpy.types.Event) -> set:
         if len(self.objects_to_do) > 0:
@@ -246,14 +285,6 @@ class RemoveDoublesSafely(Operator):
                     
                     bpy.ops.object.mode_set(mode='OBJECT')
                     mesh["mesh"].select_set(False)
-                else:
-                    mesh["mesh"].select_set(True)
-                    context.view_layer.objects.active = mesh["mesh"]
-                    bpy.ops.object.mode_set(mode='OBJECT')
-                    bpy.ops.object.select_all(action='DESELECT')
-                    for obj in mesh["mesh_shapekeys"].values():
-                        obj.select_set(True)
-                    bpy.ops.object.delete() #delete all objects that were shapekey types.
 
                 self.objects_to_do.pop(0)
 
