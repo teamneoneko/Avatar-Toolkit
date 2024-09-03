@@ -33,7 +33,7 @@ class AvatarToolkitToolsPanel(bpy.types.Panel):
             row.operator(CreateDigitigradeLegs.bl_idname, text=t("Tools.create_digitigrade_legs.label"), icon='BONE_DATA')
             layout.separator()
             row = layout.row(align=True)
-            layout.label(text=t("Tools.separate_by.label"), icon='MESH')
+            layout.label(text=t("Tools.separate_by.label"), icon='MESH_DATA')
             row.operator(SeparateByMaterials.bl_idname, text=t("Tools.separate_by_materials.label"), icon='MATERIAL')
             row.operator(SeparateByLooseParts.bl_idname, text=t("Tools.separate_by_loose_parts.label"), icon='OUTLINER_OB_MESH')
             row = layout.row(align=True)
