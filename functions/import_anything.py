@@ -83,7 +83,7 @@ class ImportAnyModel(Operator, ImportHelper):
 
 
 
-#This needs to be done with our own MMD importer:
+#TODO: This needs to be done with our own MMD importer.
 """ 
 #stolen from cats. Oh wait I made this code riiiiiiight - @989onan
 @register_wrap

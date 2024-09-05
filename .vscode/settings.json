@@ -2,7 +2,9 @@
     "python.analysis.extraPaths": [
         "D:\\SteamLibrary\\steamapps\\common\\Blender\\4.3\\scripts\\addons",
         "C:\\Users\\Onan\\AppData\\Roaming\\Blender Foundation\\Blender\\4.3\\extensions\\user_default\\",//C:/Users/Onan/AppData/Roaming/Blender Foundation/Blender/4.0/scripts/addons
-        "D:\\blender stuff\\blendercodestuff\\4.3"
+        "D:\\blender stuff\\blendercodestuff\\4.3",
+        "/Users/frankche/Documents/blendercoding/4.1/",
+        "/Users/frankche/Library/Application Support/Blender/4.3/extensions/user_default/"
     ],
     "python.analysis.diagnosticSeverityOverrides": {
         "reportInvalidTypeForm": "none"
