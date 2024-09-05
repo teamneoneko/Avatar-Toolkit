@@ -41,17 +41,17 @@ class AvatarToolkitQuickAccessPanel(Panel):
         if get_selected_armature(context) != None:
             if(context.mode == "POSE"):
                 row = layout.row(align=True)
-                row.operator(Avatar_Toolkit_OP_Stop_Pose_Mode.bl_idname, text=t("Quick_Access.stop_pose_mode.label"), icon='POSE_HLT')
+                row.operator(AvatarToolkit_OT_StopPoseMode.bl_idname, text=t("Quick_Access.stop_pose_mode.label"), icon='POSE_HLT')
                 row = layout.row(align=True)
-                row.operator(Avatar_Toolkit_OP_Apply_Pose_As_Rest.bl_idname, text=t("Quick_Access.apply_pose_as_rest.label"), icon='MOD_ARMATURE')
+                row.operator(AvatarToolkit_OT_ApplyPoseAsRest.bl_idname, text=t("Quick_Access.apply_pose_as_rest.label"), icon='MOD_ARMATURE')
                 row = layout.row(align=True)
-                row.operator(Avatar_Toolkit_OP_Apply_Pose_As_Shapekey.bl_idname, text=t("Quick_Access.apply_pose_as_shapekey.label"), icon='MOD_ARMATURE')
+                row.operator(AvatarToolkit_OT_ApplyPoseAsShapekey.bl_idname, text=t("Quick_Access.apply_pose_as_shapekey.label"), icon='MOD_ARMATURE')
             else:
                 row = layout.row(align=True)
-                row.operator(Avatar_Toolkit_OP_Start_Pose_Mode.bl_idname, text=t("Quick_Access.start_pose_mode.label"), icon='POSE_HLT')
+                row.operator(AvatarToolkit_OT_StartPoseMode.bl_idname, text=t("Quick_Access.start_pose_mode.label"), icon='POSE_HLT')
 
 @register_wrap
-class Avatar_Toolkit_OP_Start_Pose_Mode(Operator):
+class AvatarToolkit_OT_StartPoseMode(Operator):
     bl_idname = 'avatar_toolkit.start_pose_mode'
     bl_label = t("Quick_Access.start_pose_mode.label")
     bl_description = t("Quick_Access.start_pose_mode.desc")
@@ -77,7 +77,7 @@ class Avatar_Toolkit_OP_Start_Pose_Mode(Operator):
         return {'FINISHED'}
 
 @register_wrap
-class Avatar_Toolkit_OP_Stop_Pose_Mode(Operator):
+class AvatarToolkit_OT_StopPoseMode(Operator):
     bl_idname = 'avatar_toolkit.stop_pose_mode'
     bl_label = t("Quick_Access.stop_pose_mode.label")
     bl_description = t("Quick_Access.stop_pose_mode.desc")
@@ -99,7 +99,7 @@ class Avatar_Toolkit_OP_Stop_Pose_Mode(Operator):
         return {'FINISHED'}
 
 @register_wrap
-class Avatar_Toolkit_OP_Apply_Pose_As_Shapekey(Operator):
+class AvatarToolkit_OT_ApplyPoseAsShapekey(Operator):
     bl_idname = 'avatar_toolkit.apply_pose_as_shapekey'
     bl_label = t("Quick_Access.apply_pose_as_shapekey.label")
     bl_description = t("Quick_Access.apply_pose_as_shapekey.desc")
@@ -129,7 +129,7 @@ class Avatar_Toolkit_OP_Apply_Pose_As_Shapekey(Operator):
         return {'FINISHED'}
 
 @register_wrap
-class Avatar_Toolkit_OP_Apply_Pose_As_Rest(Operator):
+class AvatarToolkit_OT_ApplyPoseAsRest(Operator):
     bl_idname = 'avatar_toolkit.apply_pose_as_rest'
     bl_label = t("Quick_Access.apply_pose_as_rest.label")
     bl_description = t("Quick_Access.apply_pose_as_rest.desc")
