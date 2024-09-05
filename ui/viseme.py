@@ -1,5 +1,7 @@
 import bpy
 from ..core.register import register_wrap
+from .panel import AvatarToolKit_PT_AvatarToolkitPanel, CATEGORY_NAME
+from ..functions.viseme import AvatarToolKit_OT_AutoVisemeButton
 from ..functions.translations import t
 from ..core.common import get_selected_armature
 
@@ -9,8 +11,8 @@ class AvatarToolkitVisemePanel(bpy.types.Panel):
     bl_idname = "OBJECT_PT_avatar_toolkit_viseme"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = "Avatar Toolkit"
-    bl_parent_id = "OBJECT_PT_avatar_toolkit"
+    bl_category = CATEGORY_NAME
+    bl_parent_id = AvatarToolKit_PT_AvatarToolkitPanel.bl_idname
     bl_order = 5
 
     def draw(self, context: bpy.types.Context) -> None:
@@ -32,7 +34,7 @@ class AvatarToolkitVisemePanel(bpy.types.Panel):
 
                     row = layout.row()
                     row.scale_y = 1.2
-                    row.operator("avatar_toolkit.create_visemes", text=t('VisemePanel.create_visemes'), icon='TRIA_RIGHT')
+                    row.operator(AvatarToolKit_OT_AutoVisemeButton.bl_idname, text=t('VisemePanel.create_visemes'), icon='TRIA_RIGHT')
                 else:
                     layout.label(text=t('VisemePanel.error.noShapekeys'), icon='ERROR')
             else:

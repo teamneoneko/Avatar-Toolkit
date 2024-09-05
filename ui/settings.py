@@ -1,6 +1,6 @@
 import bpy
 from ..core.register import register_wrap
-from .panel import AvatarToolkitPanel
+from .panel import AvatarToolKit_PT_AvatarToolkitPanel, CATEGORY_NAME
 from ..functions.translations import t
 
 @register_wrap
@@ -9,8 +9,8 @@ class AvatarToolkitSettingsPanel(bpy.types.Panel):
     bl_idname = "OBJECT_PT_avatar_toolkit_settings"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = "Avatar Toolkit"
-    bl_parent_id = "OBJECT_PT_avatar_toolkit"
+    bl_category = CATEGORY_NAME
+    bl_parent_id = AvatarToolKit_PT_AvatarToolkitPanel.bl_idname
     bl_order = 6
 
     def draw(self, context):

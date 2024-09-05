@@ -6,7 +6,7 @@ from ..core.common import fix_uv_coordinates, get_selected_armature, is_valid_ar
 from ..functions.translations import t
 
 @register_wrap
-class JoinAllMeshes(Operator):
+class AvatarToolKit_OT_JoinAllMeshes(Operator):
     bl_idname = "avatar_toolkit.join_all_meshes"
     bl_label = t("Optimization.join_all_meshes.label")
     bl_description = t("Optimization.join_all_meshes.desc")
@@ -72,7 +72,7 @@ class JoinAllMeshes(Operator):
         finish_progress(context)
 
 @register_wrap
-class JoinSelectedMeshes(Operator):
+class AvatarToolKit_OT_JoinSelectedMeshes(Operator):
     bl_idname = "avatar_toolkit.join_selected_meshes"
     bl_label = t("Optimization.join_selected_meshes.label")
     bl_description = t("Optimization.join_selected_meshes.desc")

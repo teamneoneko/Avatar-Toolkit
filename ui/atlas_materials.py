@@ -1,13 +1,13 @@
 from bpy.types import UIList, Panel, UILayout, Object, Context,Material, Operator
 import bpy
 from ..core.register import register_wrap
-from .panel import AvatarToolkitPanel
-from ..core.common import SceneMatClass, material_list_bool, get_selected_armature
-from ..functions.atlas_materials import Atlas_Materials
+from .panel import AvatarToolKit_PT_AvatarToolkitPanel, CATEGORY_NAME
+from ..core.common import SceneMatClass, MaterialListBool, get_selected_armature
+from ..functions.atlas_materials import AvatarToolKit_OT_AtlasMaterials
 from ..functions.translations import t
 
 @register_wrap
-class ExpandSection_Materials(Operator):
+class AvatarToolKit_OT_ExpandSectionMaterials(Operator):
     bl_idname = 'avatar_toolkit.expand_section_materials'
     bl_label = ""
     bl_description = ""
@@ -28,13 +28,13 @@ class ExpandSection_Materials(Operator):
                                 newlist.append(mat_slot.material)
                                 newitem: SceneMatClass = context.scene.materials.add()
                                 newitem.mat = mat_slot.material
-            material_list_bool.old_list[context.scene.name] = newlist
+            MaterialListBool.old_list[context.scene.name] = newlist
         else:
             context.scene.texture_atlas_Has_Mat_List_Shown = False
         return {'FINISHED'}
 
 @register_wrap
-class MaterialTextureAtlasProperties(UIList):
+class AvatarToolKit_UL_MaterialTextureAtlasProperties(UIList):
     bl_label = t("TextureAtlas.material_list_label")
     bl_idname = "Material_UL_avatar_toolkit_texture_atlas_mat_list_mat"
     bl_space_type = 'VIEW_3D'
@@ -59,13 +59,13 @@ class MaterialTextureAtlasProperties(UIList):
             col.prop(item.mat, "texture_atlas_roughness")
 
 @register_wrap
-class TextureAtlasPanel(Panel):
+class AvatarToolKit_PT_TextureAtlasPanel(Panel):
     bl_label = t("TextureAtlas.label")
     bl_idname = "OBJECT_PT_avatar_toolkit_texture_atlas"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = "Avatar Toolkit"
-    bl_parent_id = "OBJECT_PT_avatar_toolkit"
+    bl_category = CATEGORY_NAME
+    bl_parent_id = AvatarToolKit_PT_AvatarToolkitPanel.bl_idname
     bl_order = 4
 
     def draw(self, context: Context):
@@ -77,12 +77,12 @@ class TextureAtlasPanel(Panel):
             boxoutter = row.box()
             direction_icon = 'RIGHTARROW' if not context.scene.texture_atlas_Has_Mat_List_Shown else 'DOWNARROW_HLT'
             row = boxoutter.row()
-            row.operator(ExpandSection_Materials.bl_idname, text=(t("TextureAtlas.reload_list") if not context.scene.texture_atlas_Has_Mat_List_Shown else t("TextureAtlas.loaded_list")), icon=direction_icon)
+            row.operator(AvatarToolKit_OT_ExpandSectionMaterials.bl_idname, text=(t("TextureAtlas.reload_list") if not context.scene.texture_atlas_Has_Mat_List_Shown else t("TextureAtlas.loaded_list")), icon=direction_icon)
             if context.scene.texture_atlas_Has_Mat_List_Shown:
                 row = boxoutter.row()
-                row.template_list(MaterialTextureAtlasProperties.bl_idname, 'material_list', context.scene, 'materials',
+                row.template_list(AvatarToolKit_UL_MaterialTextureAtlasProperties.bl_idname, 'material_list', context.scene, 'materials',
                                 context.scene, 'texture_atlas_material_index', rows=12, type='DEFAULT')
                 row = layout.row()
-                row.operator(Atlas_Materials.bl_idname, text=t("TextureAtlas.atlas_materials"))
+                row.operator(AvatarToolKit_OT_AtlasMaterials.bl_idname, text=t("TextureAtlas.atlas_materials"))
         else:
             layout.label(text=t("Tools.select_armature"), icon='ERROR')

@@ -6,8 +6,8 @@ import re
 
 
 @register_wrap
-class CreateDigitigradeLegs(bpy.types.Operator):
-    bl_idname = "avatar_toolkit.createdigitigradelegs"
+class AvatarToolKit_OT_CreateDigitigradeLegs(bpy.types.Operator):
+    bl_idname = "avatar_toolkit.create_digitigrade_legs"
     bl_label = t('Tools.create_digitigrade_legs.label')
     bl_description = t('Tools.create_digitigrade_legs.desc')
 
