@@ -5,7 +5,7 @@ from ..core.register import register_wrap
 from .translations import t
 
 @register_wrap
-class AvatarToolkit_RemoveZeroWeightBones(Operator):
+class AvatarToolkit_OT_RemoveZeroWeightBones(Operator):
     bl_idname = "avatar_toolkit.remove_zero_weight_bones"
     bl_label = t("Tools.remove_zero_weight_bones.label")
     bl_description = t("Tools.remove_zero_weight_bones.desc")
