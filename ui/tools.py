@@ -7,7 +7,7 @@ from ..functions.translations import t
 from ..core.common import get_selected_armature
 from ..functions.seperate_by import SeparateByMaterials, SeparateByLooseParts
 from ..functions.additional_tools import ApplyTransforms
-from ..functions.armature_modifying import AvatarToolkit_RemoveZeroWeightBones
+from ..functions.armature_modifying import AvatarToolkit_RemoveZeroWeightBones, AvatarToolkit_OT_MergeBonesToActive, AvatarToolkit_OT_MergeBonesToParents
 
 @register_wrap
 class AvatarToolkitToolsPanel(bpy.types.Panel):
@@ -39,6 +39,10 @@ class AvatarToolkitToolsPanel(bpy.types.Panel):
             row.operator(SeparateByLooseParts.bl_idname, text=t("Tools.separate_by_loose_parts.label"), icon='OUTLINER_OB_MESH')
             row = layout.row(align=True)
             row.operator(ApplyTransforms.bl_idname, text=t("Tools.apply_transforms.label"), icon='OBJECT_ORIGIN')
+            row = layout.row(align=True)
             row.operator(AvatarToolkit_RemoveZeroWeightBones.bl_idname, text=t("Tools.remove_zero_weight_bones.label"), icon='BONE_DATA')
+            row = layout.row(align=True)
+            row.operator(AvatarToolkit_OT_MergeBonesToActive.bl_idname, text=t("Tools.merge_bones_to_active.label"), icon='BONE_DATA')
+            row.operator(AvatarToolkit_OT_MergeBonesToParents.bl_idname, text=t("Tools.merge_bones_to_parents.label"), icon='BONE_DATA')
         else:
             layout.label(text=t("Tools.select_armature"), icon='ERROR')

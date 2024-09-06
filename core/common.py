@@ -262,3 +262,25 @@ def update_progress(self, context, message):
 def finish_progress(context):
     context.window_manager.progress_end()
     context.area.header_text_set(None)
+
+def transfer_vertex_weights(context: Context, obj: bpy.types.Object, source_group: str, target_group: str, delete_source_group: bool = True) -> bool:
+    
+    modifier: bpy.types.VertexWeightMixModifier = obj.modifiers.new(name="merge_weights",type="VERTEX_WEIGHT_MIX")
+
+    modifier.mix_set = 'B'
+    modifier.vertex_group_a = target_group
+    modifier.vertex_group_b = source_group
+    modifier.mask_constant = 1.0
+
+    bpy.ops.object.mode_set(mode='OBJECT')
+    prev_obj: bpy.types.Object = context.view_layer.objects.active
+    context.view_layer.objects.active = obj
+    bpy.ops.object.modifier_apply(modifier=modifier.name)
+    if delete_source_group:
+        obj.vertex_groups.remove(obj.vertex_groups.get(source_group))
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.object.mode_set(mode='OBJECT')
+    context.view_layer.objects.active = prev_obj
+
+    return True
+

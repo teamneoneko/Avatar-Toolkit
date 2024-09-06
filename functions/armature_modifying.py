@@ -1,6 +1,6 @@
 import bpy
 from ..core import common
-from bpy.types import Operator, Context, Mesh, Armature, EditBone, PoseBone
+from bpy.types import Operator, Context, Mesh, Armature, EditBone
 from ..core.register import register_wrap
 from .translations import t
 
@@ -61,4 +61,98 @@ class AvatarToolkit_RemoveZeroWeightBones(Operator):
             amature_data.edit_bones.remove(amature_data.edit_bones[bone_name]) #delete list of unweighted bones from the armature
 
         self.report({'INFO'}, t("Tools.remove_zero_weight_bones.success"))
+        return {'FINISHED'}
+
+@register_wrap
+class AvatarToolkit_OT_MergeBonesToActive(Operator):
+    bl_idname = "avatar_toolkit.merge_bones_to_active"
+    bl_label = t("Tools.merge_bones_to_active.label")
+    bl_description = t("Tools.merge_bones_to_active.desc")
+    bl_options = {'REGISTER', 'UNDO'}
+
+    delete_old: bpy.props.BoolProperty(name=t("Tools.merge_bones_to_active.delete_old.label"), description=t("Tools.merge_bones_to_active.delete_old.desc"), default=False)
+
+    @classmethod
+    def poll(cls, context: Context) -> bool:
+        if common.get_selected_armature(context) is not None:
+            if common.get_selected_armature(context) == context.view_layer.objects.active:
+                if context.mode == "POSE":
+                    return len(context.selected_pose_bones) > 1
+                elif context.mode == "EDIT_ARMATURE":
+                    return len(context.selected_bones) > 1
+        return False
+
+    def execute(cls, context: Context) -> set[str]:
+        
+        prev_mode: str = "EDIT"
+        if context.mode == "POSE":
+            prev_mode = "POSE"
+
+        #get active bone and a list of all other selected bones
+        bpy.ops.object.mode_set(mode='EDIT')
+        target_bone: str = context.active_bone.name
+
+        armature_data: Armature = context.view_layer.objects.active.data
+
+
+        bones: list[str] = [i.name for i in context.selected_bones]
+        bones.remove(target_bone)
+
+        for obj in common.get_all_meshes(context):
+            for bone in bones:
+                bone_name: str = armature_data.edit_bones[bone].name
+                common.transfer_vertex_weights(context=context,obj=obj,source_group=bone_name,target_group=armature_data.edit_bones[target_bone].name)
+                bpy.ops.object.mode_set(mode='EDIT')
+        for bone in bones:   
+            if cls.delete_old:
+                for bone_child in armature_data.edit_bones[bone].children:
+                    bone_child.parent = armature_data.edit_bones[bone].parent
+                armature_data.edit_bones.remove(armature_data.edit_bones[bone])
+        
+        bpy.ops.object.mode_set(mode=prev_mode)
+        return {'FINISHED'}
+    
+@register_wrap
+class AvatarToolkit_OT_MergeBonesToParents(Operator):
+    bl_idname = "avatar_toolkit.merge_bones_to_parents"
+    bl_label = t("Tools.merge_bones_to_parents.label")
+    bl_description = t("Tools.merge_bones_to_parents.desc")
+    bl_options = {'REGISTER', 'UNDO'}
+
+    delete_old: bpy.props.BoolProperty(name=t("Tools.merge_bones_to_parents.delete_old.label"), description=t("Tools.merge_bones_to_parents.delete_old.desc"), default=False)
+
+    @classmethod
+    def poll(cls, context: Context) -> bool:
+        if common.get_selected_armature(context) is not None:
+            if common.get_selected_armature(context) == context.view_layer.objects.active:
+                if context.mode == "POSE":
+                    return len(context.selected_pose_bones) > 0
+                elif context.mode == "EDIT_ARMATURE":
+                    return len(context.selected_bones) > 0
+        return False
+
+    def execute(cls, context: Context) -> set[str]:
+
+        prev_mode: str = "EDIT"
+        if context.mode == "POSE":
+            prev_mode = "POSE"
+        #get active bone and a list of all other selected bones
+        bpy.ops.object.mode_set(mode='EDIT')
+        armature_data: Armature = context.view_layer.objects.active.data
+
+        for obj in common.get_all_meshes(context):
+            for bone in [i.name for i in context.selected_bones]:
+                if armature_data.edit_bones[bone].parent != None:
+                    bone_name: str = armature_data.edit_bones[bone].name
+                    common.transfer_vertex_weights(context=context,obj=obj,source_group=bone_name,target_group=armature_data.edit_bones[bone].parent.name)
+                    bpy.ops.object.mode_set(mode='EDIT')
+        
+        for bone in [i.name for i in context.selected_bones]:   
+            if cls.delete_old:
+                for bone_child in armature_data.edit_bones[bone].children:
+                    bone_child.parent = armature_data.edit_bones[bone].parent
+                armature_data.edit_bones.remove(armature_data.edit_bones[bone])
+        
+        
+        bpy.ops.object.mode_set(mode=prev_mode)
         return {'FINISHED'}
