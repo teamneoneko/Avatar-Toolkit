@@ -14,6 +14,4 @@ class UVTools_PT_MainPanel(bpy.types.Panel):
     def draw(self: bpy.types.Panel, context: bpy.types.Context):
         layout = self.layout
 
-        sima = context.space_data
-        if sima.show_uvedit:
-            draw_title(self)
+        draw_title(self)

@@ -18,7 +18,5 @@ class UVTools_PT_Tools(bpy.types.Panel):
     def draw(self, context: bpy.types.Context):
         layout = self.layout
 
-        sima = context.space_data
-        if sima.show_uvedit:
-            row = layout.row(align=True)
-            row.operator(AvatarToolkit_OT_AlignUVEdgesToTarget.bl_idname, text=t("avatar_toolkit.align_uv_edges_to_target.label"), icon='GP_MULTIFRAME_EDITING')
+        row = layout.row(align=True)
+        row.operator(AvatarToolkit_OT_AlignUVEdgesToTarget.bl_idname, text=t("avatar_toolkit.align_uv_edges_to_target.label"), icon='GP_MULTIFRAME_EDITING')

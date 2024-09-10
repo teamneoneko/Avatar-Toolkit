@@ -31,6 +31,10 @@ class AvatarToolkit_OT_AlignUVEdgesToTarget(Operator):
         for obj in context.view_layer.objects.selected:
             if obj.type != "MESH":
                 return False
+        if not context.space_data:
+            return False
+        if not context.space_data.show_uvedit:
+            return False
         return True
 
     def execute(self, context: Context):
