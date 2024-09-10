@@ -15,7 +15,7 @@ class AvatarToolkitOptimizationPanel(bpy.types.Panel):
     bl_parent_id = "OBJECT_PT_avatar_toolkit"
     bl_order = 2
 
-    def draw(self, context):
+    def draw(self: bpy.types.Panel, context: bpy.types.Context):
         layout = self.layout
         armature = get_selected_armature(context)
         
