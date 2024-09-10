@@ -35,6 +35,8 @@ class AvatarToolkit_OT_AlignUVEdgesToTarget(Operator):
             return False
         if not context.space_data.show_uvedit:
             return False
+        if context.scene.tool_settings.use_uv_select_sync:
+            return False
         return True
 
     def execute(self, context: Context):
@@ -84,7 +86,7 @@ class AvatarToolkit_OT_AlignUVEdgesToTarget(Operator):
             #hmmm real stupid grimlin hours with this one. Using a string as the index of a dictionary of loop corners that end up on the same coordinate
             
             for k,i in enumerate(uv_lay.vertex_selection): #go through the selected vertices on object.
-                if (i.value == True) and (bm.verts[me.loops[k].vertex_index].select == True) and (bm.verts[me.loops[k].vertex_index].hide == False): #find vertices that are not hidden and are are selected again TODO: Why does checking hidden not work? - @989onan
+                if (i.value == True) and (bm.verts[me.loops[k].vertex_index].select == True) and (bm.verts[me.loops[k].vertex_index].hide == False): #filter out vertices that are hidden from UV port
                     key = np.array(uv_lay.uv[k].vector[:])
                     key = key.round(decimals=5) #make a key that is the position of a selected vertex
                     
@@ -94,7 +96,7 @@ class AvatarToolkit_OT_AlignUVEdgesToTarget(Operator):
                     vert_target_verts[str(key)] = me.loops[k].vertex_index #associate the index of the physical vertex in real space with the coordinate of the uv vertices that share a position (Basically associate UV vert with real vert)
             if len(vert_target_loops) > 4000: #This usually indicates that the user has a bunch of crap selected.
                 self.report({'WARNING'}, t("UVTools.align_uv_to_target.warning.too_much"))
-                return {'FINISHED'}
+                return
             print("Finding connections on line for \""+obj_name+"\"!")
             me.validate()
             
@@ -174,7 +176,7 @@ class AvatarToolkit_OT_AlignUVEdgesToTarget(Operator):
 
             if len(startpoints) != 2:
                 self.report({'WARNING'}, t("UVTools.align_uv_to_target.warning.need_a_line").format(obj=obj_name))
-                return {'FINISHED'}
+                return
             
             a_list1 = startpoints[0].replace(", "," ").replace("[","").replace("]","").split()
             map_object1 = map(float, a_list1)
@@ -231,14 +233,18 @@ class AvatarToolkit_OT_AlignUVEdgesToTarget(Operator):
                 continue
             
             #create our list of points that is a chain. then sort the chain into the correct order based on connections of vertices and the faces that the vertices make up in the UV map.
-            source_data = generate_loop_tree(source)
-            sorted_source_tree = sort_uv_tree(source_data["tree"], source)
-            print("Sorted source "+source)
-            print(sorted_source_tree)
-            
-            vertex_factor = float(len(sorted_target_tree)-1) / (float(len(sorted_source_tree)-1))
-            
-            print(str(vertex_factor)+" = "+str(float(len(sorted_target_tree)-1)) + " / " + str((float(len(sorted_source_tree)-1)))+")")
+            try:
+                source_data = generate_loop_tree(source)
+                sorted_source_tree = sort_uv_tree(source_data["tree"], source)
+                print("Sorted source "+source)
+                print(sorted_source_tree)
+                
+                vertex_factor = float(len(sorted_target_tree)-1) / (float(len(sorted_source_tree)-1))
+                
+                print(str(vertex_factor)+" = "+str(float(len(sorted_target_tree)-1)) + " / " + str((float(len(sorted_source_tree)-1)))+")")
+            except Exception as e:
+                print(e)
+                return {'FINISHED'}
             
             for k,i in enumerate(sorted_source_tree):
                 
