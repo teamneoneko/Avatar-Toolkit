@@ -6,7 +6,7 @@ from ..functions.translations import t
 from ..core.register import register_wrap
 
 @register_wrap
-class AvatarToolkit_OT_RemoveUnusedShapekeys(bpy.types.Operators):
+class AvatarToolkit_OT_RemoveUnusedShapekeys(bpy.types.Operator):
     tolerance: bpy.props.FloatProperty(name=t("Tools.remove_unused_shapekeys.tolerance.label"), default=0.001, description=t("Tools.remove_unused_shapekeys.tolerance.desc"))
     bl_idname = "avatar_toolkit.remove_unused_shapekeys"
     bl_label = t("Tools.remove_unused_shapekeys.label")
