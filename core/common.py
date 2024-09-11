@@ -21,7 +21,7 @@ class SceneMatClass(PropertyGroup):
 
 register_class(SceneMatClass)
 
-class material_list_bool:
+class MaterialListBool:
     #For the love that is holy do not ever touch these. If this was java I would make these private
     #They should only be accessed via context.scene.texture_atlas_Has_Mat_List_Shown
     #This is so we know if the materials are up to date. messing with these variables directly will make the thing blow up.
@@ -31,9 +31,9 @@ class material_list_bool:
     bool_material_list_expand: dict[str,bool] = {}
 
     def set_bool(self, value: bool) -> None:
-        material_list_bool.bool_material_list_expand[bpy.context.scene.name] = value
+        MaterialListBool.bool_material_list_expand[bpy.context.scene.name] = value
         if value == False:
-            material_list_bool.old_list[bpy.context.scene.name] = []
+            MaterialListBool.old_list[bpy.context.scene.name] = []
 
     def get_bool(self) -> bool:
             newlist: list[Material] = []
@@ -45,20 +45,20 @@ class material_list_bool:
                                 newlist.append(mat_slot.material)
             
             still_the_same: bool = True
-            if bpy.context.scene.name in material_list_bool.old_list:
+            if bpy.context.scene.name in MaterialListBool.old_list:
                 for item in newlist:
-                    if item not in material_list_bool.old_list[bpy.context.scene.name]:
+                    if item not in MaterialListBool.old_list[bpy.context.scene.name]:
                         still_the_same = False
                         break
-                for item in material_list_bool.old_list[bpy.context.scene.name]:
+                for item in MaterialListBool.old_list[bpy.context.scene.name]:
                     if item not in newlist:
                         still_the_same = False
                         break
             else:
                 still_the_same = False
-            material_list_bool.bool_material_list_expand[bpy.context.scene.name] = still_the_same
+            MaterialListBool.bool_material_list_expand[bpy.context.scene.name] = still_the_same
             
-            return material_list_bool.bool_material_list_expand[bpy.context.scene.name]
+            return MaterialListBool.bool_material_list_expand[bpy.context.scene.name]
 
 
 ### Clean up material names in the given mesh by removing the '.001' suffix.
@@ -262,3 +262,25 @@ def update_progress(self, context, message):
 def finish_progress(context):
     context.window_manager.progress_end()
     context.area.header_text_set(None)
+
+def transfer_vertex_weights(context: Context, obj: bpy.types.Object, source_group: str, target_group: str, delete_source_group: bool = True) -> bool:
+    
+    modifier: bpy.types.VertexWeightMixModifier = obj.modifiers.new(name="merge_weights",type="VERTEX_WEIGHT_MIX")
+
+    modifier.mix_set = 'B'
+    modifier.vertex_group_a = target_group
+    modifier.vertex_group_b = source_group
+    modifier.mask_constant = 1.0
+
+    bpy.ops.object.mode_set(mode='OBJECT')
+    prev_obj: bpy.types.Object = context.view_layer.objects.active
+    context.view_layer.objects.active = obj
+    bpy.ops.object.modifier_apply(modifier=modifier.name)
+    if delete_source_group:
+        obj.vertex_groups.remove(obj.vertex_groups.get(source_group))
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.object.mode_set(mode='OBJECT')
+    context.view_layer.objects.active = prev_obj
+
+    return True
+

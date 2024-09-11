@@ -4,7 +4,7 @@ from ..core.register import register_property
 from bpy.types import Scene, Object, Material, Context
 from bpy.props import BoolProperty, EnumProperty, IntProperty, CollectionProperty, StringProperty, FloatVectorProperty, PointerProperty
 from ..core.addon_preferences import get_preference
-from ..core.common import SceneMatClass, material_list_bool, get_armatures, get_mesh_items
+from ..core.common import SceneMatClass, MaterialListBool, get_armatures, get_mesh_items
 
 def register() -> None:
     default_language = get_preference("language", 0)
@@ -106,8 +106,8 @@ def register() -> None:
 
     register_property((Scene, "texture_atlas_Has_Mat_List_Shown", BoolProperty(
         default=False,
-        get=material_list_bool.get_bool, 
-        set=material_list_bool.set_bool)))
+        get=MaterialListBool.get_bool, 
+        set=MaterialListBool.set_bool)))
 
 
 def unregister() -> None:

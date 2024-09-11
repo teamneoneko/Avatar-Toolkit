@@ -8,7 +8,7 @@ from ..core.common import get_selected_armature, simplify_bonename, is_valid_arm
 from ..functions.translations import t
 
 @register_wrap
-class ConvertToResonite(Operator):
+class AvatarToolKit_OT_ConvertToResonite(Operator):
     bl_idname = 'avatar_toolkit.convert_to_resonite'
     bl_label = t('Tools.convert_to_resonite.label')
     bl_description = t('Tools.convert_to_resonite.desc')

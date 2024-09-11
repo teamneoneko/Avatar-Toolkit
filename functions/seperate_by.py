@@ -1,11 +1,10 @@
 import bpy
 from bpy.types import Context, Operator
 from ..core.register import register_wrap
-from ..core.common import get_selected_armature, is_valid_armature, select_current_armature
 from ..functions.translations import t
 
 @register_wrap
-class SeparateByMaterials(Operator):
+class AvatarToolKit_OT_SeparateByMaterials(Operator):
     bl_idname = "avatar_toolkit.separate_by_materials"
     bl_label = t("Tools.separate_by_materials.label")
     bl_description = t("Tools.separate_by_materials.desc")
@@ -25,7 +24,7 @@ class SeparateByMaterials(Operator):
         return {'FINISHED'}
 
 @register_wrap
-class SeparateByLooseParts(Operator):
+class AvatarToolKit_OT_SeparateByLooseParts(Operator):
     bl_idname = "avatar_toolkit.separate_by_loose_parts"
     bl_label = t("Tools.separate_by_loose_parts.label")
     bl_description = t("Tools.separate_by_loose_parts.desc")

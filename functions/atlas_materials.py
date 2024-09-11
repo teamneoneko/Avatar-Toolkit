@@ -2,13 +2,11 @@ from pathlib import Path
 
 import numpy
 import bpy
-import re
 import os
 from typing import List, Tuple, Optional
-from mathutils import Vector
 from bpy.types import Material, Operator, Context, Object, Image, Mesh, MeshUVLoopLayer, Float2AttributeValue, ShaderNodeTexImage, ShaderNodeBsdfPrincipled, ShaderNodeNormalMap
 from ..core.register import register_wrap
-from ..core.common import SceneMatClass, material_list_bool
+from ..core.common import SceneMatClass, MaterialListBool
 from ..core.packer.rectangle_packer import MaterialImageList, BinPacker
 from ..functions.translations import t
 
@@ -113,7 +111,7 @@ def prep_images_in_scene(context: Context) -> list[MaterialImageList]:
 
 
 @register_wrap
-class Atlas_Materials(Operator):
+class AvatarToolKit_OT_AtlasMaterials(Operator):
 
     bl_idname = "avatar_toolkit.atlas_materials"
     bl_label = t("TextureAtlas.atlas_materials")
