@@ -2,6 +2,12 @@ import bpy
 from ..core.register import register_wrap
 from ..functions.translations import t
 
+def draw_title(self: bpy.types.Panel):
+    layout = self.layout
+    layout.label(text=t("AvatarToolkit.welcome"))
+    layout.label(text=t("AvatarToolkit.description"))
+    layout.label(text=t("AvatarToolkit.alpha_warning"))
+
 CATEGORY_NAME = "Avatar Toolkit"
 
 @register_wrap
@@ -12,10 +18,7 @@ class AvatarToolKit_PT_AvatarToolkitPanel(bpy.types.Panel):
     bl_region_type = 'UI'
     bl_category = CATEGORY_NAME
 
-    def draw(self, context):
-        layout = self.layout
-        layout.label(text=t("AvatarToolkit.welcome"))
-        layout.label(text=t("AvatarToolkit.description"))
-        layout.label(text=t("AvatarToolkit.alpha_warning"))
+    def draw(self: bpy.types.Panel, context: bpy.types.Context):
+        draw_title(self)
 
         
