@@ -3,14 +3,13 @@ from bpy.types import Operator
 from bpy_extras.io_utils import ImportHelper
 from ..core.register import register_wrap
 from ..core.importer import imports, import_types
-from ..core.common import remove_default_objects
+from ..core.common import remove_default_objects, open_web_after_delay_multi_threaded
 from ..functions.translations import t
 import pathlib
 import os
-from ..core import common
 
 @register_wrap
-class ImportAnyModel(Operator, ImportHelper):
+class AvatarToolKit_OT_ImportAnyModel(Operator, ImportHelper):
     bl_idname = 'avatar_toolkit.import_any_model'
     bl_label = t('Tools.import_any_model.label')
     bl_description = t('Tools.import_any_model.desc')
@@ -24,7 +23,7 @@ class ImportAnyModel(Operator, ImportHelper):
     #since I wrote this myself, a bit more efficent than cats. mostly - @989onan
     def execute(self, context: bpy.types.Context):
         file_grouping_dict: dict[str, list[dict[str,str]]] = dict()#group our files so our importers can import them together. in the case of OBJ+MTL and others that need grouped files, this is extremely important.
-        common.remove_default_objects()
+        remove_default_objects()
         #check if we are importing multiple files
         is_multi = False
         try:
@@ -69,9 +68,9 @@ class ImportAnyModel(Operator, ImportHelper):
                 else:
                     import_types[file_group_name]("",files,self.filepath) #give an empty directory, works just fine for 90%
             except AttributeError as e:
-                print("Warning, you may not have the required importer!")
+                print("Warning, you may not have the required importer for extension type \"{extension}\"!".format(extension = file_group_name))
                 
-                common.open_web_after_delay_multi_threaded(delay=12, url=t('Importing.importer_search_term').format(extension = file_group_name))
+                open_web_after_delay_multi_threaded(delay=12, url=t('Importing.importer_search_term').format(extension = file_group_name))
 
                 self.report({'ERROR'},t('Importing.need_importer').format(extension = file_group_name))
 

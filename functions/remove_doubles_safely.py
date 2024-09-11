@@ -12,7 +12,7 @@ class meshEntry(TypedDict):
     cur_vertex_pass: int
 
 @register_wrap
-class RemoveDoublesSafelyAdvanced(Operator):
+class AvatarToolKit_OT_RemoveDoublesSafelyAdvanced(Operator):
     bl_idname = "avatar_toolkit.remove_doubles_safely_advanced"
     bl_label = t("Optimization.remove_doubles_safely_advanced.label")
     bl_description = t("Optimization.remove_doubles_safely_advanced.desc")
@@ -30,7 +30,7 @@ class RemoveDoublesSafelyAdvanced(Operator):
         bpy.ops.avatar_toolkit.remove_doubles_safely('INVOKE_DEFAULT',advanced=True,merge_distance=self.merge_distance)
         return {'FINISHED'}
 @register_wrap
-class RemoveDoublesSafely(Operator):
+class AvatarToolKit_OT_RemoveDoublesSafely(Operator):
     bl_idname = "avatar_toolkit.remove_doubles_safely"
     bl_label = t("Optimization.remove_doubles_safely.label")
     bl_description = t("Optimization.remove_doubles_safely.desc")

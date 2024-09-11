@@ -6,7 +6,7 @@ from typing import List, Tuple
 from ..core.common import get_selected_armature, is_valid_armature, get_all_meshes, init_progress, update_progress, finish_progress
 
 @register_wrap
-class AutoVisemeButton(bpy.types.Operator):
+class AvatarToolKit_OT_AutoVisemeButton(bpy.types.Operator):
     bl_idname = 'avatar_toolkit.create_visemes'
     bl_label = t('AutoVisemeButton.label')
     bl_description = t('AutoVisemeButton.desc')

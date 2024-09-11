@@ -5,7 +5,7 @@ from ..core.common import get_selected_armature, is_valid_armature, get_all_mesh
 from ..functions.translations import t
 
 @register_wrap
-class ApplyTransforms(Operator):
+class AvatarToolKit_OT_ApplyTransforms(Operator):
     bl_idname = "avatar_toolkit.apply_transforms"
     bl_label = t("Tools.apply_transforms.label")
     bl_description = t("Tools.apply_transforms.desc")
