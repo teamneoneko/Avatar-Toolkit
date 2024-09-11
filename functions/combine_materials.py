@@ -53,7 +53,7 @@ def get_base_name(name: str) -> str:
     return mat_match.group(1) if mat_match else name
 
 @register_wrap
-class CombineMaterials(Operator):
+class AvatarToolKit_OT_CombineMaterials(Operator):
     bl_idname = "avatar_toolkit.combine_materials"
     bl_label = t("Optimization.combine_materials.label")
     bl_description = t("Optimization.combine_materials.desc")
