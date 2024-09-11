@@ -6,6 +6,7 @@ from ..functions.digitigrade_legs import AvatarToolKit_OT_CreateDigitigradeLegs
 from ..functions.resonite_functions import AvatarToolKit_OT_ConvertToResonite
 from ..functions.translations import t
 from ..core.common import get_selected_armature
+from ..functions.mesh_tools import AvatarToolkit_OT_RemoveUnusedShapekeys
 from ..functions.seperate_by import AvatarToolKit_OT_SeparateByMaterials, AvatarToolKit_OT_SeparateByLooseParts
 from ..functions.additional_tools import AvatarToolKit_OT_ApplyTransforms
 from ..functions.armature_modifying import AvatarToolkit_OT_RemoveZeroWeightBones, AvatarToolkit_OT_MergeBonesToActive, AvatarToolkit_OT_MergeBonesToParents
@@ -40,6 +41,7 @@ class AvatarToolkit_PT_ToolsPanel(bpy.types.Panel):
             row.operator(AvatarToolKit_OT_SeparateByLooseParts.bl_idname, text=t("Tools.separate_by_loose_parts.label"), icon='OUTLINER_OB_MESH')
             row = layout.row(align=True)
             row.operator(AvatarToolKit_OT_ApplyTransforms.bl_idname, text=t("Tools.apply_transforms.label"), icon='OBJECT_ORIGIN')
+            row.operator(AvatarToolkit_OT_RemoveUnusedShapekeys.bl_idname, text=t("Tools.remove_unused_shapekeys.label"), icon='SHAPEKEY_DATA')
             row = layout.row(align=True)
             row.operator(AvatarToolkit_OT_RemoveZeroWeightBones.bl_idname, text=t("Tools.remove_zero_weight_bones.label"), icon='BONE_DATA')
             row = layout.row(align=True)
