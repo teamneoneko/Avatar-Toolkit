@@ -1,6 +1,5 @@
 import bpy
 from ..core.register import register_wrap
-from ..ui.panel import AvatarToolkitPanel
 from bpy.types import Context, Mesh, Panel, Operator, Armature, EditBone
 from ..functions.translations import t
 from ..core.common import get_selected_armature, get_all_meshes
