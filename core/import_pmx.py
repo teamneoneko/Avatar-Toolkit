@@ -1,3 +1,5 @@
+from io import BufferedReader
+import os
 import bpy
 import struct
 import traceback
@@ -5,12 +7,14 @@ import mathutils
 
 from mathutils import Matrix, Vector
 
+from bpy.types import Material, Operator, Context, Object, Image, Mesh, MeshUVLoopLayer, Float2AttributeValue, ShaderNodeTexImage, ShaderNodeBsdfPrincipled, ShaderNodeOutputMaterial
+
 def replace_char(string, index, character):
     temp = list(string)
     temp[index] = character
     return "".join(temp)
 
-def read_pmx_header(file):
+def read_pmx_header(file: BufferedReader):
     # Read PMX header information
     magic = file.read(4)
     if magic != b'PMX ':
@@ -41,10 +45,11 @@ def read_pmx_header(file):
     print(model_english_comment)
     return version, encoding, additional_uvs, vertex_index_size, texture_index_size, material_index_size, bone_index_size, morph_index_size, rigid_body_index_size, model_name, model_english_name, model_comment, model_english_comment
 
-def read_vertex(file, string_build, byte_size, additional_uvs):
+def read_vertex(file: BufferedReader, string_build, byte_size, additional_uvs):
     position = struct.unpack('<3f', file.read(12))
     normal = struct.unpack('<3f', file.read(12))
     uv = struct.unpack('<2f', file.read(8))
+    uv = [uv[0],(1.0-uv[1])-1.0]
     additional_uv_read = []
     for i in range(0,additional_uvs):
         additional_uv_read.append(struct.unpack('<4f', file.read(16)))
@@ -89,7 +94,7 @@ def read_vertex(file, string_build, byte_size, additional_uvs):
     edge_scale = struct.unpack('<f', file.read(4))[0]
     return position, normal, uv, bone_indices, bone_weights, edge_scale, additional_uv_read
 
-def read_material(file, string_build, byte_size):
+def read_material(file: BufferedReader, string_build, byte_size):
     material_name = str(file.read(struct.unpack('<i', file.read(4))[0]), 'utf-16-le', errors='replace')
     material_english_name = str(file.read(struct.unpack('<i', file.read(4))[0]), 'utf-16-le', errors='replace')
     
@@ -115,11 +120,11 @@ def read_material(file, string_build, byte_size):
     
     
     comment = str(file.read(struct.unpack('<i', file.read(4))[0]), 'utf-16-le', errors='replace')
-    surface_count = struct.unpack('<i', file.read(4))[0]/3
+    surface_count = int(struct.unpack('<i', file.read(4))[0]/3)
     
     return material_name, material_english_name, diffuse_color, specular_color, specular_strength, ambient_color, flag, edge_color, edge_size, texture_index, sphere_texture_index, sphere_mode, toon_sharing_flag, toon_texture_index, comment, surface_count
 
-def read_bone(file, string_build, byte_size):
+def read_bone(file: BufferedReader, string_build, byte_size):
     bone_name = str(file.read(struct.unpack('<i', file.read(4))[0]), 'utf-16-le', errors='replace')
     bone_english_name = str(file.read(struct.unpack('<i', file.read(4))[0]), 'utf-16-le', errors='replace')
     
@@ -178,7 +183,7 @@ def read_bone(file, string_build, byte_size):
     
     return bone_name, bone_english_name, position, parent_bone_index, layer, flag, tail_position, inherit_bone_parent_index, inherit_bone_parent_influence, fixed_axis, local_x_vector, local_z_vector, external_key, ik_target_bone_index, ik_loop_count, ik_limit_radian, ik_links
 
-def read_morph(file, morph_struct, morph_bytesize, vertex_struct, vertex_size, bone_struct, bone_size, material_struct, material_size, rigid_struct, rigid_size):
+def read_morph(file: BufferedReader, morph_struct, morph_bytesize, vertex_struct, vertex_size, bone_struct, bone_size, material_struct, material_size, rigid_struct, rigid_size):
     morph_name = str(file.read(struct.unpack('<i', file.read(4))[0]), 'utf-16-le', errors='replace')
     morph_english_name = str(file.read(struct.unpack('<i', file.read(4))[0]), 'utf-16-le', errors='replace')
     
@@ -268,7 +273,7 @@ def read_index_size(index, types):
 
 def import_pmx(filepath):
     try:
-        faces = []
+        faces: list[tuple[int,int,int]] = []
         vertices = []
         textures = []
         materials = []
@@ -386,19 +391,65 @@ def import_pmx(filepath):
         
         # Assign UV coordinates
         uv_layer = mesh.uv_layers.new()
-        for i, vertex in enumerate(vertices):
-            uv_layer.data[i].uv = vertex[2]
+        loop_indices_orig = tuple(i for f in faces for i in f)
+        uv_table = {vi:v for vi, v in enumerate([i[2] for i in vertices])}
+        uv_layer.data.foreach_set('uv', tuple(v for i in loop_indices_orig for v in uv_table[i]))
         
+
+        cur_polygon_index: int = 0
+
         # Assign materials
         for material_data in materials:
-            material = bpy.data.materials.new(material_data[0])
-            material.diffuse_color = material_data[2]
-            material.specular_color = material_data[3]
-            material.specular_intensity = material_data[4]
+            material: bpy.types.Material
+            if material_data[0] in bpy.data.materials:
+                material = bpy.data.materials[material_data[0]]
+            else:
+                material = bpy.data.materials.new(material_data[0])
+
+            material.use_nodes = True
+            for node in [node for node in material.node_tree.nodes]:
+                material.node_tree.nodes.remove(node)
+            
+            principled_node: ShaderNodeBsdfPrincipled = material.node_tree.nodes.new(type="ShaderNodeBsdfPrincipled")
+            principled_node.location.x = 7.29706335067749
+            principled_node.location.y = 298.918212890625
+            principled_node.inputs["Base Color"].default_value = material_data[2]
+            principled_node.inputs["Specular Tint"].default_value = [material_data[3][0],material_data[3][1],material_data[3][2],1.0]
+            principled_node.inputs["Specular IOR Level"].default_value = material_data[4]
+
+            output_node: ShaderNodeOutputMaterial = material.node_tree.nodes.new(type="ShaderNodeOutputMaterial")
+            output_node.location.x = 297.29705810546875
+            output_node.location.y = 298.918212890625
+
+            albedo_node: ShaderNodeTexImage = material.node_tree.nodes.new(type="ShaderNodeTexImage")
+            albedo_node.location.x = -588.6177978515625
+            albedo_node.location.y = 414.1948547363281
+
+            if textures[material_data[9]] in bpy.data.images:
+                albedo_node.image = bpy.data.images[textures[material_data[9]]]
+            else:
+                albedo_node.image = bpy.data.images.new(name=textures[material_data[9]],width=32,height=32)
+                albedo_node.image.filepath = os.path.join(os.path.dirname(filepath),textures[material_data[9]])
+                albedo_node.image.source = 'FILE'
+                albedo_node.image.reload()
+                
+            
+
+            material.node_tree.links.new(principled_node.inputs["Base Color"], albedo_node.outputs["Color"])
+            material.node_tree.links.new(principled_node.inputs["Alpha"], albedo_node.outputs["Alpha"])
+            material.node_tree.links.new(output_node.inputs["Surface"], principled_node.outputs["BSDF"])
+            
             #material.ambient = material_data[5] #TODO: this doesn't exist
             # Set other material properties based on the PMX data
+            if not (material.name in mesh.materials):
+                mesh.materials.append(material)
+
+            #surprised this works - @989onan
+            end: int = cur_polygon_index+material_data[15]-1
+            for face in mesh.polygons.items()[cur_polygon_index:end]:
+                face[1].material_index = mesh.materials.find(material.name)
             
-            mesh.materials.append(material)
+            cur_polygon_index = cur_polygon_index+material_data[15]
         
         # Create armature and assign bones
         armature = bpy.data.armatures.new(model_name + "_Armature")
