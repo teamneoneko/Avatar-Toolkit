@@ -2,6 +2,9 @@ import bpy
 import struct
 import mathutils
 import traceback
+import os
+
+from bpy.types import Material, Operator, Context, Object, Image, Mesh, MeshUVLoopLayer, Float2AttributeValue, ShaderNodeTexImage, ShaderNodeBsdfPrincipled, ShaderNodeOutputMaterial
 
 def read_pmd_header(file):
     # Read PMD header information
@@ -147,14 +150,57 @@ def import_pmd(filepath):
             
             # Assign materials
             for material_data in materials:
-                material = bpy.data.materials.new(f"Material_{len(mesh.materials)}")
-                material.diffuse_color = material_data[0]
-                material.specular_color = material_data[1]
-                material.specular_intensity = material_data[2]
-                material.ambient = material_data[3]
-                # Set other material properties based on the PMD data
+                material: bpy.types.Material
+                if f"Material_{len(mesh.materials)}" in bpy.data.materials:
+                    material = bpy.data.materials[f"Material_{len(mesh.materials)}"]
+                else:
+                    material = bpy.data.materials.new(f"Material_{len(mesh.materials)}")
+
+                material.use_nodes = True
+                for node in [node for node in material.node_tree.nodes]:
+                    material.node_tree.nodes.remove(node)
                 
-                mesh.materials.append(material)
+                principled_node: ShaderNodeBsdfPrincipled = material.node_tree.nodes.new(type="ShaderNodeBsdfPrincipled")
+                principled_node.location.x = 7.29706335067749
+                principled_node.location.y = 298.918212890625
+                principled_node.inputs["Base Color"].default_value = material_data[0]
+                principled_node.inputs["Specular Tint"].default_value = [material_data[1][0],material_data[1][1],material_data[1][2],1.0]
+                principled_node.inputs["Specular IOR Level"].default_value = material_data[2]
+
+                output_node: ShaderNodeOutputMaterial = material.node_tree.nodes.new(type="ShaderNodeOutputMaterial")
+                output_node.location.x = 297.29705810546875
+                output_node.location.y = 298.918212890625
+
+                albedo_node: ShaderNodeTexImage = material.node_tree.nodes.new(type="ShaderNodeTexImage")
+                albedo_node.location.x = -588.6177978515625
+                albedo_node.location.y = 414.1948547363281
+
+                if texture_file_name in bpy.data.images:
+                    albedo_node.image = bpy.data.images[texture_file_name]
+                else:
+                    albedo_node.image = bpy.data.images.new(name=texture_file_name,width=32,height=32)
+                    albedo_node.image.filepath = os.path.join(os.path.dirname(filepath),texture_file_name)
+                    albedo_node.image.source = 'FILE'
+                    albedo_node.image.reload()
+                    
+                
+
+                material.node_tree.links.new(principled_node.inputs["Base Color"], albedo_node.outputs["Color"])
+                material.node_tree.links.new(principled_node.inputs["Alpha"], albedo_node.outputs["Alpha"])
+                material.node_tree.links.new(output_node.inputs["Surface"], principled_node.outputs["BSDF"])
+                
+                #material.ambient = material_data[5] #TODO: this doesn't exist
+                # Set other material properties based on the PMX data
+                if not (material.name in mesh.materials):
+                    mesh.materials.append(material)
+
+                #surprised this works - @989onan
+                end: int = cur_polygon_index+material_data[15]-1
+                for face in mesh.polygons.items()[cur_polygon_index:end]:
+                    face[1].material_index = mesh.materials.find(material.name)
+                
+                cur_polygon_index = cur_polygon_index+material_data[15]
+                # Set other material properties based on the PMD data
             
             # Create armature and assign bones
             armature = bpy.data.armatures.new(model_name + "_Armature")
