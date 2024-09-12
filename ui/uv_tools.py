@@ -4,6 +4,7 @@ from ..core.register import register_wrap
 from ..functions.translations import t
 from ..functions.uv_tools import AvatarToolkit_OT_AlignUVEdgesToTarget
 from .panel import draw_title
+from .uv_panel import UVTools_PT_MainPanel
 
 @register_wrap
 class UVTools_PT_Tools(bpy.types.Panel):
@@ -12,7 +13,7 @@ class UVTools_PT_Tools(bpy.types.Panel):
     bl_space_type = 'IMAGE_EDITOR'
     bl_region_type = 'UI'
     bl_category = "Avatar Toolkit"
-    bl_parent_id = "OBJECT_PT_avatar_toolkit_uv"
+    bl_parent_id = UVTools_PT_MainPanel.bl_idname
     bl_order = 3
 
     def draw(self, context: bpy.types.Context):

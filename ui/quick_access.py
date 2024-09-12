@@ -7,7 +7,7 @@ from ..functions.translations import t
 
 from ..core.import_pmx import import_pmx
 from ..core.import_pmd import import_pmd
-from ..functions.import_anything import ImportAnyModel
+from ..functions.import_anything import AvatarToolKit_OT_ImportAnyModel
 from ..functions.armature_modifying import AvatarToolkit_OT_StartPoseMode, AvatarToolkit_OT_StopPoseMode, AvatarToolkit_OT_ApplyPoseAsRest, AvatarToolkit_OT_ApplyPoseAsShapekey
 from ..core.common import get_selected_armature, set_selected_armature, get_all_meshes
 
