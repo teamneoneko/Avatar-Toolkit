@@ -338,6 +338,78 @@ class AvatarToolkit_OT_MergeBonesToParents(Operator):
                     bone_child.parent = armature_data.edit_bones[bone].parent
                 armature_data.edit_bones.remove(armature_data.edit_bones[bone])
         
-        
         bpy.ops.object.mode_set(mode=prev_mode)
+        return {'FINISHED'}
+
+
+@register_wrap
+class AvatarToolkit_OT_MergeArmatures(Operator):
+    bl_idname = "avatar_toolkit.merge_armatures"
+    bl_label = t("MergeArmature.merge_armatures.label")
+    bl_description = t("MergeArmature.merge_armatures.desc").format(selected_armature_label=t("MergeArmatures.selected_armature.label"))
+    bl_options = {'REGISTER', 'UNDO'}
+
+    """align_bones: bpy.props.BoolProperty(default=False,name=t("MergeArmature.merge_armatures.align_bones.label"),description=t("MergeArmature.merge_armatures.align_bones.desc"))"""
+
+    @classmethod
+    def poll(cls, context: Context) -> bool:
+        return (common.get_selected_armature(context) is not None) and (context.scene.merge_armature_source is not None)
+
+    def make_active(self, obj: bpy.types.Object, context: Context):
+        context.view_layer.objects.active = obj
+        bpy.ops.object.mode_set(mode='OBJECT')
+        bpy.ops.object.select_all(action='DESELECT')
+        context.view_layer.objects.active = obj
+        obj.select_set(True)
+
+    def execute(cls, context: Context) -> set[str]:
+        source_armature: bpy.types.Object = bpy.data.objects[context.scene.merge_armature_source]
+        source_armature_data: Armature = source_armature.data
+        target_armature: bpy.types.Object = common.get_selected_armature(context)
+        target_armature_data: Armature = target_armature.data
+        parent_dictionary: dict[str, list[str]] = {}
+
+        cls.make_active(obj=source_armature, context=context)
+        
+        
+        #TODO: This is woefully screwed. This needs to be fixed - @989onan
+        """if cls.align_bones:
+            bpy.ops.object.mode_set(mode='POSE')
+            for bone in source_armature.pose.bones:
+                if bone.name in target_armature_data.bones:
+
+                    #sorry for this one liner - @989onan
+                    bone.matrix = source_armature.convert_space(matrix=target_armature.convert_space(matrix=target_armature_data.bones[bone.name].matrix_local, pose_bone=None,from_space='LOCAL',to_space='WORLD'), pose_bone=None, from_space='WORLD', to_space='LOCAL')
+            
+            if not common.apply_pose_as_rest(armature=source_armature,meshes=[i for i in source_armature.children if i.type == 'MESH'], context=context):
+                cls.report({'ERROR'}, t("Quick_Access.apply_armature_failed"))
+                return {'FINISHED'}"""
+        
+        
+
+
+        cls.make_active(obj=source_armature, context=context)
+        bpy.ops.object.mode_set(mode='EDIT')
+        source_armature_data: Armature = source_armature.data
+        for bone_name in [i.name for i in source_armature_data.edit_bones]:
+            if bone_name in target_armature_data.bones:
+                parent_dictionary[bone_name] = [i.name for i in source_armature_data.edit_bones[bone_name].children]
+                source_armature_data.edit_bones.remove(source_armature_data.edit_bones[bone_name])
+        bpy.ops.object.mode_set(mode='OBJECT')
+
+        cls.make_active(obj=target_armature, context=context)
+        source_armature.select_set(True)
+
+        bpy.ops.object.join()
+        target_armature: bpy.types.Object = common.get_selected_armature(context)
+        cls.make_active(obj=target_armature, context=context)
+        bpy.ops.object.mode_set(mode='EDIT')
+        for bone_name, bone_name_list in parent_dictionary.items():
+            if bone_name in target_armature_data.edit_bones:
+                for bone_child in bone_name_list:
+                    target_armature_data.edit_bones[bone_child].parent = target_armature_data.edit_bones[bone_name]
+        bpy.ops.object.mode_set(mode='OBJECT')
+        
+
+
         return {'FINISHED'}

@@ -21,6 +21,12 @@ def register() -> None:
         name=t("VisemePanel.selected_mesh.label"),
         description=t("VisemePanel.selected_mesh.desc")
     )))
+
+    register_property((bpy.types.Scene, "merge_armature_source", bpy.props.EnumProperty(
+        items=get_armatures,
+        name=t("MergeArmatures.selected_armature.label"),
+        description=t("MergeArmatures.selected_armature.label")
+    )))
     
     register_property((bpy.types.Scene, "avatar_toolkit_language_changed", bpy.props.BoolProperty(default=False)))
 
@@ -49,8 +55,8 @@ def register() -> None:
 
     register_property((bpy.types.Scene, "selected_armature", bpy.props.EnumProperty(
         items=get_armatures,
-        name="Selected Armature",
-        description="The currently selected armature for Avatar Toolkit operations"
+        name=t("Quick_Access.selected_armature.label"),
+        description=t("Quick_Access.selected_armature.desc")
     )))
     
     #happy with how compressed this get_texture_node_list method is - @989onan
@@ -88,7 +94,7 @@ def register() -> None:
         items=get_texture_node_list)))
     register_property((Material, "texture_atlas_height", EnumProperty(
         name=t("TextureAtlas.height"),
-        description=t("TextureAtlas.texture_use_atlas.desc").format(name=t("TextureAtlas.height_map").lower()), 
+        description=t("TextureAtlas.texture_use_atlas.desc").format(name=t("TextureAtlas.height").lower()), 
         default=0, 
         items=get_texture_node_list)))
     register_property((Material, "texture_atlas_roughness", EnumProperty(
