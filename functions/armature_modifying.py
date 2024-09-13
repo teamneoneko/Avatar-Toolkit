@@ -4,6 +4,8 @@ from bpy.types import Context, Mesh, Panel, Operator, Armature, EditBone
 from ..functions.translations import t
 from ..core.common import get_selected_armature, get_all_meshes
 from ..core import common
+from ..core.dictionaries import bone_names
+from mathutils import Matrix
 
 @register_wrap
 class AvatarToolkit_OT_StartPoseMode(Operator):
@@ -95,98 +97,10 @@ class AvatarToolkit_OT_ApplyPoseAsRest(Operator):
         return get_selected_armature(context) != None and context.mode == "POSE"
     
     def execute(self, context: Context):
-        for obj in get_all_meshes(context):
-            mesh_data: Mesh = obj.data
-
-
-
-            if mesh_data.shape_keys:
-                shape_key_obj_list: list[bpy.types.Object] = []
-                modifier_armature_name: str = ""
-
-                for modifier in obj.modifiers:
-                    if modifier.type == "ARMATURE":
-                        arm_modifier: bpy.types.ArmatureModifier = modifier
-                        modifier_armature_name = arm_modifier.object.name
-                for idx,shape in enumerate(mesh_data.shape_keys.key_blocks):
-                    if idx == 0:
-                        continue
-                    context.view_layer.objects.active = obj
-                    
-                    bpy.ops.object.mode_set(mode="OBJECT")
-                    bpy.ops.object.select_all(action="DESELECT")
-                    context.view_layer.objects.active = obj
-                    obj.select_set(True)
-
-                    #create duplicate of object
-                    bpy.ops.object.duplicate()
-
-                    shape_obj = context.view_layer.objects.active
-
-                    #make current shapekey a separate object
-                    shape_obj.active_shape_key_index = idx
-                    shape_obj.name = shape.name
-                    
-                    bpy.ops.object.shape_key_move(type="TOP")
-
-                    bpy.ops.object.mode_set(mode="EDIT")
-                    bpy.ops.object.mode_set(mode="OBJECT")
-
-                    bpy.ops.object.shape_key_remove(all=True)
-
-                    bpy.ops.object.modifier_apply(modifier=modifier_armature_name)
-
-                    #for modifier_name in [i.name for i in shape_obj.modifiers]:
-                    #    bpy.ops.object.modifier_remove(modifier=modifier_name)
-
-                    shape_key_obj_list.append(shape_obj) #add to a list of shape key objects
-                context.view_layer.objects.active = obj
-                    
-                bpy.ops.object.mode_set(mode="OBJECT")
-                context.view_layer.objects.active.select_set(True)
-                bpy.ops.object.shape_key_remove(all=True)
-                bpy.ops.object.modifier_apply(modifier=modifier_armature_name)
-                bpy.ops.object.select_all(action="DESELECT")
-
-                for shapekey_obj in shape_key_obj_list:
-                    shapekey_obj.select_set(True)
-                context.view_layer.objects.active = obj
-                context.view_layer.objects.active.select_set(True)
-
-                try:
-                    bpy.ops.object.join_shapes()
-                except:
-                    self.report({'ERROR'}, t("Quick_Access.apply_armature_failed"))
-                    #delete shapekey objects to not leave ourselves in a bad exit state - @989onan
-                    context.view_layer.objects.active = shape_key_obj_list[0]
-                    obj.select_set(False)
-                    bpy.ops.object.delete(confirm=False)
-                    return {'CANCELLED'}
-                context.view_layer.objects.active = shape_key_obj_list[0]
-                obj.select_set(False)
-                bpy.ops.object.delete(confirm=False)
-            else:
-                modifier_armature_name: str = ""
-
-                for modifier in obj.modifiers:
-                    if modifier.type == "ARMATURE":
-                        arm_modifier: bpy.types.ArmatureModifier = modifier
-                        modifier_armature_name = arm_modifier.object.name
-                context.view_layer.objects.active = obj
-                bpy.ops.object.mode_set(mode="OBJECT")
-                bpy.ops.object.select_all(action="DESELECT")
-                context.view_layer.objects.active.select_set(True)
-                bpy.ops.object.modifier_apply(modifier=modifier_armature_name)
-
-            armature_obj: bpy.types.Object = get_selected_armature(context)
-            
-            context.view_layer.objects.active = armature_obj
-            armature_obj.select_set(True)
-            bpy.ops.object.mode_set(mode="OBJECT")
-            bpy.ops.object.mode_set(mode="POSE")
-
-            bpy.ops.pose.armature_apply(selected=False)
-
+        
+        if common.apply_pose_as_rest(armature_obj=get_selected_armature(context),meshes=get_all_meshes(context), context=context):
+            self.report({'ERROR'}, t("Quick_Access.apply_armature_failed"))
+            return {'FINISHED'}
         return {'FINISHED'}
 
 @register_wrap
@@ -349,8 +263,6 @@ class AvatarToolkit_OT_MergeArmatures(Operator):
     bl_description = t("MergeArmature.merge_armatures.desc").format(selected_armature_label=t("MergeArmatures.selected_armature.label"))
     bl_options = {'REGISTER', 'UNDO'}
 
-    """align_bones: bpy.props.BoolProperty(default=False,name=t("MergeArmature.merge_armatures.align_bones.label"),description=t("MergeArmature.merge_armatures.align_bones.desc"))"""
-
     @classmethod
     def poll(cls, context: Context) -> bool:
         return (common.get_selected_armature(context) is not None) and (context.scene.merge_armature_source is not None)
@@ -372,20 +284,52 @@ class AvatarToolkit_OT_MergeArmatures(Operator):
         cls.make_active(obj=source_armature, context=context)
         
         
-        #TODO: This is woefully screwed. This needs to be fixed - @989onan
-        """if cls.align_bones:
-            bpy.ops.object.mode_set(mode='POSE')
-            for bone in source_armature.pose.bones:
-                if bone.name in target_armature_data.bones:
 
-                    #sorry for this one liner - @989onan
-                    bone.matrix = source_armature.convert_space(matrix=target_armature.convert_space(matrix=target_armature_data.bones[bone.name].matrix_local, pose_bone=None,from_space='LOCAL',to_space='WORLD'), pose_bone=None, from_space='WORLD', to_space='LOCAL')
-            
-            if not common.apply_pose_as_rest(armature=source_armature,meshes=[i for i in source_armature.children if i.type == 'MESH'], context=context):
+        if context.scene.merge_armature_apply_transforms:
+            target_armature.select_set(True)
+            for obj in target_armature.children:
+                obj.select_set(True)
+            for obj in source_armature.children:
+                obj.select_set(True)
+            bpy.ops.object.transform_apply()
+
+        
+        if context.scene.merge_armature_align_bones:
+            if not context.scene.merge_armature_apply_transforms:
+                source_armature.matrix_world = target_armature.matrix_world
+
+            def children_bone_recursive(parent_bone) -> list[bpy.types.PoseBone]:
+                child_bones = []
+                child_bones.append(parent_bone)
+                for child in parent_bone.children:
+                    child_bones.extend(children_bone_recursive(child))
+                return child_bones
+            bpy.ops.object.mode_set(mode='POSE')
+            source_armature_bone_names = [j.name for j in children_bone_recursive(
+                source_armature.pose.bones[
+                    next(bone.name for bone in source_armature.pose.bones if common.simplify_bonename(bone.name) in bone_names['hips']) #Find bone that matches dictionary for hips before continuing.
+                    ]
+                    )] #bones are default in order of parent child.
+
+            bpy.ops.object.mode_set(mode='OBJECT')
+            bpy.ops.object.select_all(action='DESELECT')
+            context.view_layer.objects.active = target_armature
+            bpy.ops.object.mode_set(mode='EDIT')
+            for source_bone_name in source_armature_bone_names:
+                
+                if source_bone_name in target_armature_data.edit_bones:
+                    obj = source_armature
+                    editbone = target_armature_data.edit_bones[source_bone_name]
+                    bone = obj.pose.bones[source_bone_name]
+                    bone.matrix = editbone.matrix
+                else:
+                    continue
+            if not common.apply_pose_as_rest(armature_obj=source_armature,meshes=[i for i in source_armature.children if i.type == 'MESH'], context=context):
                 cls.report({'ERROR'}, t("Quick_Access.apply_armature_failed"))
-                return {'FINISHED'}"""
+                return {'FINISHED'}
         
         
+
 
 
         cls.make_active(obj=source_armature, context=context)
