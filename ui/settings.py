@@ -11,7 +11,7 @@ class AvatarToolkitSettingsPanel(bpy.types.Panel):
     bl_region_type = 'UI'
     bl_category = CATEGORY_NAME
     bl_parent_id = AvatarToolKit_PT_AvatarToolkitPanel.bl_idname
-    bl_order = 6
+    bl_order = 7
 
     def draw(self, context):
         layout = self.layout

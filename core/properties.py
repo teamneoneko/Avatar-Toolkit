@@ -4,7 +4,7 @@ from ..core.register import register_property
 from bpy.types import Scene, Object, Material, Context
 from bpy.props import BoolProperty, EnumProperty, IntProperty, CollectionProperty, StringProperty, FloatVectorProperty, PointerProperty
 from ..core.addon_preferences import get_preference
-from ..core.common import SceneMatClass, MaterialListBool, get_armatures, get_mesh_items
+from ..core.common import SceneMatClass, MaterialListBool, get_armatures, get_mesh_items, get_armatures_that_are_not_selected
 
 def register() -> None:
     default_language = get_preference("language", 0)
@@ -20,6 +20,23 @@ def register() -> None:
         items=get_mesh_items,
         name=t("VisemePanel.selected_mesh.label"),
         description=t("VisemePanel.selected_mesh.desc")
+    )))
+
+    register_property((bpy.types.Scene, "merge_armature_source", bpy.props.EnumProperty(
+        items=get_armatures_that_are_not_selected,
+        name=t("MergeArmatures.selected_armature.label"),
+        description=t("MergeArmatures.selected_armature.label")
+    )))
+
+    register_property((bpy.types.Scene, "merge_armature_apply_transforms", bpy.props.BoolProperty(
+        default=False,
+        name=t("MergeArmature.merge_armatures.apply_transforms.label"),
+        description=t("MergeArmature.merge_armatures.apply_transforms.desc")
+    )))
+    register_property((bpy.types.Scene, "merge_armature_align_bones", bpy.props.BoolProperty(
+        default=False,
+        name=t("MergeArmature.merge_armatures.align_bones.label"),
+        description=t("MergeArmature.merge_armatures.align_bones.desc")
     )))
     
     register_property((bpy.types.Scene, "avatar_toolkit_language_changed", bpy.props.BoolProperty(default=False)))
@@ -49,8 +66,8 @@ def register() -> None:
 
     register_property((bpy.types.Scene, "selected_armature", bpy.props.EnumProperty(
         items=get_armatures,
-        name="Selected Armature",
-        description="The currently selected armature for Avatar Toolkit operations"
+        name=t("Quick_Access.selected_armature.label"),
+        description=t("Quick_Access.selected_armature.desc")
     )))
     
     #happy with how compressed this get_texture_node_list method is - @989onan
@@ -88,7 +105,7 @@ def register() -> None:
         items=get_texture_node_list)))
     register_property((Material, "texture_atlas_height", EnumProperty(
         name=t("TextureAtlas.height"),
-        description=t("TextureAtlas.texture_use_atlas.desc").format(name=t("TextureAtlas.height_map").lower()), 
+        description=t("TextureAtlas.texture_use_atlas.desc").format(name=t("TextureAtlas.height").lower()), 
         default=0, 
         items=get_texture_node_list)))
     register_property((Material, "texture_atlas_roughness", EnumProperty(
