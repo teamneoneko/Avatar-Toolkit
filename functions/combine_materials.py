@@ -81,23 +81,30 @@ class AvatarToolKit_OT_CombineMaterials(Operator):
         init_progress(context, 5)  # 5 steps in total
         
         update_progress(self, context, t("Optimization.consolidating_materials"))
-        self.consolidate_materials(meshes)
+        num_combined = self.consolidate_materials(meshes)
         
         update_progress(self, context, t("Optimization.cleaning_material_slots"))
-        self.clean_material_slots(meshes)
+        cleaned_slots = self.clean_material_slots(meshes)
         
         update_progress(self, context, t("Optimization.cleaning_material_names"))
-        self.clean_material_names()
+        cleaned_names = self.clean_material_names()
         
         update_progress(self, context, t("Optimization.clearing_unused_data"))
-        self.clear_unused_data_blocks()
+        removed_data_blocks = self.clear_unused_data_blocks()
         
         update_progress(self, context, t("Optimization.finalizing"))
         finish_progress(context)
         
+        self.report({'INFO'}, t("Optimization.materials_optimization_report").format(
+            num_combined=num_combined,
+            num_cleaned_slots=cleaned_slots,
+            num_cleaned_names=cleaned_names,
+            num_removed_data_blocks=removed_data_blocks
+        ))
+        
         return {'FINISHED'}
 
-    def consolidate_materials(self, meshes: List[Object]) -> None:
+    def consolidate_materials(self, meshes: List[Object]) -> int:
         mat_mapping: Dict[str, Material] = {}
         num_combined: int = 0
         for mesh in meshes:
@@ -118,21 +125,32 @@ class AvatarToolKit_OT_CombineMaterials(Operator):
                             continue
                     else:
                         mat_mapping[base_name] = mat
-        
-        self.report({'INFO'}, t("Optimization.materials_combined").format(num_combined=num_combined))
+        return num_combined
 
-    def clean_material_slots(self, meshes: List[Object]) -> None:
+    def clean_material_slots(self, meshes: List[Object]) -> int:
+        cleaned_slots = 0
         for obj in meshes:
             obj.select_set(True)
             bpy.context.view_layer.objects.active = obj
+            initial_slots = len(obj.material_slots)
             bpy.ops.object.material_slot_remove_unused()
+            cleaned_slots += initial_slots - len(obj.material_slots)
             obj.select_set(False)
+        return cleaned_slots
 
-    def clean_material_names(self) -> None:
+    def clean_material_names(self) -> int:
+        cleaned_names = 0
         for obj in bpy.data.objects:
             if obj.type == 'MESH':
-                clean_material_names(obj)
+                result = clean_material_names(obj)
+                if result is not None:
+                    cleaned_names += result
+        return cleaned_names
 
-    def clear_unused_data_blocks(self) -> None:
+    def clear_unused_data_blocks(self) -> int:
+        initial_count = sum(len(getattr(bpy.data, attr)) for attr in dir(bpy.data) if isinstance(getattr(bpy.data, attr), bpy.types.bpy_prop_collection))
         bpy.ops.outliner.orphans_purge(do_local_ids=True, do_linked_ids=True, do_recursive=True)
+        final_count = sum(len(getattr(bpy.data, attr)) for attr in dir(bpy.data) if isinstance(getattr(bpy.data, attr), bpy.types.bpy_prop_collection))
+        return initial_count - final_count
+
 
