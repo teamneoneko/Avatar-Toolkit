@@ -27,6 +27,7 @@
     "Optimization.cleaning_material_names": "Cleaning material names...",
     "Optimization.cleaning_material_slots": "Cleaning material slots...",
     "Optimization.clearing_unused_data": "Clearing unused data...",
+    "Optimization.materials_optimization_report": "Materials optimization completed: Combined {num_combined} materials, cleaned {num_cleaned_slots} material slots, cleaned {num_cleaned_names} material names, and removed {num_removed_data_blocks} unused data blocks",
     "Optimization.combine_materials.desc": "Combine similar materials to reduce draw calls and improve performance",
     "Optimization.combine_materials.label": "Combine Materials",
     "Optimization.consolidating_materials": "Consolidating materials...",
