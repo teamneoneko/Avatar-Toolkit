@@ -63,6 +63,11 @@ def register() -> None:
         min=0.0,
         max=2.0
     )))
+    register_property((bpy.types.Scene, "merge_twist_bones", bpy.props.BoolProperty(
+        name=t("Tools.merge_twist_bones.label"),
+        description=t("Tools.merge_twist_bones.desc"),
+        default=True
+    )))
 
     register_property((bpy.types.Scene, "selected_armature", bpy.props.EnumProperty(
         items=get_armatures,
