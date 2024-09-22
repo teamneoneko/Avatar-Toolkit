@@ -89,3 +89,33 @@ class AvatarToolKit_OT_ConnectBones(Operator):
     def draw(self, context):
         layout = self.layout
         layout.prop(self, "min_distance")
+
+@register_wrap
+class AvatarToolKit_OT_DeleteBoneConstraints(Operator):
+    bl_idname = "avatar_toolkit.delete_bone_constraints"
+    bl_label = t("Tools.delete_bone_constraints.label")
+    bl_description = t("Tools.delete_bone_constraints.desc")
+    bl_options = {'REGISTER', 'UNDO'}
+
+    @classmethod
+    def poll(cls, context: Context) -> bool:
+        return get_selected_armature(context) is not None
+
+    def execute(self, context: Context) -> set[str]:
+        armature = get_selected_armature(context)
+        if not is_valid_armature(armature):
+            self.report({'ERROR'}, t("Tools.delete_bone_constraints.invalid_armature"))
+            return {'CANCELLED'}
+
+        bpy.ops.object.mode_set(mode='POSE')
+        
+        constraints_removed = 0
+        for bone in armature.pose.bones:
+            while bone.constraints:
+                bone.constraints.remove(bone.constraints[0])
+                constraints_removed += 1
+
+        bpy.ops.object.mode_set(mode='OBJECT')
+
+        self.report({'INFO'}, t("Tools.delete_bone_constraints.success").format(constraints_removed=constraints_removed))
+        return {'FINISHED'}

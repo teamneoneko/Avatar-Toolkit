@@ -8,7 +8,7 @@ from ..functions.translations import t
 from ..core.common import get_selected_armature
 from ..functions.mesh_tools import AvatarToolkit_OT_RemoveUnusedShapekeys
 from ..functions.seperate_by import AvatarToolKit_OT_SeparateByMaterials, AvatarToolKit_OT_SeparateByLooseParts
-from ..functions.additional_tools import AvatarToolKit_OT_ApplyTransforms, AvatarToolKit_OT_ConnectBones
+from ..functions.additional_tools import AvatarToolKit_OT_ApplyTransforms, AvatarToolKit_OT_ConnectBones, AvatarToolKit_OT_DeleteBoneConstraints
 from ..functions.armature_modifying import AvatarToolkit_OT_RemoveZeroWeightBones, AvatarToolkit_OT_MergeBonesToActive, AvatarToolkit_OT_MergeBonesToParents
 from ..functions.rigify_functions import AvatarToolKit_OT_ConvertRigifyToUnity
 
@@ -50,6 +50,9 @@ class AvatarToolkit_PT_ToolsPanel(bpy.types.Panel):
             row.operator(AvatarToolkit_OT_MergeBonesToParents.bl_idname, text=t("Tools.merge_bones_to_parents.label"), icon='BONE_DATA')
             row = layout.row(align=True)
             row.operator(AvatarToolKit_OT_ConnectBones.bl_idname, text=t("Tools.connect_bones.label"), icon='BONE_DATA')
+            row = layout.row(align=True)
+            row.operator(AvatarToolKit_OT_DeleteBoneConstraints.bl_idname, text=t("Tools.delete_bone_constraints.label"), icon='CONSTRAINT_BONE')
+            row = layout.row(align=True)
             row.operator(AvatarToolKit_OT_ConvertRigifyToUnity.bl_idname, text=t("Tools.convert_rigify_to_unity.label"), icon='ARMATURE_DATA')
             row = layout.row()
             row.prop(context.scene, "merge_twist_bones")
