@@ -144,6 +144,36 @@ def select_current_armature(context: Context) -> bool:
         return True
     return False
 
+def apply_shapekey_to_basis(context: bpy.types.Context, obj: bpy.types.Object, shape_key_name: str, delete_old: bool = False) -> bool:
+    if shape_key_name not in obj.data.shape_keys.key_blocks:
+       return False
+    shapekeynum = obj.data.shape_keys.key_blocks.find(shape_key_name)
+
+    bpy.ops.object.mode_set(mode="EDIT")
+
+    bpy.ops.mesh.select_all(action='SELECT')
+
+
+    obj.active_shape_key_index = 0
+    bpy.ops.mesh.blend_from_shape(shape = shape_key_name, add=True, blend=1)
+    obj.active_shape_key_index = shapekeynum
+    bpy.ops.mesh.select_all(action='SELECT')
+    bpy.ops.mesh.blend_from_shape(shape = shape_key_name, add=True, blend=-2)
+
+
+    bpy.ops.mesh.select_all(action='DESELECT')
+
+    bpy.ops.object.mode_set(mode="OBJECT")
+    print("blended!")
+
+    if delete_old:
+        obj.active_shape_key_index = shapekeynum
+        bpy.ops.object.shape_key_remove(all=False)
+    else:
+        mesh: bpy.types.Mesh = obj.data
+        mesh.shape_keys.key_blocks[shape_key_name].name = shape_key_name + "_reversed"
+    return True
+
 def apply_pose_as_rest(context: Context, armature_obj: bpy.types.Object, meshes: list[bpy.types.Object]) -> bool:
     for obj in meshes:
         mesh_data: Mesh = obj.data
