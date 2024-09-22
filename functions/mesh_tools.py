@@ -1,7 +1,7 @@
 import numpy as np
 import bpy
 from bpy.types import Context
-from ..core.common import get_selected_armature, get_all_meshes, is_valid_armature
+from ..core.common import get_selected_armature, get_all_meshes, is_valid_armature, apply_shapekey_to_basis, has_shapekeys
 from ..functions.translations import t
 from ..core.register import register_wrap
 
@@ -54,3 +54,28 @@ class AvatarToolkit_OT_RemoveUnusedShapekeys(bpy.types.Operator):
                 if ("-" in kb_name) or ("=" in kb_name) or ("~" in kb_name): #don't delete category names. - @989onan
                     continue
                 ob.shape_key_remove(ob.data.shape_keys.key_blocks[kb_name])
+
+
+
+@register_wrap
+class AvatarToolkit_OT_ApplyShapeKey(bpy.types.Operator):
+    bl_idname = "avatar_toolkit.apply_shape_key"
+    bl_label = t("Tools.apply_shape_key.label")
+    bl_description = t("Tools.apply_shape_key.desc")
+    bl_options = {'REGISTER', 'UNDO'}
+    
+
+    @classmethod
+    def poll(cls, context: Context) -> bool:
+        armature = get_selected_armature(context)
+        return armature is not None and is_valid_armature(armature) and (len(get_all_meshes(context)) > 0) and (context.mode == "OBJECT") and context.view_layer.objects.active is not None and has_shapekeys(context.view_layer.objects.active)
+
+    def execute(self, context: Context) -> set[str]:
+        obj: bpy.types.Object = context.view_layer.objects.active
+
+        
+        if (apply_shapekey_to_basis(context,obj,obj.active_shape_key.name,False)):
+            return {'FINISHED'}
+        else:
+            self.report({'ERROR'}, t("Tools.apply_shape_key.error"))
+            return {'FINISHED'}
