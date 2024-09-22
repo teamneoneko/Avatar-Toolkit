@@ -33,6 +33,11 @@ def register():
     #finally register properties that may use some classes.
     core.register.register_properties()
 
+    from functions.mesh_tools import AvatarToolkit_OT_ApplyShapeKey
+    
+    bpy.types.MESH_MT_shape_key_context_menu.append((lambda self, context: self.layout.separator()))
+    bpy.types.MESH_MT_shape_key_context_menu.append((lambda self, context: self.layout.operator(AvatarToolkit_OT_ApplyShapeKey.bl_idname, icon="KEY_HLT")))
+
 def unregister():
     print("Unregistering Avatar Toolkit")
     # Unregister the UI classes
