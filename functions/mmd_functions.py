@@ -141,7 +141,15 @@ class AvatarToolKit_OT_OptimizeArmature(Operator):
         bpy.ops.avatar_toolkit.delete_bone_constraints('EXEC_DEFAULT')
 
         update_progress(self, context, t("MMDOptions.merging_bones_to_parents"))
-        bpy.ops.avatar_toolkit.merge_bones_to_parents('EXEC_DEFAULT')
+        bpy.ops.object.mode_set(mode='OBJECT')
+        bpy.ops.object.select_all(action='DESELECT')
+        armature.select_set(True)
+        context.view_layer.objects.active = armature
+        bpy.ops.object.mode_set(mode='EDIT')
+        try:
+            bpy.ops.avatar_toolkit.merge_bones_to_parents('EXEC_DEFAULT')
+        except RuntimeError as e:
+            self.report({'WARNING'}, f"Failed to merge bones to parents: {str(e)}")
 
         update_progress(self, context, t("MMDOptions.reordering_bones"))
         self.reorder_bones(context, armature)
@@ -264,10 +272,10 @@ def add_principled_shader(material: Material, bake_mmd=True):
     elif principled_base_color is not None:
         principled_shader.inputs["Base Color"].default_value = principled_base_color
 
-    principled_shader.inputs["Specular"].default_value = 0
+    principled_shader.inputs["Specular IOR Level"].default_value = 0
     principled_shader.inputs["Roughness"].default_value = 0.9
     principled_shader.inputs["Sheen Tint"].default_value = (1.0, 1.0, 1.0, 1.0)
-    principled_shader.inputs["Clearcoat Roughness"].default_value = 0
+    principled_shader.inputs["Coat Roughness"].default_value = 0
     principled_shader.inputs["IOR"].default_value = 1.45
 
     # Handle transparency
