@@ -55,8 +55,6 @@ class AvatarToolkit_OT_RemoveUnusedShapekeys(bpy.types.Operator):
                     continue
                 ob.shape_key_remove(ob.data.shape_keys.key_blocks[kb_name])
 
-
-
 @register_wrap
 class AvatarToolkit_OT_ApplyShapeKey(bpy.types.Operator):
     bl_idname = "avatar_toolkit.apply_shape_key"
