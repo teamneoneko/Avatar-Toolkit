@@ -1,6 +1,7 @@
 import bpy
 import numpy as np
-from bpy.types import Operator, Context, Material, ShaderNodeTexImage, ShaderNodeGroup
+import re
+from bpy.types import Operator, Context, Material, ShaderNodeTexImage, ShaderNodeGroup, Object
 from ..core.register import register_wrap
 from ..functions.translations import t
 from ..core.common import get_selected_armature, is_valid_armature, get_all_meshes, init_progress, update_progress, finish_progress
@@ -26,24 +27,39 @@ class AvatarToolKit_OT_CleanupMesh(Operator):
 
         update_progress(self, context, t("MMDOptions.removing_unused_vertex_groups"))
         for obj in get_all_meshes(context):
-            vgroups = obj.vertex_groups
-            for vgroup in vgroups:
-                if not any(vgroup.index in [g.group for g in v.groups] for v in obj.data.vertices):
-                    vgroups.remove(vgroup)
+            self.remove_unused_vertex_groups(obj)
 
         update_progress(self, context, t("MMDOptions.removing_unused_vertices"))
         for obj in get_all_meshes(context):
-            bpy.ops.object.select_all(action='DESELECT')
-            obj.select_set(True)
-            context.view_layer.objects.active = obj
-            bpy.ops.object.mode_set(mode='EDIT')
-            bpy.ops.mesh.select_all(action='SELECT')
-            bpy.ops.mesh.delete_loose()
-            bpy.ops.object.mode_set(mode='OBJECT')
+            self.remove_unused_vertices(obj)
 
-        update_progress(self, context, t("MMDOptions.cleanup_complete"))
+        update_progress(self, context, t("MMDOptions.removing_empty_shape_keys"))
+        for obj in get_all_meshes(context):
+            self.remove_empty_shape_keys(obj)
+
         finish_progress(context)
         return {'FINISHED'}
+
+    def remove_unused_vertex_groups(self, obj):
+        vgroups = obj.vertex_groups
+        for vgroup in vgroups:
+            if not any(vgroup.index in [g.group for g in v.groups] for v in obj.data.vertices):
+                vgroups.remove(vgroup)
+
+    def remove_unused_vertices(self, obj):
+        bpy.ops.object.select_all(action='DESELECT')
+        obj.select_set(True)
+        bpy.context.view_layer.objects.active = obj
+        bpy.ops.object.mode_set(mode='EDIT')
+        bpy.ops.mesh.select_all(action='SELECT')
+        bpy.ops.mesh.delete_loose()
+        bpy.ops.object.mode_set(mode='OBJECT')
+
+    def remove_empty_shape_keys(self, obj):
+        if obj.data.shape_keys:
+            for key in obj.data.shape_keys.key_blocks:
+                if key.name != 'Basis' and all(abs(key.data[i].co[j] - obj.data.shape_keys.reference_key.data[i].co[j]) < 0.0001 for i in range(len(key.data)) for j in range(3)):
+                    obj.shape_key_remove(key)
 
 @register_wrap
 class AvatarToolKit_OT_OptimizeWeights(Operator):
@@ -52,13 +68,21 @@ class AvatarToolKit_OT_OptimizeWeights(Operator):
     bl_description = t("MMDOptions.optimize_weights.desc")
     bl_options = {'REGISTER', 'UNDO'}
 
+    max_weights: bpy.props.IntProperty(
+        name=t("MMDOptions.max_weights.label"),
+        description=t("MMDOptions.max_weights.desc"),
+        default=4,
+        min=1,
+        max=8
+    )
+
     def execute(self, context: Context) -> set[str]:
         armature = get_selected_armature(context)
         if not armature:
             self.report({'ERROR'}, t("MMDOptions.no_armature_selected"))
             return {'CANCELLED'}
 
-        init_progress(context, 3)
+        init_progress(context, 4)
 
         update_progress(self, context, t("MMDOptions.merging_weights"))
         for obj in get_all_meshes(context):
@@ -69,9 +93,20 @@ class AvatarToolKit_OT_OptimizeWeights(Operator):
         update_progress(self, context, t("MMDOptions.removing_zero_weight_bones"))
         bpy.ops.avatar_toolkit.remove_zero_weight_bones('EXEC_DEFAULT')
 
+        update_progress(self, context, t("MMDOptions.limiting_vertex_weights"))
+        for obj in get_all_meshes(context):
+            self.limit_vertex_weights(obj)
+
         update_progress(self, context, t("MMDOptions.weight_optimization_complete"))
         finish_progress(context)
         return {'FINISHED'}
+
+    def limit_vertex_weights(self, obj):
+        for v in obj.data.vertices:
+            if len(v.groups) > self.max_weights:
+                sorted_groups = sorted(v.groups, key=lambda g: g.weight, reverse=True)
+                for g in sorted_groups[self.max_weights:]:
+                    obj.vertex_groups[g.group].remove([v.index])
 
 @register_wrap
 class AvatarToolKit_OT_OptimizeArmature(Operator):
@@ -86,7 +121,7 @@ class AvatarToolKit_OT_OptimizeArmature(Operator):
             self.report({'ERROR'}, t("MMDOptions.no_armature_selected"))
             return {'CANCELLED'}
 
-        init_progress(context, 7)
+        init_progress(context, 9)
 
         update_progress(self, context, t("MMDOptions.fixing_bone_rolls"))
         bpy.ops.object.mode_set(mode='EDIT')
@@ -111,6 +146,12 @@ class AvatarToolKit_OT_OptimizeArmature(Operator):
         update_progress(self, context, t("MMDOptions.reordering_bones"))
         self.reorder_bones(context, armature)
 
+        update_progress(self, context, t("MMDOptions.fixing_armature_names"))
+        self.fix_armature_names(armature)
+
+        update_progress(self, context, t("MMDOptions.renaming_bones"))
+        self.rename_bones(armature)
+
         update_progress(self, context, t("MMDOptions.armature_optimization_complete"))
         finish_progress(context)
         return {'FINISHED'}
@@ -126,12 +167,29 @@ class AvatarToolKit_OT_OptimizeArmature(Operator):
         for root_bone in sorted(root_bones, key=lambda b: b.name):
             sort_bones(root_bone)
 
-import bpy
-import numpy as np
-from bpy.types import Operator, Context, Material, ShaderNodeTexImage, ShaderNodeGroup, Object
-from ..core.register import register_wrap
-from ..functions.translations import t
-from ..core.common import get_all_meshes, init_progress, update_progress, finish_progress
+    def fix_armature_names(self, armature):
+        for bone in armature.data.bones:
+            fixed_name = self.get_fixed_bone_name(bone.name)
+            if fixed_name != bone.name:
+                bone.name = fixed_name
+
+    def get_fixed_bone_name(self, name):
+        name = name.replace(' ', '_')
+        name = re.sub(r'[^\w]', '', name)
+        return name
+
+    def rename_bones(self, armature):
+        for bone in armature.data.bones:
+            new_name = self.get_standardized_bone_name(bone.name)
+            if new_name != bone.name:
+                bone.name = new_name
+
+    def get_standardized_bone_name(self, name):
+        if 'left' in name.lower():
+            return f"Left_{name}"
+        elif 'right' in name.lower():
+            return f"Right_{name}"
+        return name
 
 def bake_mmd_colors(node_base_tex: ShaderNodeTexImage, node_mmd_shader: ShaderNodeGroup):
     ambient_color_input = node_mmd_shader.inputs.get("Ambient Color")
@@ -202,6 +260,7 @@ def add_principled_shader(material: Material, bake_mmd=True):
 
     if node_base_tex and node_base_tex.image:
         links.new(node_base_tex.outputs["Color"], principled_shader.inputs["Base Color"])
+        links.new(node_base_tex.outputs["Alpha"], principled_shader.inputs["Alpha"])
     elif principled_base_color is not None:
         principled_shader.inputs["Base Color"].default_value = principled_base_color
 
@@ -210,6 +269,12 @@ def add_principled_shader(material: Material, bake_mmd=True):
     principled_shader.inputs["Sheen Tint"].default_value = (1.0, 1.0, 1.0, 1.0)
     principled_shader.inputs["Clearcoat Roughness"].default_value = 0
     principled_shader.inputs["IOR"].default_value = 1.45
+
+    # Handle transparency
+    if material.blend_method != 'OPAQUE':
+        principled_shader.inputs["Alpha"].default_value = material.alpha_threshold
+        material.blend_method = 'CLIP'
+        material.shadow_method = 'CLIP'
 
 def fix_mmd_shader(material: Material):
     mmd_shader_node = material.node_tree.nodes.get("mmd_shader")
@@ -301,3 +366,4 @@ class AvatarToolKit_OT_ConvertMaterials(Operator):
             for link in input.links:
                 if link.from_node not in used_nodes:
                     self.traverse_node_tree(link.from_node, used_nodes)
+
