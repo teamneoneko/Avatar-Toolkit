@@ -7,8 +7,7 @@ from ..functions.resonite_functions import AvatarToolKit_OT_ConvertToResonite
 from ..functions.translations import t
 from ..core.common import get_selected_armature
 from ..functions.mesh_tools import AvatarToolkit_OT_RemoveUnusedShapekeys
-from ..functions.seperate_by import AvatarToolKit_OT_SeparateByMaterials, AvatarToolKit_OT_SeparateByLooseParts
-from ..functions.additional_tools import AvatarToolKit_OT_ApplyTransforms, AvatarToolKit_OT_ConnectBones, AvatarToolKit_OT_DeleteBoneConstraints
+from ..functions.additional_tools import AvatarToolKit_OT_ApplyTransforms, AvatarToolKit_OT_ConnectBones, AvatarToolKit_OT_DeleteBoneConstraints, AvatarToolKit_OT_SeparateByMaterials, AvatarToolKit_OT_SeparateByLooseParts
 from ..functions.armature_modifying import AvatarToolkit_OT_RemoveZeroWeightBones, AvatarToolkit_OT_MergeBonesToActive, AvatarToolkit_OT_MergeBonesToParents
 from ..functions.rigify_functions import AvatarToolKit_OT_ConvertRigifyToUnity
 
