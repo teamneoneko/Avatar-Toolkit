@@ -4,9 +4,9 @@ from ..functions.translations import t
 
 def draw_title(self: bpy.types.Panel):
     layout = self.layout
-    layout.label(text=t("AvatarToolkit.welcome"))
-    layout.label(text=t("AvatarToolkit.description"))
-    layout.label(text=t("AvatarToolkit.alpha_warning"))
+    layout.label(text=t("AvatarToolkit.desc1"))
+    layout.label(text=t("AvatarToolkit.desc2"))
+    layout.label(text=t("AvatarToolkit.desc3"))
 
 CATEGORY_NAME = "Avatar Toolkit"
 
