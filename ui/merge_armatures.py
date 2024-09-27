@@ -25,16 +25,24 @@ class AvatarToolkit_PT_MergeArmaturesPanel(Panel):
             layout.label(text=t("MergeArmatures.title.label"), icon='ARMATURE_DATA')
             
             layout.separator(factor=0.5)
-            row = layout.row(align=True)
-            row.prop(context.scene, property="selected_armature",text=t("MergeArmatures.target_armature.label"),icon="STYLUS_PRESSURE")
-            row = layout.row(align=True)
-            row.prop(context.scene, property="merge_armature_source",icon="SORT_DESC")
-            row = layout.row(align=True)
-            row.prop(context.scene, property="merge_armature_align_bones")
-            row = layout.row(align=True)
-            row.prop(context.scene, property="merge_armature_apply_transforms")
-            row = layout.row(align=True)
-            row.operator(operator=AvatarToolkit_OT_MergeArmatures.bl_idname,icon="ARMATURE_DATA")
+            
+            box = layout.box()
+            col = box.column(align=True)
+            
+            col.prop(context.scene, property="selected_armature", text=t("MergeArmatures.target_armature.label"), icon="ARMATURE_DATA")
+            col.prop(context.scene, property="merge_armature_source", icon="OUTLINER_OB_ARMATURE")
+            
+            layout.separator(factor=0.5)
+            
+            col = layout.column(align=True)
+            col.prop(context.scene, property="merge_armature_align_bones", icon="BONE_DATA")
+            col.prop(context.scene, property="merge_armature_apply_transforms", icon="OBJECT_ORIGIN")
+            
+            layout.separator(factor=1.0)
+            
+            row = layout.row()
+            row.scale_y = 1.5
+            row.operator(operator=AvatarToolkit_OT_MergeArmatures.bl_idname, icon="ARMATURE_DATA")
             
         else:
             layout.label(text=t("MergeArmatures.select_armature"), icon='ERROR')

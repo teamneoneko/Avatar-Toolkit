@@ -32,28 +32,45 @@ class AvatarToolkit_PT_ToolsPanel(bpy.types.Panel):
             row = layout.row(align=True)
             row.scale_y = 1.5  
             row.operator(AvatarToolKit_OT_ConvertToResonite.bl_idname, text=t("Tools.convert_to_resonite.label"), icon='SCENE_DATA')
+            
             row = layout.row(align=True)
-            row.operator(AvatarToolKit_OT_CreateDigitigradeLegs.bl_idname, text=t("Tools.create_digitigrade_legs.label"), icon='BONE_DATA')
-            layout.separator()
-            row = layout.row(align=True)
+            row.scale_y = 1.5
+            row.operator(AvatarToolKit_OT_ConvertRigifyToUnity.bl_idname, text=t("Tools.convert_rigify_to_unity.label"), icon='ARMATURE_DATA')
+            
+            layout.separator(factor=1.0)
+            
             layout.label(text=t("Tools.separate_by.label"), icon='MESH_DATA')
+            row = layout.row(align=True)
             row.operator(AvatarToolKit_OT_SeparateByMaterials.bl_idname, text=t("Tools.separate_by_materials.label"), icon='MATERIAL')
             row.operator(AvatarToolKit_OT_SeparateByLooseParts.bl_idname, text=t("Tools.separate_by_loose_parts.label"), icon='OUTLINER_OB_MESH')
+            
+            layout.separator(factor=1.0)
+            
+            layout.label(text=t("Tools.bone_tools.label"), icon='BONE_DATA')
             row = layout.row(align=True)
-            row.operator(AvatarToolKit_OT_ApplyTransforms.bl_idname, text=t("Tools.apply_transforms.label"), icon='OBJECT_ORIGIN')
-            row.operator(AvatarToolkit_OT_RemoveUnusedShapekeys.bl_idname, text=t("Tools.remove_unused_shapekeys.label"), icon='SHAPEKEY_DATA')
+            row.operator(AvatarToolKit_OT_CreateDigitigradeLegs.bl_idname, text=t("Tools.create_digitigrade_legs.label"), icon='BONE_DATA')
+            
             row = layout.row(align=True)
             row.operator(AvatarToolkit_OT_RemoveZeroWeightBones.bl_idname, text=t("Tools.remove_zero_weight_bones.label"), icon='BONE_DATA')
+            
             row = layout.row(align=True)
             row.operator(AvatarToolkit_OT_MergeBonesToActive.bl_idname, text=t("Tools.merge_bones_to_active.label"), icon='BONE_DATA')
             row.operator(AvatarToolkit_OT_MergeBonesToParents.bl_idname, text=t("Tools.merge_bones_to_parents.label"), icon='BONE_DATA')
+            
             row = layout.row(align=True)
             row.operator(AvatarToolKit_OT_ConnectBones.bl_idname, text=t("Tools.connect_bones.label"), icon='BONE_DATA')
-            row = layout.row(align=True)
             row.operator(AvatarToolKit_OT_DeleteBoneConstraints.bl_idname, text=t("Tools.delete_bone_constraints.label"), icon='CONSTRAINT_BONE')
-            row = layout.row(align=True)
-            row.operator(AvatarToolKit_OT_ConvertRigifyToUnity.bl_idname, text=t("Tools.convert_rigify_to_unity.label"), icon='ARMATURE_DATA')
+            
             row = layout.row()
             row.prop(context.scene, "merge_twist_bones")
+            
+            layout.separator(factor=1.0)
+            
+            layout.label(text=t("Tools.additional_tools.label"), icon='TOOL_SETTINGS')
+            row = layout.row(align=True)
+            row.operator(AvatarToolKit_OT_ApplyTransforms.bl_idname, text=t("Tools.apply_transforms.label"), icon='OBJECT_ORIGIN')
+            row.operator(AvatarToolkit_OT_RemoveUnusedShapekeys.bl_idname, text=t("Tools.remove_unused_shapekeys.label"), icon='SHAPEKEY_DATA')
+            
+            layout.separator(factor=1.0) 
         else:
             layout.label(text=t("Tools.select_armature"), icon='ERROR')

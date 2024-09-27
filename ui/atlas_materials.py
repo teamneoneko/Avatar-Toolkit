@@ -73,16 +73,29 @@ class AvatarToolKit_PT_TextureAtlasPanel(Panel):
         armature = get_selected_armature(context)
         
         if armature:
-            row = layout.row()
-            boxoutter = row.box()
+            layout.label(text=t("TextureAtlas.label"), icon='TEXTURE')
+            
+            layout.separator(factor=0.5)
+            
+            box = layout.box()
+            row = box.row()
             direction_icon = 'RIGHTARROW' if not context.scene.texture_atlas_Has_Mat_List_Shown else 'DOWNARROW_HLT'
-            row = boxoutter.row()
-            row.operator(AvatarToolKit_OT_ExpandSectionMaterials.bl_idname, text=(t("TextureAtlas.reload_list") if not context.scene.texture_atlas_Has_Mat_List_Shown else t("TextureAtlas.loaded_list")), icon=direction_icon)
+            row.operator(AvatarToolKit_OT_ExpandSectionMaterials.bl_idname, 
+                        text=(t("TextureAtlas.reload_list") if not context.scene.texture_atlas_Has_Mat_List_Shown else t("TextureAtlas.loaded_list")), 
+                        icon=direction_icon)
+            
             if context.scene.texture_atlas_Has_Mat_List_Shown:
-                row = boxoutter.row()
-                row.template_list(AvatarToolKit_UL_MaterialTextureAtlasProperties.bl_idname, 'material_list', context.scene, 'materials',
-                                context.scene, 'texture_atlas_material_index', rows=12, type='DEFAULT')
-                row = layout.row()
-                row.operator(AvatarToolKit_OT_AtlasMaterials.bl_idname, text=t("TextureAtlas.atlas_materials"))
+                row = box.row()
+                row.template_list(AvatarToolKit_UL_MaterialTextureAtlasProperties.bl_idname, 'material_list', 
+                                context.scene, 'materials', context.scene, 'texture_atlas_material_index', 
+                                rows=12, type='DEFAULT')
+            
+            layout.separator(factor=1.0)
+            
+            row = layout.row()
+            row.scale_y = 1.5
+            row.operator(AvatarToolKit_OT_AtlasMaterials.bl_idname, text=t("TextureAtlas.atlas_materials"), icon='NODE_TEXTURE')
+        
         else:
             layout.label(text=t("Tools.select_armature"), icon='ERROR')
+
