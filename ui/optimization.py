@@ -4,7 +4,7 @@ from .panel import AvatarToolKit_PT_AvatarToolkitPanel, CATEGORY_NAME
 from ..functions.translations import t
 from ..functions.remove_doubles_safely import AvatarToolKit_OT_RemoveDoublesSafely, AvatarToolKit_OT_RemoveDoublesSafelyAdvanced
 from ..core.common import get_selected_armature
-from ..functions.join_meshes import AvatarToolKit_OT_JoinAllMeshes, AvatarToolKit_OT_JoinSelectedMeshes
+from ..functions.mesh_tools import AvatarToolKit_OT_JoinAllMeshes, AvatarToolKit_OT_JoinSelectedMeshes
 from ..functions.combine_materials import AvatarToolKit_OT_CombineMaterials
 
 @register_wrap
