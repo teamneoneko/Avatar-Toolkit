@@ -15,7 +15,7 @@ class AvatarToolkit_PT_MergeArmaturesPanel(Panel):
     bl_region_type = 'UI'
     bl_category = CATEGORY_NAME
     bl_parent_id = AvatarToolKit_PT_AvatarToolkitPanel.bl_idname
-    bl_order = 4
+    bl_order = 5
 
     def draw(self, context: Context):
         layout = self.layout
