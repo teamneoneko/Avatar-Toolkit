@@ -25,31 +25,39 @@ class AvatarToolkitQuickAccessPanel(Panel):
         layout = self.layout
         layout.label(text=t("Quick_Access.options"), icon='TOOL_SETTINGS')
 
-        layout.label(text=t("Quick_Access.select_armature"), icon='ARMATURE_DATA')
+        layout.separator(factor=1.0)
 
+        layout.label(text=t("Quick_Access.select_armature"), icon='ARMATURE_DATA')
         layout.prop(context.scene, "selected_armature", text="")
 
-        row = layout.row()
-        row.label(text=t("Quick_Access.import_export.label"), icon='IMPORT')
-        
-        layout.separator(factor=0.5)
+        layout.separator(factor=1.0)
 
+        layout.label(text=t("Quick_Access.import_export.label"), icon='IMPORT')
+        
         row = layout.row(align=True)
-        row.scale_y = 1.5  
+        row.scale_y = 1.5
         row.operator(AvatarToolKit_OT_ImportAnyModel.bl_idname, text=t("Quick_Access.import"), icon='IMPORT')
         row.operator(AVATAR_TOOLKIT_OT_ExportMenu.bl_idname, text=t("Quick_Access.export"), icon='EXPORT')
-        
+
+        layout.separator(factor=1.0)
+
         if get_selected_armature(context) != None:
             if(context.mode == "POSE"):
-                row = layout.row(align=True)
-                row.operator(AvatarToolkit_OT_StopPoseMode.bl_idname, text=t("Quick_Access.stop_pose_mode.label"), icon='POSE_HLT')
-                row = layout.row(align=True)
-                row.operator(AvatarToolkit_OT_ApplyPoseAsRest.bl_idname, text=t("Quick_Access.apply_pose_as_rest.label"), icon='MOD_ARMATURE')
-                row = layout.row(align=True)
-                row.operator(AvatarToolkit_OT_ApplyPoseAsShapekey.bl_idname, text=t("Quick_Access.apply_pose_as_shapekey.label"), icon='MOD_ARMATURE')
+                col = layout.column(align=True)
+                col.scale_y = 1.2
+                col.operator(AvatarToolkit_OT_StopPoseMode.bl_idname, text=t("Quick_Access.stop_pose_mode.label"), icon='POSE_HLT')
+
+                layout.separator(factor=0.5)
+
+                col = layout.column(align=True)
+                col.scale_y = 1.2
+                col.operator(AvatarToolkit_OT_ApplyPoseAsRest.bl_idname, text=t("Quick_Access.apply_pose_as_rest.label"), icon='MOD_ARMATURE')
+                col.operator(AvatarToolkit_OT_ApplyPoseAsShapekey.bl_idname, text=t("Quick_Access.apply_pose_as_shapekey.label"), icon='MOD_ARMATURE')
             else:
-                row = layout.row(align=True)
+                row = layout.row()
+                row.scale_y = 1.2
                 row.operator(AvatarToolkit_OT_StartPoseMode.bl_idname, text=t("Quick_Access.start_pose_mode.label"), icon='POSE_HLT')
+
 
 @register_wrap
 class AVATAR_TOOLKIT_OT_ExportMenu(bpy.types.Operator):
