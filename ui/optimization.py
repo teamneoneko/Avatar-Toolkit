@@ -30,7 +30,7 @@ class AvatarToolkit_PT_OptimizationPanel(bpy.types.Panel):
             row = layout.row(align=True)
             row.scale_y = 1.2 
             row.operator(AvatarToolKit_OT_RemoveDoublesSafely.bl_idname, text=t("Optimization.remove_doubles_safely.label"), icon='SNAP_VERTEX')
-            row.operator(AvatarToolKit_OT_RemoveDoublesSafelyAdvanced.bl_idname, text=t("Optimization.remove_doubles_safely_advanced.label"), icon = "ACTION")
+            row.operator(AvatarToolKit_OT_RemoveDoublesSafelyAdvanced.bl_idname, text=t("Optimization.remove_doubles_safely_advanced.label"), icon="ACTION")
             layout.separator(factor=0.5)
             
             layout.label(text=t("Optimization.joinmeshes.label"), icon='SETTINGS')
