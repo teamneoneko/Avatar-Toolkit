@@ -40,6 +40,7 @@ import_types: dict[str, typing.Callable[[str, list[dict[str,str]], str], None]] 
     "x3d": (lambda directory, files, filepath : bpy.ops.import_scene.x3d(files=files, directory=directory, filepath=filepath)),
     "wrl": (lambda directory, files, filepath : bpy.ops.import_scene.x3d(files=files, directory=directory, filepath=filepath)),
     "vmd": (lambda directory, files, filepath : import_multi_files(directory=directory, files=files, filepath=filepath, method = (lambda directory, filepath: bpy.ops.tuxedo.import_mmd_animation(directory=directory, filepath=filepath)))),
+    "vrm": (lambda directory, files, filepath: bpy.ops.import_scene.vrm(filepath=filepath)),
     "pmx": (lambda directory, files, filepath : import_pmx(filepath)),
     "pmd": (lambda directory, files, filepath : import_pmd(filepath)),
 }
