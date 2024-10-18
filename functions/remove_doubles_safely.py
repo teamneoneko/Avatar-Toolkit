@@ -18,7 +18,6 @@ class AvatarToolKit_OT_RemoveDoublesSafelyAdvanced(Operator):
     bl_description = t("Optimization.remove_doubles_safely_advanced.desc")
     bl_options = {'REGISTER', 'UNDO'}
 
-
     merge_distance: bpy.props.FloatProperty(default=0.0001)
 
     @classmethod
@@ -26,9 +25,20 @@ class AvatarToolKit_OT_RemoveDoublesSafelyAdvanced(Operator):
         armature = get_selected_armature(context)
         return armature is not None and is_valid_armature(armature)
 
+    def draw(self, context):
+        layout = self.layout
+        layout.label(text="This process may take a long time.")
+        layout.label(text="Blender may seem unresponsive during this operation.")
+        layout.label(text="Please be patient and wait for it to complete.")
+
+    def invoke(self, context, event):
+        return context.window_manager.invoke_props_dialog(self)
+
     def execute(self, context: Context):
-        bpy.ops.avatar_toolkit.remove_doubles_safely('INVOKE_DEFAULT',advanced=True,merge_distance=self.merge_distance)
-        return {'FINISHED'}
+        bpy.ops.avatar_toolkit.remove_doubles_safely('INVOKE_DEFAULT', advanced=True, merge_distance=self.merge_distance)
+        return {'RUNNING_MODAL'}
+
+
 @register_wrap
 class AvatarToolKit_OT_RemoveDoublesSafely(Operator):
     bl_idname = "avatar_toolkit.remove_doubles_safely"
