@@ -249,7 +249,19 @@
     "MMDOptions.renaming_bones": "Renaming bones",
     "MMDOptions.armature_optimization_complete": "Armature optimization complete",
     "MMDOptions.convert_materials.label": "Convert Materials",
-    "MMDOptions.convert_materials.desc": "Convert materials to use Principled BSDF shader and fix MMD and VRM shaders",    "MMDOptions.converting_materials": "Converting materials for {name}"
-    
+    "MMDOptions.convert_materials.desc": "Convert materials to use Principled BSDF shader and fix MMD and VRM shaders",    "MMDOptions.converting_materials": "Converting materials for {name}",
+    "Updater.label": "Updater",
+    "Updater.CheckForUpdateButton.label": "Check for Updates",
+    "Updater.CheckForUpdateButton.label_alt": "No Updates Available",
+    "Updater.UpdateToLatestButton.label": "Update to {name}",
+    "Updater.UpdateToSelectedButton.label": "Update",
+    "Updater.currentVersion": "Current Version: {name}",
+    "Scene.avatar_toolkit_updater_version_list.name": "Available Versions",
+    "Scene.avatar_toolkit_updater_version_list.description": "List of available versions to update to",
+    "check_for_update.cantCheck": "Unable to check for updates",
+    "download_file.cantConnect": "Cannot connect to update server",
+    "download_file.cantFindZip": "Update file not found",
+    "download_file.cantFindAvatarToolkit": "Avatar Toolkit files not found in update package"
+ 
   }
 }
