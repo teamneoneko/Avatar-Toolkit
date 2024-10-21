@@ -6,6 +6,7 @@ import urllib
 import shutil
 import pathlib
 import zipfile
+import time 
 from threading import Thread
 from bpy.app.handlers import persistent
 from ..functions.translations import t
@@ -13,7 +14,7 @@ from .addon_preferences import get_preference, get_current_version, save_prefere
 from .register import register_wrap
 from ..ui.panel import AvatarToolKit_PT_AvatarToolkitPanel, CATEGORY_NAME
 
-GITHUB_REPO = "teamneoneko/Avatar-Toolkit"
+GITHUB_REPO = "Yusarina/avito"
 
 is_checking_for_update = False
 update_needed = False
@@ -292,10 +293,3 @@ def ui_refresh():
         for window in windowManager.windows:
             for area in window.screen.areas:
                 area.tag_redraw()
-
-def register():
-    bpy.app.handlers.load_post.append(check_for_update_on_start)
-
-def unregister():
-    if check_for_update_on_start in bpy.app.handlers.load_post:
-        bpy.app.handlers.load_post.remove(check_for_update_on_start)
