@@ -267,7 +267,22 @@
     "check_for_update.cantCheck": "Unable to check for updates",
     "download_file.cantConnect": "Cannot connect to update server",
     "download_file.cantFindZip": "Update file not found",
-    "download_file.cantFindAvatarToolkit": "Avatar Toolkit files not found in update package"
+    "download_file.cantFindAvatarToolkit": "Avatar Toolkit files not found in update package",
+    "CreditsSupport.label": "Credits & Support",
+    "CreditsSupport.credits_title": "Credits",
+    "CreditsSupport.credits_text1": "Avatar Toolkit has been created by the Neoneko team:",
+    "CreditsSupport.credits_text2": "Yusarina and 989Onan",
+    "CreditsSupport.credits_text3": "Some code has been inspired by Cats Blender Plugin,",
+    "CreditsSupport.credits_text4": "thanks to the original contributors to that plugin.",
+    "CreditsSupport.support_text1": "If you like what we do, you can donate/ tip to us",
+    "CreditsSupport.support_text2": "through our pally.gg page.",
+    "CreditsSupport.support_title": "Support Us",
+    "CreditsSupport.support_button": "Support Us",
+    "CreditsSupport.help_title": "Need Help?",
+    "CreditsSupport.help_text1": "Check out our wiki first, we HIGHLY encourage",
+    "CreditsSupport.help_text2": "that you read it before seeking further support.",
+    "CreditsSupport.wiki_button": "Wiki",
+    "CreditsSupport.discord_button": "Join Discord"
  
   }
 }
