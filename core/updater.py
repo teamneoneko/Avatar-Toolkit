@@ -9,11 +9,11 @@ import zipfile
 from threading import Thread
 from bpy.app.handlers import persistent
 from ..functions.translations import t
-from .addon_preferences import get_preference
+from .addon_preferences import get_preference, get_current_version, save_preference
 from .register import register_wrap
 from ..ui.panel import AvatarToolKit_PT_AvatarToolkitPanel, CATEGORY_NAME
 
-GITHUB_REPO = "teamneoneko/Avatar-Toolkit-rinadev"
+GITHUB_REPO = "teamneoneko/Avatar-Toolkit"
 
 is_checking_for_update = False
 update_needed = False
@@ -47,6 +47,26 @@ class AvatarToolkit_OT_UpdateToLatest(bpy.types.Operator):
         return {'FINISHED'}
 
 @register_wrap
+class AvatarToolkit_OT_UpdateNotificationPopup(bpy.types.Operator):
+    bl_idname = "avatar_toolkit.update_notification_popup"
+    bl_label = t('UpdateNotificationPopup.label')
+    bl_description = t('UpdateNotificationPopup.desc')
+    bl_options = {'INTERNAL'}
+
+    def execute(self, context):
+        update_now(latest=True)
+        self.report({'INFO'}, "Update started. Please wait for the process to complete.")
+        return {'FINISHED'}
+
+    def invoke(self, context, event):
+        return context.window_manager.invoke_props_dialog(self, width=300)
+
+    def draw(self, context):
+        layout = self.layout
+        col = layout.column(align=True)
+        col.label(text=t('UpdateNotificationPopup.newUpdate', default="New update available: {version}").format(version=latest_version_str))
+
+@register_wrap
 class AvatarToolkit_PT_UpdaterPanel(bpy.types.Panel):
     bl_label = t("Updater.label")
     bl_idname = "OBJECT_PT_avatar_toolkit_updater"
@@ -54,11 +74,38 @@ class AvatarToolkit_PT_UpdaterPanel(bpy.types.Panel):
     bl_region_type = 'UI'
     bl_category = CATEGORY_NAME
     bl_parent_id = AvatarToolKit_PT_AvatarToolkitPanel.bl_idname
-    bl_order = 5
+    bl_order = 9
 
     def draw(self, context):
         layout = self.layout
         draw_updater_panel(context, layout)
+
+@register_wrap
+class AvatarToolkit_OT_RestartBlenderPopup(bpy.types.Operator):
+    bl_idname = "avatar_toolkit.restart_blender_popup"
+    bl_label = t('RestartBlenderPopup.label', default="Restart Blender")
+    bl_description = t('RestartBlenderPopup.desc', default="Restart Blender to complete the update")
+    bl_options = {'INTERNAL'}
+
+    def execute(self, context):
+        return {'FINISHED'}
+
+    def invoke(self, context, event):
+        return context.window_manager.invoke_props_dialog(self, width=300)
+
+    def draw(self, context):
+        layout = self.layout
+        col = layout.column(align=True)
+        col.label(text=t('RestartBlenderPopup.message', default="Update successful! Please restart Blender."))
+
+@persistent
+def check_for_update_on_start(dummy):
+    if get_preference("check_for_updates_on_startup", True):
+        current_time = time.time()
+        last_check = get_preference("last_update_check", 0)
+        if current_time - last_check > 86400:  # 24 hours
+            check_for_update_background()
+            save_preference("last_update_check", current_time)
 
 def check_for_update_background():
     global is_checking_for_update
@@ -72,17 +119,18 @@ def check_for_update():
     global update_needed, latest_version, latest_version_str, version_list
 
     if not get_github_releases():
-        finish_update_checking(error=t('check_for_update.cantCheck'))
+        bpy.app.timers.register(lambda: finish_update_checking(error=t('check_for_update.cantCheck')))
         return
 
     update_needed = check_for_update_available()
 
     if update_needed:
         print('Update found!')
+        bpy.app.timers.register(lambda: bpy.ops.avatar_toolkit.update_notification_popup('INVOKE_DEFAULT') or None)
     else:
         print('No update found.')
 
-    finish_update_checking()
+    bpy.app.timers.register(finish_update_checking)
 
 def get_github_releases():
     global version_list
@@ -114,16 +162,31 @@ def check_for_update_available():
     latest_version = max(version_list.keys(), key=lambda v: [int(x) for x in v.split('.')])
     latest_version_str = latest_version
 
-    current_version = get_preference("version")
-    current_version_parts = [int(x) for x in current_version.split('.')]
-    latest_version_parts = [int(x) for x in latest_version.split('.')]
+    current_version = get_current_version()
+    print(f"Current version: {current_version}")  # Debugging statement
+
+    if current_version is None:
+        print("Current version is None. Cannot check for updates.")
+        return False
+
+    try:
+        # Validate that the version string contains only numeric parts
+        current_version_parts = [int(x) for x in current_version.split('.')]
+        latest_version_parts = [int(x) for x in latest_version.split('.')]
+    except ValueError as e:
+        print(f"Error parsing version numbers: {e}")
+        return False
 
     return latest_version_parts > current_version_parts
+
 
 def finish_update_checking(error=''):
     global is_checking_for_update
     is_checking_for_update = False
-    bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
+    if update_needed:
+        bpy.ops.avatar_toolkit.update_notification_popup('INVOKE_DEFAULT')
+    ui_refresh()
+    return None  # Important for bpy.app.timers
 
 def update_now(latest=False):
     if latest:
@@ -132,6 +195,7 @@ def update_now(latest=False):
         update_link = version_list[bpy.context.scene.avatar_toolkit_updater_version_list][0]
 
     download_file(update_link)
+    ui_refresh()
 
 def download_file(update_url):
     update_zip_file = os.path.join(downloads_dir, "avatar-toolkit-update.zip")
@@ -198,7 +262,9 @@ def finish_update(error=''):
         print(f"Update failed: {error}")
     else:
         print("Update successful!")
-    bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
+        save_preference("version", latest_version_str)
+        bpy.ops.avatar_toolkit.restart_blender_popup('INVOKE_DEFAULT')
+    ui_refresh()
 
 def get_version_list(self, context):
     return [(v, v, '') for v in version_list.keys()] if version_list else []
@@ -219,5 +285,17 @@ def draw_updater_panel(context, layout):
     row.operator(AvatarToolkit_OT_UpdateToLatest.bl_idname, text=t('Updater.UpdateToSelectedButton.label'))
 
     col.separator()
-    col.label(text=t('Updater.currentVersion').format(name=get_preference("version")))
+    col.label(text=t('Updater.currentVersion').format(name=get_current_version()))
 
+def ui_refresh():
+    for windowManager in bpy.data.window_managers:
+        for window in windowManager.windows:
+            for area in window.screen.areas:
+                area.tag_redraw()
+
+def register():
+    bpy.app.handlers.load_post.append(check_for_update_on_start)
+
+def unregister():
+    if check_for_update_on_start in bpy.app.handlers.load_post:
+        bpy.app.handlers.load_post.remove(check_for_update_on_start)
