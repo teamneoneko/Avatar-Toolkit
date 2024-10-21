@@ -13,17 +13,18 @@ from ..functions.translations import t
 from .addon_preferences import get_preference, get_current_version, save_preference
 from .register import register_wrap
 from ..ui.panel import AvatarToolKit_PT_AvatarToolkitPanel, CATEGORY_NAME
+from typing import Dict, List, Tuple, Optional, Set, Any
 
-GITHUB_REPO = "Yusarina/avito"
+GITHUB_REPO = "teamneoneko/Avatar-Toolkit"
 
-is_checking_for_update = False
-update_needed = False
-latest_version = None
-latest_version_str = ''
-version_list = None
+is_checking_for_update: bool = False
+update_needed: bool = False
+latest_version: Optional[str] = None
+latest_version_str: str = ''
+version_list: Optional[Dict[str, List[str]]] = None
 
-main_dir = os.path.dirname(os.path.dirname(__file__))
-downloads_dir = os.path.join(main_dir, "downloads")
+main_dir: str = os.path.dirname(os.path.dirname(__file__))
+downloads_dir: str = os.path.join(main_dir, "downloads")
 
 @register_wrap
 class AvatarToolkit_OT_CheckForUpdate(bpy.types.Operator):
@@ -32,7 +33,7 @@ class AvatarToolkit_OT_CheckForUpdate(bpy.types.Operator):
     bl_description = t('CheckForUpdateButton.desc')
     bl_options = {'INTERNAL'}
 
-    def execute(self, context):
+    def execute(self, context: bpy.types.Context) -> Set[str]:
         check_for_update_background()
         return {'FINISHED'}
 
@@ -43,7 +44,7 @@ class AvatarToolkit_OT_UpdateToLatest(bpy.types.Operator):
     bl_description = t('UpdateToLatestButton.desc')
     bl_options = {'INTERNAL'}
 
-    def execute(self, context):
+    def execute(self, context: bpy.types.Context) -> Set[str]:
         update_now(latest=True)
         return {'FINISHED'}
 
@@ -54,15 +55,15 @@ class AvatarToolkit_OT_UpdateNotificationPopup(bpy.types.Operator):
     bl_description = t('UpdateNotificationPopup.desc')
     bl_options = {'INTERNAL'}
 
-    def execute(self, context):
+    def execute(self, context: bpy.types.Context) -> Set[str]:
         update_now(latest=True)
         self.report({'INFO'}, "Update started. Please wait for the process to complete.")
         return {'FINISHED'}
 
-    def invoke(self, context, event):
+    def invoke(self, context: bpy.types.Context, event: bpy.types.Event) -> Set[str]:
         return context.window_manager.invoke_props_dialog(self, width=300)
 
-    def draw(self, context):
+    def draw(self, context: bpy.types.Context) -> None:
         layout = self.layout
         col = layout.column(align=True)
         col.label(text=t('UpdateNotificationPopup.newUpdate', default="New update available: {version}").format(version=latest_version_str))
@@ -77,7 +78,7 @@ class AvatarToolkit_PT_UpdaterPanel(bpy.types.Panel):
     bl_parent_id = AvatarToolKit_PT_AvatarToolkitPanel.bl_idname
     bl_order = 9
 
-    def draw(self, context):
+    def draw(self, context: bpy.types.Context) -> None:
         layout = self.layout
         draw_updater_panel(context, layout)
 
@@ -88,19 +89,19 @@ class AvatarToolkit_OT_RestartBlenderPopup(bpy.types.Operator):
     bl_description = t('RestartBlenderPopup.desc', default="Restart Blender to complete the update")
     bl_options = {'INTERNAL'}
 
-    def execute(self, context):
+    def execute(self, context: bpy.types.Context) -> Set[str]:
         return {'FINISHED'}
 
-    def invoke(self, context, event):
+    def invoke(self, context: bpy.types.Context, event: bpy.types.Event) -> Set[str]:
         return context.window_manager.invoke_props_dialog(self, width=300)
 
-    def draw(self, context):
+    def draw(self, context: bpy.types.Context) -> None:
         layout = self.layout
         col = layout.column(align=True)
         col.label(text=t('RestartBlenderPopup.message', default="Update successful! Please restart Blender."))
 
 @persistent
-def check_for_update_on_start(dummy):
+def check_for_update_on_start(dummy: Any) -> None:
     if get_preference("check_for_updates_on_startup", True):
         current_time = time.time()
         last_check = get_preference("last_update_check", 0)
@@ -108,7 +109,7 @@ def check_for_update_on_start(dummy):
             check_for_update_background()
             save_preference("last_update_check", current_time)
 
-def check_for_update_background():
+def check_for_update_background() -> None:
     global is_checking_for_update
     if is_checking_for_update:
         return
@@ -116,7 +117,7 @@ def check_for_update_background():
     is_checking_for_update = True
     Thread(target=check_for_update).start()
 
-def check_for_update():
+def check_for_update() -> None:
     global update_needed, latest_version, latest_version_str, version_list
 
     if not get_github_releases():
@@ -133,7 +134,7 @@ def check_for_update():
 
     bpy.app.timers.register(finish_update_checking)
 
-def get_github_releases():
+def get_github_releases() -> bool:
     global version_list
     version_list = {}
 
@@ -155,7 +156,7 @@ def get_github_releases():
 
     return True
 
-def check_for_update_available():
+def check_for_update_available() -> bool:
     global latest_version, latest_version_str
     if not version_list:
         return False
@@ -181,7 +182,7 @@ def check_for_update_available():
     return latest_version_parts > current_version_parts
 
 
-def finish_update_checking(error=''):
+def finish_update_checking(error: str = '') -> None:
     global is_checking_for_update
     is_checking_for_update = False
     if update_needed:
@@ -189,7 +190,7 @@ def finish_update_checking(error=''):
     ui_refresh()
     return None  # Important for bpy.app.timers
 
-def update_now(latest=False):
+def update_now(latest: bool = False) -> None:
     if latest:
         update_link = version_list[latest_version_str][0]
     else:
@@ -198,7 +199,7 @@ def update_now(latest=False):
     download_file(update_link)
     ui_refresh()
 
-def download_file(update_url):
+def download_file(update_url: str) -> None:
     update_zip_file = os.path.join(downloads_dir, "avatar-toolkit-update.zip")
 
     if os.path.isdir(downloads_dir):
@@ -233,13 +234,13 @@ def download_file(update_url):
 
     finish_update()
 
-def find_init_directory(path):
+def find_init_directory(path: str) -> Optional[str]:
     for root, dirs, files in os.walk(path):
         if "__init__.py" in files:
             return root
     return None
 
-def clean_addon_dir():
+def clean_addon_dir() -> None:
     for item in os.listdir(main_dir):
         item_path = os.path.join(main_dir, item)
         if item.startswith('.') or item in ['resources', 'downloads']:
@@ -249,7 +250,7 @@ def clean_addon_dir():
         elif os.path.isdir(item_path):
             shutil.rmtree(item_path)
 
-def move_files(from_dir, to_dir):
+def move_files(from_dir: str, to_dir: str) -> None:
     for item in os.listdir(from_dir):
         s = os.path.join(from_dir, item)
         d = os.path.join(to_dir, item)
@@ -258,7 +259,7 @@ def move_files(from_dir, to_dir):
         else:
             shutil.copy2(s, d)
 
-def finish_update(error=''):
+def finish_update(error: str = '') -> None:
     if error:
         print(f"Update failed: {error}")
     else:
@@ -267,10 +268,10 @@ def finish_update(error=''):
         bpy.ops.avatar_toolkit.restart_blender_popup('INVOKE_DEFAULT')
     ui_refresh()
 
-def get_version_list(self, context):
+def get_version_list(self, context: bpy.types.Context) -> List[Tuple[str, str, str]]:
     return [(v, v, '') for v in version_list.keys()] if version_list else []
 
-def draw_updater_panel(context, layout):
+def draw_updater_panel(context: bpy.types.Context, layout: bpy.types.UILayout) -> None:
     col = layout.column(align=True)
 
     if is_checking_for_update:
@@ -288,7 +289,7 @@ def draw_updater_panel(context, layout):
     col.separator()
     col.label(text=t('Updater.currentVersion').format(name=get_current_version()))
 
-def ui_refresh():
+def ui_refresh() -> None:
     for windowManager in bpy.data.window_managers:
         for window in windowManager.windows:
             for area in window.screen.areas:
