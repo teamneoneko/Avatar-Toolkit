@@ -66,14 +66,14 @@ def load_translations() -> bool:
 
     return dictionary != old_dictionary
 
-def t(phrase: str, default: str = None) -> str:
+def t(phrase: str, default: str = None, **kwargs) -> str:
     output: str = dictionary.get(phrase)
     if output is None:
         if verbose:
             print(f'Warning: Unknown phrase: {phrase}')
         return default if default is not None else phrase
     # print(f"Translating '{phrase}' to '{output}'")  # Debug print
-    return output
+    return output.format(**kwargs) if kwargs else output
 
 def get_language_display_name(lang: str) -> str:
     if lang == "auto":

@@ -7,6 +7,7 @@ if "bpy" not in locals():
     from .core.register import __bl_ordered_classes
     from .core import properties
     from .core import addon_preferences
+    from .core.updater import check_for_update_on_start
 else:
     import importlib
     importlib.reload(ui)
@@ -33,6 +34,8 @@ def register():
     #finally register properties that may use some classes.
     core.register.register_properties()
 
+    bpy.app.handlers.load_post.append(check_for_update_on_start)
+
     from .functions.mesh_tools import AvatarToolkit_OT_ApplyShapeKey
     
     bpy.types.MESH_MT_shape_key_context_menu.append((lambda self, context: self.layout.separator()))
@@ -41,6 +44,8 @@ def register():
 def unregister():
     print("Unregistering Avatar Toolkit")
     # Unregister the UI classes
+    if check_for_update_on_start in bpy.app.handlers.load_post:
+        bpy.app.handlers.load_post.remove(check_for_update_on_start)
 
     # Iterate over the classes to unregister in reverse order and unregister them
     for cls in reversed(list(__bl_ordered_classes)):

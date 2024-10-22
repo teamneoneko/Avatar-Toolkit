@@ -5,6 +5,7 @@ from bpy.types import Scene, Object, Material, Context
 from bpy.props import BoolProperty, EnumProperty, IntProperty, CollectionProperty, StringProperty, FloatVectorProperty, PointerProperty
 from ..core.addon_preferences import get_preference
 from ..core.common import SceneMatClass, MaterialListBool, get_armatures, get_mesh_items, get_armatures_that_are_not_selected
+from .updater import get_version_list
 
 def register() -> None:
     default_language = get_preference("language", 0)
@@ -74,6 +75,12 @@ def register() -> None:
         name=t("Quick_Access.selected_armature.label"),
         description=t("Quick_Access.selected_armature.desc")
     )))
+
+    register_property((bpy.types.Scene, "avatar_toolkit_updater_version_list", bpy.props.EnumProperty(
+        name=t('Scene.avatar_toolkit_updater_version_list.name'),
+        description=t('Scene.avatar_toolkit_updater_version_list.description'),
+        items=get_version_list
+    )))
     
     #happy with how compressed this get_texture_node_list method is - @989onan
     def get_texture_node_list(self: Material, context: Context) -> list[set[3]]:
@@ -130,7 +137,6 @@ def register() -> None:
         default=False,
         get=MaterialListBool.get_bool, 
         set=MaterialListBool.set_bool)))
-
 
 def unregister() -> None:
     #if you register properties with register_property then you shouldn't need this function.
