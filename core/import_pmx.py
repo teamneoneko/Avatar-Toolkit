@@ -200,38 +200,76 @@ def read_bone(file: BufferedReader, string_build, byte_size):
         print(f"Current file position: {file.tell()}")
         raise
 
+def set_bone_local_axis(bone, local_x, local_z):
+    # Convert from MMD to Blender coordinate system
+    x_axis = Vector(local_x).xzy
+    z_axis = Vector(local_z).xzy
+    y_axis = z_axis.cross(x_axis)
+    
+    # Create rotation matrix from axes
+    matrix = Matrix([x_axis, y_axis, z_axis]).transposed()
+    bone.matrix_local = matrix.to_4x4()
+
+def finalize_armature(armature_obj):
+    # Apply MMD to Blender space conversion
+    armature_obj.rotation_euler[0] = 1.5708  # 90 degrees in radians
+    armature_obj.rotation_euler[2] = 3.14159 # 180 degrees in radians
+    
+    # Apply scale to armature
+    armature_obj.scale = (scale, scale, scale)
+
+    # Apply transforms
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+
 def create_bones(armature_obj, bones_data, scale=0.08):
     bpy.context.view_layer.objects.active = armature_obj
     bpy.ops.object.mode_set(mode='EDIT')
     
     edit_bones = []
-    for bone_data in bones_data:
-        bone = armature_obj.data.edit_bones.new(bone_data[0])
-        # Scale the head position
-        bone.head = Vector(bone_data[2]).xzy * scale
+    for i, bone_data in enumerate(bones_data):
+        try:
+            print(f"Creating bone {i}: {bone_data[0]}")
+            bone = armature_obj.data.edit_bones.new(bone_data[0])
+            
+            # Convert and scale head position
+            head_pos = Vector(bone_data[2]).xzy * scale
+            bone.head = head_pos
+            
+            # Handle tail position
+            if bone_data[6][0] is not None:
+                tail_pos = Vector(bone_data[6]).xzy * scale
+                bone.tail = tail_pos
+                print(f"Using defined tail position for bone {bone_data[0]}")
+            else:
+                # Set a default tail position if not provided
+                bone.tail = head_pos + Vector((0, 0.1, 0)) * scale
+                print(f"Using default tail position for bone {bone_data[0]}")
+            
+            # Set parent if exists
+            if bone_data[3] != -1:
+                parent_bone = armature_obj.data.edit_bones[bones_data[bone_data[3]][0]]
+                bone.parent = parent_bone
+                print(f"Parented bone {bone_data[0]} to {parent_bone.name}")
+                
+            edit_bones.append(bone)
+                
+        except Exception as e:
+            print(f"Error creating bone {i}: {str(e)}")
+            continue
         
-        # Handle tail position with scale
-        if isinstance(bone_data[6], int) and bone_data[6] != -1:
-            target_pos = Vector(bones_data[bone_data[6]][2]).xzy * scale
-            bone.tail = target_pos
-        else:
-            offset = Vector(bone_data[6]).xzy * scale
-            bone.tail = bone.head + offset
-            
-        if bone.length < 0.001:
-            bone.tail = bone.head + Vector((0, 0, 0.001))
-            
-        edit_bones.append(bone)
-    
-    # Set parent relationships
+    # Set bone hierarchy
     for i, bone_data in enumerate(bones_data):
         if bone_data[3] != -1:
             edit_bones[i].parent = edit_bones[bone_data[3]]
             
+    # Apply final transforms
     bpy.ops.object.mode_set(mode='OBJECT')
+    armature_obj.rotation_euler[0] = 1.5708
+    armature_obj.rotation_euler[2] = 3.14159
+    armature_obj.select_set(True)
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+    
     return edit_bones
-
-
 
 def read_morph(file: BufferedReader, morph_struct, morph_bytesize, vertex_struct, vertex_size, bone_struct, bone_size, material_struct, material_size, rigid_struct, rigid_size):
     morph_name = str(file.read(struct.unpack('<i', file.read(4))[0]), 'utf-16-le', errors='replace')
@@ -321,7 +359,7 @@ def read_index_size(index, types):
     
     return struct, byte_size
 
-def import_pmx(filepath):
+def import_pmx(filepath, scale=0.08):
     try:
         faces: list[tuple[int,int,int]] = []
         vertices = []
@@ -342,24 +380,13 @@ def import_pmx(filepath):
                 print("stage 3")
                 print(vertex_count)
                 
-                
                 #====== Start reading index sizes and create helper prebuilts =====
                 morph_struct, morph_size = read_index_size(morph_index_size, 'bhi')
-                
                 vertex_struct, vertex_size = read_index_size(vertex_index_size, 'BHi')
-                
                 bone_struct, bone_size = read_index_size(bone_index_size, 'bhi')
-                
                 material_struct, material_size = read_index_size(material_index_size, 'bhi')
-                
                 texture_struct, texture_size = read_index_size(texture_index_size, 'bhi')
-                
                 rigid_struct, rigid_size = read_index_size(rigid_body_index_size, 'bhi')
-                
-                
-                
-                #====== End of reading index sizes and create helper prebuilts =====
-                
                 
                 for _ in range(vertex_count):
                     position, normal, uv, bone_indices, bone_weights, edge_scale, additional_uv_read = read_vertex(file, bone_struct, bone_size, additional_uvs)
@@ -373,10 +400,6 @@ def import_pmx(filepath):
                 def read_data(data, length):
                     return list(struct.unpack(data, file.read(length)))
                 
-                
-                
-                
-                #storing function to use in for-loop to prevent checking the same thing a bajillion times - @989onan
                 face_funct = lambda: print("invalid face funct")
                 if vertex_index_size == 1:
                     face_funct = lambda: read_data('<3B',3)
@@ -433,14 +456,12 @@ def import_pmx(filepath):
                 print("finished reading file!")
         except Exception as e:
             print(str(e))
-            #pass
             
-            #raise IOError("Could not read PMX file") from e
-        # Create Blender objects and assign PMX data
         mesh = bpy.data.meshes.new(model_name)
-        mesh.from_pydata([v[0] for v in vertices], [], faces)
+        scaled_vertices = [(Vector(v[0]).xzy * scale) for v in vertices]
+        mesh.from_pydata(scaled_vertices, [], faces)
         mesh.update()
-        
+
         obj = bpy.data.objects.new(model_name, mesh)
         bpy.context.collection.objects.link(obj)
         
@@ -453,7 +474,6 @@ def import_pmx(filepath):
         loop_indices_orig = tuple(i for f in faces for i in f)
         uv_table = {vi:v for vi, v in enumerate([i[2] for i in vertices])}
         uv_layer.data.foreach_set('uv', tuple(v for i in loop_indices_orig for v in uv_table[i]))
-        
 
         cur_polygon_index: int = 0
 
@@ -469,47 +489,66 @@ def import_pmx(filepath):
             for node in [node for node in material.node_tree.nodes]:
                 material.node_tree.nodes.remove(node)
             
-            principled_node: ShaderNodeBsdfPrincipled = material.node_tree.nodes.new(type="ShaderNodeBsdfPrincipled")
-            principled_node.location.x = 7.29706335067749
-            principled_node.location.y = 298.918212890625
-            principled_node.inputs["Base Color"].default_value = material_data[2]
-            principled_node.inputs["Specular Tint"].default_value = [material_data[3][0],material_data[3][1],material_data[3][2],1.0]
-            principled_node.inputs["Specular IOR Level"].default_value = material_data[4]
+            # Create main nodes
+            principled_node = material.node_tree.nodes.new(type="ShaderNodeBsdfPrincipled")
+            principled_node.location = (0, 300)
+            
+            output_node = material.node_tree.nodes.new(type="ShaderNodeOutputMaterial")
+            output_node.location = (300, 300)
 
-            output_node: ShaderNodeOutputMaterial = material.node_tree.nodes.new(type="ShaderNodeOutputMaterial")
-            output_node.location.x = 297.29705810546875
-            output_node.location.y = 298.918212890625
-
-            albedo_node: ShaderNodeTexImage = material.node_tree.nodes.new(type="ShaderNodeTexImage")
-            albedo_node.location.x = -588.6177978515625
-            albedo_node.location.y = 414.1948547363281
+            # Set up main texture
+            albedo_node = material.node_tree.nodes.new(type="ShaderNodeTexImage")
+            albedo_node.location = (-600, 400)
 
             if textures[material_data[9]] in bpy.data.images:
                 albedo_node.image = bpy.data.images[textures[material_data[9]]]
             else:
-                albedo_node.image = bpy.data.images.new(name=textures[material_data[9]],width=32,height=32)
-                albedo_node.image.filepath = os.path.join(os.path.dirname(filepath),textures[material_data[9]])
+                albedo_node.image = bpy.data.images.new(name=textures[material_data[9]], width=32, height=32)
+                albedo_node.image.filepath = os.path.join(os.path.dirname(filepath), textures[material_data[9]])
                 albedo_node.image.source = 'FILE'
+                albedo_node.extension = 'REPEAT'
                 albedo_node.image.reload()
-                
-            
 
+            # Set material properties
+            principled_node.inputs["Base Color"].default_value = material_data[2]
+            principled_node.inputs["Specular IOR Level"].default_value = material_data[4]
+            principled_node.inputs["Roughness"].default_value = 0.5
+            principled_node.inputs["Metallic"].default_value = 0.0
+
+            # Handle transparency
+            if material_data[2][3] < 0.99:
+                material.blend_method = 'HASHED'
+                material.use_backface_culling = False
+                material.alpha_threshold = 0.5
+                material.show_transparent_back = True
+                
+                # Create mix shader for transparency
+                mix_shader = material.node_tree.nodes.new(type='ShaderNodeMixShader')
+                mix_shader.location = (100, 300)
+                transparent_node = material.node_tree.nodes.new(type='ShaderNodeBsdfTransparent')
+                transparent_node.location = (-200, 200)
+
+                # Connect nodes for transparency
+                material.node_tree.links.new(mix_shader.inputs[0], albedo_node.outputs["Alpha"])
+                material.node_tree.links.new(mix_shader.inputs[1], transparent_node.outputs[0])
+                material.node_tree.links.new(mix_shader.inputs[2], principled_node.outputs[0])
+                material.node_tree.links.new(output_node.inputs["Surface"], mix_shader.outputs[0])
+            else:
+                material.blend_method = 'OPAQUE'
+                material.node_tree.links.new(output_node.inputs["Surface"], principled_node.outputs[0])
+
+            # Connect color
             material.node_tree.links.new(principled_node.inputs["Base Color"], albedo_node.outputs["Color"])
-            material.node_tree.links.new(principled_node.inputs["Alpha"], albedo_node.outputs["Alpha"])
-            material.node_tree.links.new(output_node.inputs["Surface"], principled_node.outputs["BSDF"])
-            
-            #material.ambient = material_data[5] #TODO: this doesn't exist
-            # Set other material properties based on the PMX data
+
             if not (material.name in mesh.materials):
                 mesh.materials.append(material)
 
-            #surprised this works - @989onan
-            end: int = cur_polygon_index+material_data[15]-1
+            end: int = cur_polygon_index + material_data[15] - 1
             for face in mesh.polygons.items()[cur_polygon_index:end]:
                 face[1].material_index = mesh.materials.find(material.name)
             
-            cur_polygon_index = cur_polygon_index+material_data[15]
-        
+            cur_polygon_index = cur_polygon_index + material_data[15]
+
         # Create armature and assign bones
         armature = bpy.data.armatures.new(model_name + "_Armature")
         armature_obj = bpy.data.objects.new(model_name + "_Armature", armature)
@@ -524,37 +563,22 @@ def import_pmx(filepath):
         print("Starting bone creation...")
         print(f"Total bones to create: {len(bones)}")
 
-        for i, bone_data in enumerate(bones):
-            try:
-                print(f"Creating bone {i}: {bone_data[0]}")
-                bone = armature.edit_bones.new(bone_data[0])
-                bone.head = bone_data[2]
-                
-                if bone_data[6][0] != None:
-                    bone.tail = bone_data[6]
-                    print(f"Using defined tail position for bone {bone_data[0]}")
-                else:
-                    bone.tail = [bone.head[0], bone.head[1], bone.head[2]+0.1]
-                    print(f"Using default tail position for bone {bone_data[0]}")
-                
-                if bone_data[3] != -1:
-                    parent_bone = armature.edit_bones[bones[bone_data[3]][0]]
-                    bone.parent = parent_bone
-                    print(f"Parented bone {bone_data[0]} to {parent_bone.name}")
-                    
-            except Exception as e:
-                print(f"Error creating bone {i}: {str(e)}")
-                continue
-
-        print(f"Created bones: {len(armature.edit_bones)}")
-        print("Finished bone creation")
- 
-        bpy.ops.object.mode_set(mode='OBJECT')
+        # Create the bones using our create_bones function
+        edit_bones = create_bones(armature_obj, bones, scale)
+        
+        # Now we can safely scale and position bones
+        for bone in armature.edit_bones:
+            bone_data = next(b for b in bones if b[0] == bone.name)
+            bone.head = Vector(bone_data[2]).xzy * scale
+            if bone_data[6][0] is not None:
+                bone.tail = Vector(bone_data[6]).xzy * scale
+            else:
+                bone.tail = bone.head + Vector((0, 0.1 * scale))
         
         # Assign bone weights to the mesh
         for i, vertex in enumerate(vertices):
             for j in range(0, len(vertex[3])):
-                if vertex[3][j] != -1 and vertex[3][j] < len(bones):  # Add bounds check
+                if vertex[3][j] != -1 and vertex[3][j] < len(bones):
                     bone_name = bones[vertex[3][j]][0]
                     weight = vertex[4][j]
                     
@@ -575,7 +599,6 @@ def import_pmx(filepath):
                     vertex_index = offset_data[0]
                     offset = offset_data[1]
                     shape_key.data[vertex_index].co += mathutils.Vector(offset)
-            # Handle other morph types based on the PMX specification
         
         #ROTATE LAST!
         armature_obj.rotation_euler[0] = 1.5708
@@ -583,7 +606,6 @@ def import_pmx(filepath):
         armature_obj.select_set(True)
         obj.select_set(True)
         bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
-        
         
         print(f"Successfully imported PMX file: {filepath}")
         print(f"Model Name: {model_name}")
