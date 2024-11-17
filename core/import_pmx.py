@@ -125,63 +125,113 @@ def read_material(file: BufferedReader, string_build, byte_size):
     return material_name, material_english_name, diffuse_color, specular_color, specular_strength, ambient_color, flag, edge_color, edge_size, texture_index, sphere_texture_index, sphere_mode, toon_sharing_flag, toon_texture_index, comment, surface_count
 
 def read_bone(file: BufferedReader, string_build, byte_size):
-    bone_name = str(file.read(struct.unpack('<i', file.read(4))[0]), 'utf-16-le', errors='replace')
-    bone_english_name = str(file.read(struct.unpack('<i', file.read(4))[0]), 'utf-16-le', errors='replace')
-    
-    
-    position = struct.unpack('<3f', file.read(12))
-    parent_bone_index = struct.unpack(replace_char(string_build, 1, '1'), file.read(byte_size))[0]
-    layer = struct.unpack('<i', file.read(4))[0]
-    flag = struct.unpack('<H', file.read(2))[0]
-    
-    tail_position = [None,None,None]
-    tail_index = 0.0
-    inherit_bone_parent_index = 0
-    inherit_bone_parent_influence = 0.0
-    fixed_axis = [0.0,0.0,0.0]
-    local_x_vector = [0.0,0.0,0.0]
-    local_z_vector = [0.0,0.0,0.0]
-    external_key = 0
-    ik_target_bone_index = 0.0
-    ik_loop_count = -1
-    ik_limit_radian = 0.0
-    ik_link_count = -1
-    
-    
-    if not (flag & 0x0001):
-        tail_position = struct.unpack('<3f', file.read(12))
-    else:
-        tail_index = struct.unpack(replace_char(string_build, 1, '1'), file.read(byte_size))[0]
-    
-    if flag & 0x0100 or flag & 0x0200:
-        inherit_bone_parent_index = struct.unpack(replace_char(string_build, 1, '1'), file.read(byte_size))[0]
-        inherit_bone_parent_influence = struct.unpack('<f', file.read(4))[0]
-    
-    if flag & 0x0400:
-        fixed_axis = struct.unpack('<3f', file.read(12))
-    
-    if flag & 0x0800:
-        local_x_vector = struct.unpack('<3f', file.read(12))
-        local_z_vector = struct.unpack('<3f', file.read(12))
-    
-    if flag & 0x2000:
-        external_key = struct.unpack('<i', file.read(4))[0]
-    
-    ik_links = []
-    if flag & 0x0020:
-        ik_target_bone_index = struct.unpack(replace_char(string_build, 1, '1'), file.read(byte_size))[0]
-        ik_loop_count = struct.unpack('<i', file.read(4))[0]
-        ik_limit_radian = struct.unpack('<f', file.read(4))[0]
-        ik_link_count = struct.unpack('<i', file.read(4))[0]
+    try:
+        # Read bone name and validate
+        name_length = struct.unpack('<i', file.read(4))[0]
+        if not 0 <= name_length <= 512:
+            raise ValueError(f"Invalid bone name length {name_length}")
+            
+        bone_name = str(file.read(name_length), 'utf-16-le', errors='replace')
         
+        # Read English name
+        eng_name_length = struct.unpack('<i', file.read(4))[0]
+        bone_english_name = str(file.read(eng_name_length), 'utf-16-le', errors='replace')
         
-        for _ in range(ik_link_count):
-            ik_link_bone_index = struct.unpack(replace_char(string_build, 1, '1'), file.read(byte_size))[0]
-            ik_link_limit_min = struct.unpack('<3f', file.read(12))
-            ik_link_limit_max = struct.unpack('<3f', file.read(12))
-            ik_links.append((ik_link_bone_index, ik_link_limit_min, ik_link_limit_max))
+        # Read position and indices
+        position = struct.unpack('<3f', file.read(12))
+        parent_bone_index = struct.unpack(replace_char(string_build, 1, '1'), file.read(byte_size))[0]
+        layer = struct.unpack('<i', file.read(4))[0]
+        flag = struct.unpack('<H', file.read(2))[0]
+
+        # Initialize bone properties with defaults
+        tail_position = [0.0, 0.0, 0.0]
+        tail_index = -1
+        inherit_bone_parent_index = -1
+        inherit_bone_parent_influence = 0.0
+        fixed_axis = [0.0, 0.0, 0.0]
+        local_x_vector = [0.0, 0.0, 0.0]
+        local_z_vector = [0.0, 0.0, 0.0]
+        external_key = 0
+        ik_target_bone_index = -1
+        ik_loop_count = 0
+        ik_limit_radian = 0.0
+        ik_links = []
+
+        # Read flag-dependent data
+        if not (flag & 0x0001):  # Connection not by offset
+            tail_position = struct.unpack('<3f', file.read(12))
+        else:
+            tail_index = struct.unpack(replace_char(string_build, 1, '1'), file.read(byte_size))[0]
+
+        if flag & 0x0100 or flag & 0x0200:  # Has inheritance
+            inherit_bone_parent_index = struct.unpack(replace_char(string_build, 1, '1'), file.read(byte_size))[0]
+            inherit_bone_parent_influence = struct.unpack('<f', file.read(4))[0]
+
+        if flag & 0x0400:  # Has fixed axis
+            fixed_axis = struct.unpack('<3f', file.read(12))
+
+        if flag & 0x0800:  # Has local coordinate
+            local_x_vector = struct.unpack('<3f', file.read(12))
+            local_z_vector = struct.unpack('<3f', file.read(12))
+
+        if flag & 0x2000:  # Has external parent deform
+            external_key = struct.unpack('<i', file.read(4))[0]
+
+        if flag & 0x0020:  # Has IK
+            ik_target_bone_index = struct.unpack(replace_char(string_build, 1, '1'), file.read(byte_size))[0]
+            ik_loop_count = struct.unpack('<i', file.read(4))[0]
+            ik_limit_radian = struct.unpack('<f', file.read(4))[0]
+            ik_link_count = struct.unpack('<i', file.read(4))[0]
+
+            for _ in range(ik_link_count):
+                ik_link_bone_index = struct.unpack(replace_char(string_build, 1, '1'), file.read(byte_size))[0]
+                has_limits = struct.unpack('<b', file.read(1))[0]
+                if has_limits:
+                    limit_min = struct.unpack('<3f', file.read(12))
+                    limit_max = struct.unpack('<3f', file.read(12))
+                else:
+                    limit_min = limit_max = None
+                ik_links.append((ik_link_bone_index, limit_min, limit_max))
+
+        return bone_name, bone_english_name, position, parent_bone_index, layer, flag, tail_position, inherit_bone_parent_index, inherit_bone_parent_influence, fixed_axis, local_x_vector, local_z_vector, external_key, ik_target_bone_index, ik_loop_count, ik_limit_radian, ik_links
+
+    except Exception as e:
+        print(f"Error reading bone data: {str(e)}")
+        print(f"Current file position: {file.tell()}")
+        raise
+
+def create_bones(armature_obj, bones_data, scale=0.08):
+    bpy.context.view_layer.objects.active = armature_obj
+    bpy.ops.object.mode_set(mode='EDIT')
     
-    return bone_name, bone_english_name, position, parent_bone_index, layer, flag, tail_position, inherit_bone_parent_index, inherit_bone_parent_influence, fixed_axis, local_x_vector, local_z_vector, external_key, ik_target_bone_index, ik_loop_count, ik_limit_radian, ik_links
+    edit_bones = []
+    for bone_data in bones_data:
+        bone = armature_obj.data.edit_bones.new(bone_data[0])
+        # Scale the head position
+        bone.head = Vector(bone_data[2]).xzy * scale
+        
+        # Handle tail position with scale
+        if isinstance(bone_data[6], int) and bone_data[6] != -1:
+            target_pos = Vector(bones_data[bone_data[6]][2]).xzy * scale
+            bone.tail = target_pos
+        else:
+            offset = Vector(bone_data[6]).xzy * scale
+            bone.tail = bone.head + offset
+            
+        if bone.length < 0.001:
+            bone.tail = bone.head + Vector((0, 0, 0.001))
+            
+        edit_bones.append(bone)
+    
+    # Set parent relationships
+    for i, bone_data in enumerate(bones_data):
+        if bone_data[3] != -1:
+            edit_bones[i].parent = edit_bones[bone_data[3]]
+            
+    bpy.ops.object.mode_set(mode='OBJECT')
+    return edit_bones
+
+
 
 def read_morph(file: BufferedReader, morph_struct, morph_bytesize, vertex_struct, vertex_size, bone_struct, bone_size, material_struct, material_size, rigid_struct, rigid_size):
     morph_name = str(file.read(struct.unpack('<i', file.read(4))[0]), 'utf-16-le', errors='replace')
@@ -353,20 +403,29 @@ def import_pmx(filepath):
                 print("stage 8")
                 # Read bones
                 bone_count = struct.unpack('<i', file.read(4))[0]
-                
+                print(f"Starting to read {bone_count} bones")
+                bones_read = 0
                 
                 print("bone count: "+str(bone_count))
-                for _ in range(bone_count):
-                    bone_name, bone_english_name, position, parent_bone_index, layer, flag, tail_position, inherit_bone_parent_index, inherit_bone_parent_influence, fixed_axis, local_x_vector, local_z_vector, external_key, ik_target_bone_index, ik_loop_count, ik_limit_radian, ik_links = read_bone(file, bone_struct, bone_size)
-                    bones.append((bone_name, bone_english_name, position, parent_bone_index, layer, flag, tail_position, inherit_bone_parent_index, inherit_bone_parent_influence, fixed_axis, local_x_vector, local_z_vector, external_key, ik_target_bone_index, ik_loop_count, ik_limit_radian, ik_links))
+                for i in range(bone_count):
+                    try:
+                        bone_name, bone_english_name, position, parent_bone_index, layer, flag, tail_position, inherit_bone_parent_index, inherit_bone_parent_influence, fixed_axis, local_x_vector, local_z_vector, external_key, ik_target_bone_index, ik_loop_count, ik_limit_radian, ik_links = read_bone(file, bone_struct, bone_size)
+                        
+                        bones.append((bone_name, bone_english_name, position, parent_bone_index, layer, flag, tail_position, inherit_bone_parent_index, inherit_bone_parent_influence, fixed_axis, local_x_vector, local_z_vector, external_key, ik_target_bone_index, ik_loop_count, ik_limit_radian, ik_links))
+                        
+                        print(f"Successfully read bone {i}: {bone_name}")
+                        bones_read += 1
+                        
+                    except Exception as e:
+                        print(f"Error reading bone {i}: {str(e)}")
+                        print(f"Bytes read position: {file.tell()}")
+                        break
+
+                print(f"Finished reading bones. Total bones read: {bones_read}")
                 
                 # Read morphs
                 morph_count = struct.unpack('<i', file.read(4))[0]
-                print("morph count: "+str(morph_count))
-                
-                
-                
-                
+                print("morph count: "+str(morph_count))          
                 
                 for _ in range(morph_count):
                     morph_name, morph_english_name, panel, morph_type, morph_data = read_morph(file, morph_struct, morph_size, vertex_struct, vertex_size, bone_struct, bone_size, material_struct, material_size, rigid_struct, rigid_size)
@@ -459,41 +518,43 @@ def import_pmx(filepath):
         modifier = obj.modifiers.new("Armature", 'ARMATURE')
         modifier.object = armature_obj
 
-        
-        
         bpy.context.view_layer.objects.active = armature_obj
         bpy.ops.object.mode_set(mode='EDIT')
-        
-        for bone_data in bones:
-            bone = armature.edit_bones.new(bone_data[0])
-            bone.head = bone_data[2]
-            
-            if bone_data[6][0] != None:
-                bone.tail = bone_data[6]
-            else:
-                bone.tail = [bone.head[0],bone.head[1],bone.head[2]+1]
-                #print("fire2!")
+
+        print("Starting bone creation...")
+        print(f"Total bones to create: {len(bones)}")
+
+        for i, bone_data in enumerate(bones):
+            try:
+                print(f"Creating bone {i}: {bone_data[0]}")
+                bone = armature.edit_bones.new(bone_data[0])
+                bone.head = bone_data[2]
                 
-            
-            #print(bone_data)
-            if bone_data[3] != -1 or bone_data[3] != -1:
-                #print("parent bone index: " + str(bone_data[3]))
-                #print("parent bone name: \""+bones[bone_data[3]][0]+"\"")
-                #print("parent edit bone name: \""+armature.edit_bones[bones[bone_data[3]][0]].name+"\"")
-                #print("fire1!")
+                if bone_data[6][0] != None:
+                    bone.tail = bone_data[6]
+                    print(f"Using defined tail position for bone {bone_data[0]}")
+                else:
+                    bone.tail = [bone.head[0], bone.head[1], bone.head[2]+0.1]
+                    print(f"Using default tail position for bone {bone_data[0]}")
                 
-                parent_bone = armature.edit_bones[bones[bone_data[3]][0]]
-                parent_bone.tail = bone.head.xyz
-                
-                bone.parent = parent_bone
-            # Set other bone properties based on the PMX data
-        
+                if bone_data[3] != -1:
+                    parent_bone = armature.edit_bones[bones[bone_data[3]][0]]
+                    bone.parent = parent_bone
+                    print(f"Parented bone {bone_data[0]} to {parent_bone.name}")
+                    
+            except Exception as e:
+                print(f"Error creating bone {i}: {str(e)}")
+                continue
+
+        print(f"Created bones: {len(armature.edit_bones)}")
+        print("Finished bone creation")
+ 
         bpy.ops.object.mode_set(mode='OBJECT')
         
         # Assign bone weights to the mesh
         for i, vertex in enumerate(vertices):
-            for j in range(0,len(vertex[3])):
-                if vertex[3][j] != -1:
+            for j in range(0, len(vertex[3])):
+                if vertex[3][j] != -1 and vertex[3][j] < len(bones):  # Add bounds check
                     bone_name = bones[vertex[3][j]][0]
                     weight = vertex[4][j]
                     
