@@ -280,48 +280,81 @@ def create_armature(model_name: str, bones: list[PMXBone]) -> bpy.types.Object:
     bpy.context.view_layer.objects.active = armature_obj
     bpy.ops.object.mode_set(mode='EDIT')
     
-    # First pass: Create bones with correct positions and sizes
-    edit_bones = []  # Using a list instead of dict for indexed access
+    # First pass: Create bones with proper names and types
+    edit_bones = []
     for i, bone_data in enumerate(bones):
-        bone_name = f"bone_{i}"
+        bone_name = bone_data.name if bone_data.name else bone_data.english_name
+        if not bone_name:
+            bone_name = f"bone_{i}"
+            
         edit_bone = armature.edit_bones.new(bone_name)
         edit_bone.head = Vector(bone_data.position)
         
-        # Calculate proper tail position with enhanced logic
-        if bone_data.tail_position[0] is not None:
-            edit_bone.tail = Vector(bone_data.tail_position)
-        else:
-            # Check for special bone types using flags
-            if bone_data.flag & 0x0020:  # IK bone
-                bone_length = 0.1
-            elif bone_data.flag & 0x0100:  # Rotation influenced
-                bone_length = 0.08
-            elif bone_data.flag & 0x0200:  # Movement influenced
-                bone_length = 0.08
+        # Handle different bone types based on flags and names
+        is_expression = bool(bone_data.flag & 0x0004)
+        is_rotation_influenced = bool(bone_data.flag & 0x0100)
+        is_ik = bool(bone_data.flag & 0x0020)
+        is_twist = "twist" in bone_name.lower()
+        
+        if is_twist:
+            # Twist bones need specific handling
+            parent_pos = bones[bone_data.parent_index].position if bone_data.parent_index >= 0 else None
+            if parent_pos:
+                direction = Vector(bone_data.position) - Vector(parent_pos)
+                if direction.length > 0.001:
+                    edit_bone.tail = edit_bone.head + direction.normalized() * 0.1
+                else:
+                    edit_bone.tail = edit_bone.head + Vector((0, 0.05, 0))
             else:
-                # Find child bones
+                edit_bone.tail = edit_bone.head + Vector((0, 0.05, 0))
+                
+        elif is_expression:
+            edit_bone.tail = edit_bone.head + Vector((0, 0.02, 0))
+            edit_bone.use_deform = False
+            
+        elif is_ik:
+            if bone_data.ik_links:
+                target_pos = bones[bone_data.ik_links[0][0]].position
+                direction = Vector(target_pos) - Vector(edit_bone.head)
+                if direction.length > 0.001:
+                    edit_bone.tail = edit_bone.head + direction.normalized() * 0.1
+                else:
+                    edit_bone.tail = edit_bone.head + Vector((0, 0.1, 0))
+            else:
+                edit_bone.tail = edit_bone.head + Vector((0, 0.1, 0))
+                
+        elif is_rotation_influenced:
+            # Handle rotation influenced bones
+            if bone_data.inherit_parent_index >= 0:
+                target_pos = bones[bone_data.inherit_parent_index].position
+                direction = Vector(target_pos) - Vector(edit_bone.head)
+                if direction.length > 0.001:
+                    edit_bone.tail = edit_bone.head + direction.normalized() * 0.08
+                else:
+                    edit_bone.tail = edit_bone.head + Vector((0, 0.08, 0))
+            else:
+                edit_bone.tail = edit_bone.head + Vector((0, 0.08, 0))
+                
+        else:
+            # Standard bones
+            if bone_data.tail_position[0] is not None:
+                edit_bone.tail = Vector(bone_data.tail_position)
+            else:
                 child_positions = [bones[j].position for j in range(len(bones)) 
                                  if bones[j].parent_index == i]
                 if child_positions:
-                    # Use closest child position
-                    closest_child = min(child_positions, 
-                                     key=lambda p: (Vector(p) - Vector(bone_data.position)).length)
-                    edit_bone.tail = Vector(closest_child)
-                    continue
+                    avg_child_pos = Vector((0, 0, 0))
+                    for pos in child_positions:
+                        avg_child_pos += Vector(pos)
+                    avg_child_pos /= len(child_positions)
+                    edit_bone.tail = avg_child_pos
                 else:
-                    # Default length based on bone layer
                     bone_length = 0.1 if bone_data.layer == 0 else 0.05
-            
-            # Apply calculated length
-            direction = Vector((0, bone_length, 0))
-            if bone_data.parent_index >= 0:
-                parent_pos = Vector(bones[bone_data.parent_index].position)
-                if (Vector(bone_data.position) - parent_pos).length > 0.001:
-                    direction = (Vector(bone_data.position) - parent_pos).normalized() * bone_length
-            edit_bone.tail = edit_bone.head + direction
+                    edit_bone.tail = edit_bone.head + Vector((0, bone_length, 0))
         
         edit_bones.append(edit_bone)
-    
+
+ 
     # Second pass: Set up hierarchy and orientations
     for i, bone_data in enumerate(bones):
         edit_bone = edit_bones[i]
