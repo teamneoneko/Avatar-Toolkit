@@ -69,6 +69,37 @@ class PMXMorph:
         self.morph_type = morph_type
         self.offsets = offsets
 
+class PMXRigidBody:
+    def __init__(self, name, bone_index, group, shape_type, size, position, rotation, mass, linear_damping, angular_damping, restitution, friction, mode):
+        self.name = name
+        self.bone_index = bone_index
+        self.group = group
+        self.shape_type = shape_type
+        self.size = size
+        self.position = position
+        self.rotation = rotation
+        self.mass = mass
+        self.linear_damping = linear_damping
+        self.angular_damping = angular_damping
+        self.restitution = restitution
+        self.friction = friction
+        self.mode = mode
+
+class PMXJoint:
+    def __init__(self, name, joint_type, rigid_body_a, rigid_body_b, position, rotation, linear_limit_min, linear_limit_max, angular_limit_min, angular_limit_max, spring_constant_translation, spring_constant_rotation):
+        self.name = name
+        self.joint_type = joint_type
+        self.rigid_body_a = rigid_body_a
+        self.rigid_body_b = rigid_body_b
+        self.position = position
+        self.rotation = rotation
+        self.linear_limit_min = linear_limit_min
+        self.linear_limit_max = linear_limit_max
+        self.angular_limit_min = angular_limit_min
+        self.angular_limit_max = angular_limit_max
+        self.spring_constant_translation = spring_constant_translation
+        self.spring_constant_rotation = spring_constant_rotation
+
 def read_pmx_header(file: BufferedReader):
     magic = file.read(4)
     if magic != b'PMX ':
@@ -142,6 +173,24 @@ def read_morph(file: BufferedReader, vertex_struct, vertex_size):
         return PMXMorph(name, english_name, panel, morph_type, offsets)
     except:
         return PMXMorph("", "", 0, 0, [])
+
+def validate_pmx_data(header_data, vertices, faces, materials, bones):
+    """Validate PMX data integrity"""
+    if not vertices:
+        raise ValueError("No vertices found in PMX file")
+    if not faces:
+        raise ValueError("No faces found in PMX file")
+    if not materials:
+        raise ValueError("No materials found in PMX file")
+    if not bones:
+        raise ValueError("No bones found in PMX file")
+    return True
+
+def handle_import_error(context, error_msg):
+    """Handle import errors with user feedback"""
+    context.window_manager.progress_end()
+    bpy.ops.ui.popup_menu(message=error_msg)
+    return {'CANCELLED'}
 
 def read_vertex(file: BufferedReader, string_build, byte_size, additional_uvs):
     position = struct.unpack('<3f', file.read(12))
@@ -218,7 +267,7 @@ def read_material(file: BufferedReader, string_build, byte_size):
                       texture_index, sphere_texture_index, sphere_mode,
                       toon_sharing_flag, toon_texture_index, comment, surface_count)
 
-def create_material_nodes(material: bpy.types.Material, texture_path: str, diffuse_color, specular_color, specular_strength):
+def create_material_nodes(material: bpy.types.Material, texture_path: str, diffuse_color, specular_color, specular_strength, toon_texture_path=None):
     material.use_nodes = True
     nodes = material.node_tree.nodes
     links = material.node_tree.links
@@ -231,21 +280,32 @@ def create_material_nodes(material: bpy.types.Material, texture_path: str, diffu
     principled.inputs["Specular IOR Level"].default_value = specular_strength
     principled.inputs["Specular Tint"].default_value = (*specular_color, 1.0)
     
+    # Handle transparency
+    if diffuse_color[3] < 1.0:
+        material.blend_method = 'HASHED'
+        principled.inputs["Alpha"].default_value = diffuse_color[3]
+    
     output = nodes.new("ShaderNodeOutputMaterial")
     output.location = (300, 0)
     
-    if texture_path:
+    # Main texture
+    if texture_path and os.path.exists(texture_path):
         texture = nodes.new("ShaderNodeTexImage")
         texture.location = (-300, 0)
-        
-        if os.path.exists(texture_path):
-            if texture_path in bpy.data.images:
-                texture.image = bpy.data.images[texture_path]
-            else:
-                texture.image = bpy.data.images.load(texture_path)
-            
-            links.new(texture.outputs["Color"], principled.inputs["Base Color"])
-            links.new(texture.outputs["Alpha"], principled.inputs["Alpha"])
+        texture.image = bpy.data.images.load(texture_path)
+        links.new(texture.outputs["Color"], principled.inputs["Base Color"])
+        links.new(texture.outputs["Alpha"], principled.inputs["Alpha"])
+    
+    # Toon texture
+    if toon_texture_path and os.path.exists(toon_texture_path):
+        toon = nodes.new("ShaderNodeTexImage")
+        toon.location = (-300, -300)
+        toon.image = bpy.data.images.load(toon_texture_path)
+        mix = nodes.new("ShaderNodeMixRGB")
+        mix.location = (-50, -150)
+        mix.blend_type = 'MULTIPLY'
+        links.new(toon.outputs["Color"], mix.inputs[2])
+        links.new(mix.outputs["Color"], principled.inputs["Base Color"])
     
     links.new(principled.outputs["BSDF"], output.inputs["Surface"])
 
@@ -384,7 +444,81 @@ def create_bone_constraints(armature_obj: bpy.types.Object, bones: list[PMXBone]
     
     bpy.ops.object.mode_set(mode='OBJECT')
 
+def setup_physics(obj: bpy.types.Object, armature_obj: bpy.types.Object, rigid_bodies: list[PMXRigidBody], joints: list[PMXJoint]):
+    """Set up physics for PMX model"""
+    # Create rigid body collection if it doesn't exist
+    if 'RigidBodies' not in bpy.data.collections:
+        rigid_body_collection = bpy.data.collections.new('RigidBodies')
+        bpy.context.scene.collection.children.link(rigid_body_collection)
+    else:
+        rigid_body_collection = bpy.data.collections['RigidBodies']
 
+    # Create rigid bodies
+    for rb in rigid_bodies:
+        # Create mesh based on shape type
+        if rb.shape_type == 0:  # Sphere
+            bpy.ops.mesh.primitive_uv_sphere_add(radius=rb.size[0])
+        elif rb.shape_type == 1:  # Box
+            bpy.ops.mesh.primitive_cube_add()
+            bpy.context.active_object.scale = rb.size
+        elif rb.shape_type == 2:  # Capsule
+            bpy.ops.mesh.primitive_cylinder_add(radius=rb.size[0], depth=rb.size[1])
+
+        rb_obj = bpy.context.active_object
+        rb_obj.name = f"RB_{rb.name}"
+        rb_obj.location = rb.position
+        rb_obj.rotation_euler = rb.rotation
+
+        # Set up rigid body physics
+        rb_obj.rigid_body.type = 'ACTIVE' if rb.mode == 0 else 'PASSIVE'
+        rb_obj.rigid_body.mass = rb.mass
+        rb_obj.rigid_body.linear_damping = rb.linear_damping
+        rb_obj.rigid_body.angular_damping = rb.angular_damping
+        rb_obj.rigid_body.restitution = rb.restitution
+        rb_obj.rigid_body.friction = rb.friction
+
+        # Parent to bone if specified
+        if rb.bone_index >= 0:
+            rb_obj.parent = armature_obj
+            rb_obj.parent_type = 'BONE'
+            rb_obj.parent_bone = bones[rb.bone_index].name
+
+        # Move to rigid body collection
+        rigid_body_collection.objects.link(rb_obj)
+        bpy.context.scene.collection.objects.unlink(rb_obj)
+
+    # Create joints
+    for joint in joints:
+        empty = bpy.data.objects.new(f"Joint_{joint.name}", None)
+        empty.empty_display_type = 'ARROWS'
+        empty.location = joint.position
+        empty.rotation_euler = joint.rotation
+        bpy.context.scene.collection.objects.link(empty)
+
+        # Set up constraint
+        constraint = empty.constraints.new('RIGID_BODY_JOINT')
+        constraint.target = rigid_bodies[joint.rigid_body_a]
+        constraint.child = rigid_bodies[joint.rigid_body_b]
+        constraint.use_limit_lin_x = True
+        constraint.use_limit_lin_y = True
+        constraint.use_limit_lin_z = True
+        constraint.use_limit_ang_x = True
+        constraint.use_limit_ang_y = True
+        constraint.use_limit_ang_z = True
+
+        # Set limits
+        constraint.limit_lin_x_lower = joint.linear_limit_min[0]
+        constraint.limit_lin_x_upper = joint.linear_limit_max[0]
+        constraint.limit_lin_y_lower = joint.linear_limit_min[1]
+        constraint.limit_lin_y_upper = joint.linear_limit_max[1]
+        constraint.limit_lin_z_lower = joint.linear_limit_min[2]
+        constraint.limit_lin_z_upper = joint.linear_limit_max[2]
+        constraint.limit_ang_x_lower = joint.angular_limit_min[0]
+        constraint.limit_ang_x_upper = joint.angular_limit_max[0]
+        constraint.limit_ang_y_lower = joint.angular_limit_min[1]
+        constraint.limit_ang_y_upper = joint.angular_limit_max[1]
+        constraint.limit_ang_z_lower = joint.angular_limit_min[2]
+        constraint.limit_ang_z_upper = joint.angular_limit_max[2]
 
 def create_armature(model_name: str, bones: list[PMXBone]) -> bpy.types.Object:
     armature = bpy.data.armatures.new(f"{model_name}_Armature")
@@ -542,26 +676,34 @@ def assign_materials(obj: bpy.types.Object, materials: list[PMXMaterial], textur
         current_face_index += material.surface_count
 
 def import_pmx(filepath: str):
+    wm = bpy.context.window_manager
+    wm.progress_begin(0, 100)
+    
     try:
         with open(filepath, 'rb') as file:
-            # Read header
+            # Read header (5%)
+            wm.progress_update(5)
             header_data = read_pmx_header(file)
             version, encoding, additional_uvs, vertex_index_size, texture_index_size, \
             material_index_size, bone_index_size, morph_index_size, rigid_body_index_size, \
             model_name, model_english_name, model_comment, model_english_comment = header_data
             
-            # Set up index size formats
+            # Set up index size formats (10%)
+            wm.progress_update(10)
             vertex_struct, vertex_size = read_index_size(vertex_index_size, 'BHi')
             bone_struct, bone_size = read_index_size(bone_index_size, 'bhi')
             texture_struct, texture_size = read_index_size(texture_index_size, 'bhi')
             
-            # Read vertices
+            # Read vertices (25%)
             vertex_count = struct.unpack('<i', file.read(4))[0]
             vertices = []
-            for _ in range(vertex_count):
+            for i in range(vertex_count):
                 vertices.append(read_vertex(file, bone_struct, bone_size, additional_uvs))
+                if i % 1000 == 0:
+                    wm.progress_update(10 + (i/vertex_count * 15))
             
-            # Read faces
+            # Read faces (35%)
+            wm.progress_update(35)
             face_count = struct.unpack('<i', file.read(4))[0] // 3
             faces = []
             for _ in range(face_count):
@@ -572,32 +714,69 @@ def import_pmx(filepath: str):
                 else:
                     faces.append(struct.unpack('<3i', file.read(12)))
             
-            # Read textures
+            # Read textures (45%)
+            wm.progress_update(45)
             texture_count = struct.unpack('<i', file.read(4))[0]
             textures = []
             for _ in range(texture_count):
                 texture_path = str(file.read(struct.unpack('<i', file.read(4))[0]), 'utf-16-le', errors='replace')
                 textures.append(texture_path)
             
-            # Read materials
+            # Read materials (55%)
+            wm.progress_update(55)
             material_count = struct.unpack('<i', file.read(4))[0]
             materials = []
             for _ in range(material_count):
                 materials.append(read_material(file, texture_struct, texture_size))
             
-            # Read bones
+            # Read bones (65%)
+            wm.progress_update(65)
             bone_count = struct.unpack('<i', file.read(4))[0]
             bones = []
             for _ in range(bone_count):
                 bones.append(read_bone(file, bone_struct, bone_size))
 
-            # Read morphs
+            # Read morphs (75%)
+            wm.progress_update(75)
             morph_count = struct.unpack('<i', file.read(4))[0]
             morphs = []
             for _ in range(morph_count):
                 morphs.append(read_morph(file, vertex_struct, vertex_size))
             
-            # Create mesh and object
+            # Read rigid bodies (85%)
+            wm.progress_update(85)
+            try:
+                rigid_body_count_bytes = file.read(4)
+                if len(rigid_body_count_bytes) == 4:
+                    rigid_body_count = struct.unpack('<i', rigid_body_count_bytes)[0]
+                    rigid_bodies = []
+                    for _ in range(rigid_body_count):
+                        rigid_bodies.append(read_rigid_body(file, bone_struct, bone_size))
+                else:
+                    rigid_bodies = []
+            except:
+                rigid_bodies = []
+
+            # Read joints (90%)
+            wm.progress_update(90)
+            try:
+                joint_count_bytes = file.read(4)
+                if len(joint_count_bytes) == 4:
+                    joint_count = struct.unpack('<i', joint_count_bytes)[0]
+                    joints = []
+                    for _ in range(joint_count):
+                        joints.append(read_joint(file, rigid_body_struct, rigid_body_size))
+                else:
+                    joints = []
+            except:
+                joints = []
+
+            # Validate data (92%)
+            wm.progress_update(92)
+            validate_pmx_data(header_data, vertices, faces, materials, bones)
+
+            # Create mesh and object (94%)
+            wm.progress_update(94)
             mesh = bpy.data.meshes.new(model_name)
             mesh.from_pydata([v.position for v in vertices], [], faces)
             mesh.update()
@@ -605,16 +784,17 @@ def import_pmx(filepath: str):
             obj = bpy.data.objects.new(model_name, mesh)
             bpy.context.collection.objects.link(obj)
             
-            # Create and set up armature
+            # Create and set up armature (96%)
+            wm.progress_update(96)
             armature_obj = create_armature(model_name, bones)
             obj.parent = armature_obj
 
-            # Create shape keys
+            # Create shape keys (97%)
+            wm.progress_update(97)
             for morph in morphs:
-                if morph.morph_type == 1:  # Vertex morph
+                if morph.morph_type == 1:
                     if not obj.data.shape_keys:
                         obj.shape_key_add(name='Basis')
-                    
                     shape_key = obj.shape_key_add(name=morph.name)
                     for vertex_index, offset in morph.offsets:
                         shape_key.data[vertex_index].co = (
@@ -623,25 +803,31 @@ def import_pmx(filepath: str):
                             vertices[vertex_index].position[2] + offset[2]
                         )
             
-            # Add armature modifier
-            mod = obj.modifiers.new(name="Armature", type='ARMATURE')
-            mod.object = armature_obj
+            # Set up physics (98%)
+            wm.progress_update(98)
+            setup_physics(obj, armature_obj, rigid_bodies, joints)
             
-            # Assign materials and weights
+            # Final setup (99%)
+            wm.progress_update(99)
             base_path = os.path.dirname(filepath)
             assign_materials(obj, materials, textures, base_path)
             assign_vertex_weights(obj, vertices, bones)
+            
+            # Add armature modifier
+            mod = obj.modifiers.new(name="Armature", type='ARMATURE')
+            mod.object = armature_obj
             
             # Set proper scale and orientation
             armature_obj.scale = (0.08, 0.08, 0.08)
             armature_obj.rotation_euler = (1.5708, 0, 0)
 
-            # Select both armature and mesh
+            # Select objects and set active
             armature_obj.select_set(True)
             obj.select_set(True)
             bpy.context.view_layer.objects.active = armature_obj
 
-            armature_obj.data.use_mirror_x = False  # Prevent automatic mirroring
+            # Disable automatic mirroring
+            armature_obj.data.use_mirror_x = False
 
             # Add constraints
             create_bone_constraints(armature_obj, bones)
@@ -649,12 +835,15 @@ def import_pmx(filepath: str):
             # Apply transforms
             bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
             
-            # Ensure we end in object mode
+            # Ensure object mode
             bpy.context.view_layer.objects.active = armature_obj
             bpy.ops.object.mode_set(mode='OBJECT')
+
+            wm.progress_end()
             return {'FINISHED'}
             
     except Exception as e:
-        print(f"Error importing PMX: {str(e)}")
-        traceback.print_exc()
+        wm.progress_end()
+        error_msg = f"PMX Import Error: {str(e)}\n{traceback.format_exc()}"
+        print(error_msg)  # Console output for debugging
         return {'CANCELLED'}
