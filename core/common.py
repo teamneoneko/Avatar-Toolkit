@@ -119,11 +119,48 @@ def get_armatures_that_are_not_selected(self, context: Context) -> List[Tuple[st
     return [(obj.name, obj.name, "") for obj in bpy.data.objects if ((obj.type == 'ARMATURE') and (obj.name != context.scene.selected_armature))]
 
 def get_selected_armature(context: Context) -> Optional[Object]:
-    if context.scene.selected_armature:
-        armature = bpy.data.objects.get(context.scene.selected_armature)
-        if is_valid_armature(armature):
-            return armature
+    try:
+        if hasattr(context.scene, 'selected_armature'):
+            armature_name = context.scene.selected_armature
+            if isinstance(armature_name, bytes):
+                try:
+                    armature_name = armature_name.decode('utf-8')
+                except UnicodeDecodeError:
+                    try:
+                        armature_name = armature_name.decode('gbk')  # For Chinese characters
+                    except UnicodeDecodeError:
+                        try:
+                            armature_name = armature_name.decode('shift-jis')
+                        except UnicodeDecodeError:
+                            armature_name = armature_name.decode('latin1')
+            
+            if armature_name:
+                armature = bpy.data.objects.get(str(armature_name))
+                if is_valid_armature(armature):
+                    return armature
+    except Exception:
+        pass
     return None
+
+def get_merge_armature_source(context: Context) -> Optional[Object]:
+    try:
+        if hasattr(context.scene, 'merge_armature_source'):
+            source_name = context.scene.merge_armature_source
+            if isinstance(source_name, bytes):
+                try:
+                    source_name = source_name.decode('utf-8')
+                except UnicodeDecodeError:
+                    try:
+                        source_name = source_name.decode('shift-jis')
+                    except UnicodeDecodeError:
+                        source_name = source_name.decode('latin1', errors='ignore')
+            
+            if source_name:
+                return bpy.data.objects.get(str(source_name))
+    except Exception:
+        pass
+    return None
+
 
 def set_selected_armature(context: Context, armature: Optional[Object]) -> None:
     context.scene.selected_armature = armature.name if armature else ""

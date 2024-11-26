@@ -521,6 +521,19 @@ def setup_physics(obj: bpy.types.Object, armature_obj: bpy.types.Object, rigid_b
         constraint.limit_ang_z_upper = joint.angular_limit_max[2]
 
 def create_armature(model_name: str, bones: list[PMXBone]) -> bpy.types.Object:
+    # Handle CJK characters in model name
+    if isinstance(model_name, bytes):
+        try:
+            model_name = model_name.decode('gbk')  # Try Chinese encoding first
+        except UnicodeDecodeError:
+            try:
+                model_name = model_name.decode('utf-8')
+            except UnicodeDecodeError:
+                try:
+                    model_name = model_name.decode('shift-jis')
+                except UnicodeDecodeError:
+                    model_name = model_name.decode('latin1')
+
     armature = bpy.data.armatures.new(f"{model_name}_Armature")
     armature_obj = bpy.data.objects.new(f"{model_name}_Armature", armature)
     bpy.context.collection.objects.link(armature_obj)
@@ -602,7 +615,6 @@ def create_armature(model_name: str, bones: list[PMXBone]) -> bpy.types.Object:
         
         edit_bones.append(edit_bone)
 
- 
     # Second pass: Set up hierarchy and orientations
     for i, bone_data in enumerate(bones):
         edit_bone = edit_bones[i]
@@ -625,12 +637,12 @@ def create_armature(model_name: str, bones: list[PMXBone]) -> bpy.types.Object:
             y_axis = z_axis.cross(x_axis)
             
             # Create and apply orientation matrix
-            matrix = Matrix((x_axis, y_axis, z_axis)).to_3x3()
-            edit_bone.matrix = matrix
+            matrix_3x3 = Matrix((x_axis, y_axis, z_axis)).to_3x3()
+            matrix_4x4 = matrix_3x3.to_4x4()
+            edit_bone.matrix = matrix_4x4
     
     bpy.ops.object.mode_set(mode='OBJECT')
     return armature_obj
-
 
 
 def assign_vertex_weights(obj: bpy.types.Object, vertices: list[PMXVertex], bones: list[PMXBone]):
