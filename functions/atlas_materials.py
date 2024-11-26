@@ -10,6 +10,20 @@ from ..core.common import SceneMatClass, MaterialListBool
 from ..core.packer.rectangle_packer import MaterialImageList, BinPacker
 from ..functions.translations import t
 
+class MaterialImageList:
+    def __init__(self):
+        self.albedo: Image = None
+        self.normal: Image = None
+        self.emission: Image = None
+        self.ambient_occlusion: Image = None
+        self.height: Image = None
+        self.roughness: Image = None
+        self.material: Material = None
+        self.parent_mesh: Object = None
+        self.w: int = 0
+        self.h: int = 0
+        self.fit = None
+
 def scale_images_to_largest(images:list[Image]) -> set:
     print([image.name for image in images])
     x: int=0
@@ -38,64 +52,67 @@ def MaterialImageList_to_Image_list(classitem: MaterialImageList) -> list[Image]
 
 
 def get_material_images_from_scene(context: Context) -> list[MaterialImageList]:
-    mat: SceneMatClass = None
     material_image_list: list[MaterialImageList] = []
-    for mat in context.scene.materials:
-        new_mat_image_item: MaterialImageList = MaterialImageList()
-        try:
-            new_mat_image_item.albedo = bpy.data.images[mat.mat.texture_atlas_albedo]
-        except Exception as e:
-            name: str = mat.mat.name+"_albedo_replacement"
-            if name in bpy.data.images:
-                bpy.data.images.remove(image=bpy.data.images[name],do_unlink=True)
-            new_mat_image_item.albedo = bpy.data.images.new(name=name,width=32,height=32, alpha=True)
-            new_mat_image_item.albedo.pixels[:] = numpy.tile(numpy.array([0.0,0.0,0.0,1.0]), 32*32)
-        try:
-            new_mat_image_item.normal = bpy.data.images[mat.mat.texture_atlas_normal]
-        except Exception:
-            name: str = mat.mat.name+"_normal_replacement"
-            if name in bpy.data.images:
-                bpy.data.images.remove(image=bpy.data.images[name],do_unlink=True)
-            new_mat_image_item.normal = bpy.data.images.new(name=name,width=32,height=32, alpha=True)
-            new_mat_image_item.normal.pixels[:] = numpy.tile(numpy.array([0.5,0.5,1.0,1.0]), 32*32)
-        try:
-            new_mat_image_item.emission = bpy.data.images[mat.mat.texture_atlas_emission]
-        except Exception:
-            name: str = mat.mat.name+"_emission_replacement"
-            if name in bpy.data.images:
-                bpy.data.images.remove(image=bpy.data.images[name],do_unlink=True)
-            new_mat_image_item.emission = bpy.data.images.new(name=name,width=32,height=32, alpha=True)
-            new_mat_image_item.emission.pixels[:] = numpy.tile(numpy.array([0.0,0.0,0.0,1.0]), 32*32)
-
-        try:
-            new_mat_image_item.ambient_occlusion = bpy.data.images[mat.mat.texture_atlas_ambient_occlusion]
-        except Exception:
-            name: str = mat.mat.name+"_ambient_occlusion_replacement"
-            if name in bpy.data.images:
-                bpy.data.images.remove(image=bpy.data.images[name],do_unlink=True)
-            new_mat_image_item.ambient_occlusion = bpy.data.images.new(name=name,width=32,height=32, alpha=True)
-            new_mat_image_item.ambient_occlusion.pixels[:] = numpy.tile(numpy.array([1.0,1.0,1.0,1.0]), 32*32)
-        try:
-            new_mat_image_item.height = bpy.data.images[mat.mat.texture_atlas_height]
-        except Exception:
-            name: str = mat.mat.name+"_height_replacement"
-            if name in bpy.data.images:
-                bpy.data.images.remove(image=bpy.data.images[name],do_unlink=True)
-            new_mat_image_item.height = bpy.data.images.new(name=name,width=32,height=32, alpha=True)
-            new_mat_image_item.height.pixels[:] = numpy.tile(numpy.array([0.5,0.5,0.5,1.0]), 32*32)
-
-        try:
-            new_mat_image_item.roughness = bpy.data.images[mat.mat.texture_atlas_roughness]
-        except Exception:
-            name: str = mat.mat.name+"_roughness_replacement"
-            if name in bpy.data.images:
-                bpy.data.images.remove(image=bpy.data.images[name],do_unlink=True)
-            new_mat_image_item.roughness = bpy.data.images.new(name=name,width=32,height=32, alpha=True)
-            new_mat_image_item.roughness.pixels[:] = numpy.tile(numpy.array([1.0,1.0,1.0,0.0]), 32*32)
-        new_mat_image_item.material = mat.mat
-        material_image_list.append(new_mat_image_item)
+    
+    for obj in context.scene.objects:
+        if obj.type == 'MESH':
+            for mat_slot in obj.material_slots:
+                if mat_slot.material and mat_slot.material.include_in_atlas:
+                    new_mat_image_item = MaterialImageList()
+                    try:
+                        new_mat_image_item.albedo = bpy.data.images[mat_slot.material.texture_atlas_albedo]
+                    except Exception:
+                        name = mat_slot.material.name + "_albedo_replacement"
+                        if name in bpy.data.images:
+                            bpy.data.images.remove(image=bpy.data.images[name], do_unlink=True)
+                        new_mat_image_item.albedo = bpy.data.images.new(name=name, width=32, height=32, alpha=True)
+                        new_mat_image_item.albedo.pixels[:] = numpy.tile(numpy.array([0.0,0.0,0.0,1.0]), 32*32)
+                    try:
+                        new_mat_image_item.normal = bpy.data.images[mat_slot.material.texture_atlas_normal]
+                    except Exception:
+                        name = mat_slot.material.name + "_normal_replacement"
+                        if name in bpy.data.images:
+                            bpy.data.images.remove(image=bpy.data.images[name], do_unlink=True)
+                        new_mat_image_item.normal = bpy.data.images.new(name=name, width=32, height=32, alpha=True)
+                        new_mat_image_item.normal.pixels[:] = numpy.tile(numpy.array([0.5,0.5,1.0,1.0]), 32*32)
+                    try:
+                        new_mat_image_item.emission = bpy.data.images[mat_slot.material.texture_atlas_emission]
+                    except Exception:
+                        name = mat_slot.material.name + "_emission_replacement"
+                        if name in bpy.data.images:
+                            bpy.data.images.remove(image=bpy.data.images[name], do_unlink=True)
+                        new_mat_image_item.emission = bpy.data.images.new(name=name, width=32, height=32, alpha=True)
+                        new_mat_image_item.emission.pixels[:] = numpy.tile(numpy.array([0.0,0.0,0.0,1.0]), 32*32)
+                    try:
+                        new_mat_image_item.ambient_occlusion = bpy.data.images[mat_slot.material.texture_atlas_ambient_occlusion]
+                    except Exception:
+                        name = mat_slot.material.name + "_ambient_occlusion_replacement"
+                        if name in bpy.data.images:
+                            bpy.data.images.remove(image=bpy.data.images[name], do_unlink=True)
+                        new_mat_image_item.ambient_occlusion = bpy.data.images.new(name=name, width=32, height=32, alpha=True)
+                        new_mat_image_item.ambient_occlusion.pixels[:] = numpy.tile(numpy.array([1.0,1.0,1.0,1.0]), 32*32)
+                    try:
+                        new_mat_image_item.height = bpy.data.images[mat_slot.material.texture_atlas_height]
+                    except Exception:
+                        name = mat_slot.material.name + "_height_replacement"
+                        if name in bpy.data.images:
+                            bpy.data.images.remove(image=bpy.data.images[name], do_unlink=True)
+                        new_mat_image_item.height = bpy.data.images.new(name=name, width=32, height=32, alpha=True)
+                        new_mat_image_item.height.pixels[:] = numpy.tile(numpy.array([0.5,0.5,0.5,1.0]), 32*32)
+                    try:
+                        new_mat_image_item.roughness = bpy.data.images[mat_slot.material.texture_atlas_roughness]
+                    except Exception:
+                        name = mat_slot.material.name + "_roughness_replacement"
+                        if name in bpy.data.images:
+                            bpy.data.images.remove(image=bpy.data.images[name], do_unlink=True)
+                        new_mat_image_item.roughness = bpy.data.images.new(name=name, width=32, height=32, alpha=True)
+                        new_mat_image_item.roughness.pixels[:] = numpy.tile(numpy.array([1.0,1.0,1.0,0.0]), 32*32)
+                    
+                    new_mat_image_item.material = mat_slot.material
+                    new_mat_image_item.parent_mesh = obj
+                    material_image_list.append(new_mat_image_item)
+    
     return material_image_list
-
 
 def prep_images_in_scene(context: Context) -> list[MaterialImageList]:
     preped_images: list[MaterialImageList] = get_material_images_from_scene(context)
@@ -124,12 +141,15 @@ class AvatarToolKit_OT_AtlasMaterials(Operator):
     
     def execute(self, context: Context) -> set:
         try:
-            mat_images: list[MaterialImageList] = prep_images_in_scene(context)
+            # Only get materials marked for atlas creation
+            mat_images: list[MaterialImageList] = [m for m in prep_images_in_scene(context) if m.material.include_in_atlas]
+            
+            if not mat_images:
+                self.report({'WARNING'}, t("TextureAtlas.no_materials_selected"))
+                return {'CANCELLED'}
 
             packer: BinPacker = BinPacker(mat_images)
-
             mat_images = packer.fit()
-
 
             size: list[int] = [max([matimg.fit.w + matimg.albedo.size[0] for matimg in mat_images]),
                     max([matimg.fit.h + matimg.albedo.size[1] for matimg in mat_images])]
@@ -144,18 +164,17 @@ class AvatarToolKit_OT_AtlasMaterials(Operator):
                 h: int = int(mat.albedo.size[1])
 
                 for obj in bpy.data.objects:
-                    mesh: Mesh = obj.data
-
-
-                    for layer in mesh.polygons:
-                        if obj.material_slots[layer.material_index].material:
-                            if obj.material_slots[layer.material_index].material == mat.material:
-                                for loop_idx in layer.loop_indices:
-                                    layer_loops: MeshUVLoopLayer
-                                    for layer_loops in mesh.uv_layers:
-                                        uv_item: Float2AttributeValue = layer_loops.uv[loop_idx]
-                                        uv_item.vector.x = (uv_item.vector.x*(w/size[0]))+(x/size[0])
-                                        uv_item.vector.y = (uv_item.vector.y*(h/size[1]))+(y/size[1])
+                    if obj.type == 'MESH':
+                        mesh: Mesh = obj.data
+                        for layer in mesh.polygons:
+                            if obj.material_slots[layer.material_index].material:
+                                if obj.material_slots[layer.material_index].material == mat.material:
+                                    for loop_idx in layer.loop_indices:
+                                        layer_loops: MeshUVLoopLayer
+                                        for layer_loops in mesh.uv_layers:
+                                            uv_item: Float2AttributeValue = layer_loops.uv[loop_idx]
+                                            uv_item.vector.x = (uv_item.vector.x*(w/size[0]))+(x/size[0])
+                                            uv_item.vector.y = (uv_item.vector.y*(h/size[1]))+(y/size[1])
 
             for type in ["albedo","normal", "emission","ambient_occlusion","height", "roughness"]:
                 new_image_name: str= "Atlas_"+type+"_"+context.scene.name+"_"+Path(bpy.data.filepath).stem
@@ -167,7 +186,6 @@ class AvatarToolKit_OT_AtlasMaterials(Operator):
 
                 canvas: Image = bpy.data.images.new(name=new_image_name, width=int(size[0]),height=int(size[1]), alpha=True)
                 c_w = canvas.size[0]
-                #c_h = canvas.size[1]
                 canvas_pixels: list[float] = list(canvas.pixels[:])
                 for mat in mat_images:
                     x: int = int(mat.fit.x)
@@ -199,14 +217,12 @@ class AvatarToolKit_OT_AtlasMaterials(Operator):
                 canvas.save(filepath=os.path.join(os.path.dirname(bpy.data.filepath),new_image_name+".png"))
                 exec("atlased_mat."+type+" = canvas")
 
-
+            #I am sorry for the amount of nodes I'm instanciating here and their values.
+            #This is so that the nodes look pretty in the UI, which I think looks kinda nice. - @989onan
             atlased_mat.material = bpy.data.materials.new(name="Atlas_Final_"+bpy.context.scene.name+"_"+Path(bpy.data.filepath).stem)
             atlased_mat.material.use_nodes = True
             atlased_mat.material.node_tree.nodes.clear()
 
-
-            #I am sorry for the amount of nodes I'm instanciating here and their values.
-            #This is so that the nodes look pretty in the UI, which I think looks kinda nice. - @989onan
             principled_node: ShaderNodeBsdfPrincipled = atlased_mat.material.node_tree.nodes.new(type="ShaderNodeBsdfPrincipled")
             principled_node.location.x = 7.29706335067749
             principled_node.location.y = 298.918212890625
@@ -258,12 +274,13 @@ class AvatarToolKit_OT_AtlasMaterials(Operator):
             atlased_mat.material.node_tree.links.new(output_node.inputs["Surface"], principled_node.outputs["BSDF"])
             atlased_mat.material.node_tree.links.new(normal_map_node.inputs["Color"], normal_node.outputs["Color"])
 
-
+            # Only update materials for meshes that had materials included in the atlas
             for obj in context.scene.objects:
-                mesh: Mesh = obj.data
-                mesh.materials.clear()
-                
-                mesh.materials.append(atlased_mat.material)
+                if obj.type == 'MESH':
+                    if any(mat_slot.material and mat_slot.material.include_in_atlas for mat_slot in obj.material_slots):
+                        mesh: Mesh = obj.data
+                        mesh.materials.clear()
+                        mesh.materials.append(atlased_mat.material)
 
             self.report({'INFO'}, t("TextureAtlas.atlas_completed"))
             return {"FINISHED"}
@@ -271,5 +288,4 @@ class AvatarToolKit_OT_AtlasMaterials(Operator):
             self.report({'ERROR'}, t("TextureAtlas.atlas_error"))
             raise e
         return {"FINISHED"}
-         
          

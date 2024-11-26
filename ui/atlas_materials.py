@@ -40,23 +40,26 @@ class AvatarToolKit_UL_MaterialTextureAtlasProperties(UIList):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
 
-    def draw_item(self , context: Context, layout: UILayout, data: bpy.types.Object, item:SceneMatClass, icon, active_data, active_propname, index):
+    def draw_item(self, context: Context, layout: UILayout, data: Object, item: SceneMatClass, icon, active_data, active_propname, index):
         if context.scene.texture_atlas_Has_Mat_List_Shown:
             box = layout.box()
             row = box.row()
-            row.label(text=item.mat.name, icon = "MATERIAL")
-            col = box.row()
-            col.prop(item.mat, "texture_atlas_albedo")
-            col = box.row()
-            col.prop(item.mat, "texture_atlas_normal")
-            col = box.row()
-            col.prop(item.mat, "texture_atlas_emission")
-            col = box.row()
-            col.prop(item.mat, "texture_atlas_ambient_occlusion")
-            col = box.row()
-            col.prop(item.mat, "texture_atlas_height")
-            col = box.row()
-            col.prop(item.mat, "texture_atlas_roughness")
+            
+            # Draw material entry
+            row.prop(item.mat, "material_expanded", 
+                    text=item.mat.name,
+                    icon='DOWNARROW_HLT' if item.mat.material_expanded else 'RIGHTARROW',
+                    emboss=False)
+            row.prop(item.mat, "include_in_atlas", text="")
+            
+            if item.mat.material_expanded and item.mat.include_in_atlas:
+                col = box.column(align=True)
+                col.prop(item.mat, "texture_atlas_albedo")
+                col.prop(item.mat, "texture_atlas_normal")
+                col.prop(item.mat, "texture_atlas_emission")
+                col.prop(item.mat, "texture_atlas_ambient_occlusion")
+                col.prop(item.mat, "texture_atlas_height")
+                col.prop(item.mat, "texture_atlas_roughness")
 
 @register_wrap
 class AvatarToolKit_PT_TextureAtlasPanel(Panel):
@@ -74,7 +77,6 @@ class AvatarToolKit_PT_TextureAtlasPanel(Panel):
         
         if armature:
             layout.label(text=t("TextureAtlas.label"), icon='TEXTURE')
-            
             layout.separator(factor=0.5)
             
             box = layout.box()
@@ -86,16 +88,22 @@ class AvatarToolKit_PT_TextureAtlasPanel(Panel):
             
             if context.scene.texture_atlas_Has_Mat_List_Shown:
                 row = box.row()
-                row.template_list(AvatarToolKit_UL_MaterialTextureAtlasProperties.bl_idname, 'material_list', 
-                                context.scene, 'materials', context.scene, 'texture_atlas_material_index', 
-                                rows=12, type='DEFAULT')
+                row.template_list(AvatarToolKit_UL_MaterialTextureAtlasProperties.bl_idname, 
+                                'material_list', 
+                                context.scene, 
+                                'materials', 
+                                context.scene, 
+                                'texture_atlas_material_index', 
+                                rows=12, 
+                                type='DEFAULT')
             
             layout.separator(factor=1.0)
             
             row = layout.row()
             row.scale_y = 1.5
-            row.operator(AvatarToolKit_OT_AtlasMaterials.bl_idname, text=t("TextureAtlas.atlas_materials"), icon='NODE_TEXTURE')
-        
+            row.operator(AvatarToolKit_OT_AtlasMaterials.bl_idname, 
+                        text=t("TextureAtlas.atlas_materials"), 
+                        icon='NODE_TEXTURE')
         else:
             layout.label(text=t("Tools.select_armature"), icon='ERROR')
 

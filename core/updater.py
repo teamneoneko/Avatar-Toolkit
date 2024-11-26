@@ -7,6 +7,7 @@ import shutil
 import pathlib
 import zipfile
 import time 
+from urllib import request, error
 from threading import Thread
 from bpy.app.handlers import persistent
 from ..functions.translations import t
@@ -140,9 +141,9 @@ def get_github_releases() -> bool:
 
     try:
         ssl._create_default_https_context = ssl._create_unverified_context
-        with urllib.request.urlopen(f'https://api.github.com/repos/{GITHUB_REPO}/releases') as url:
+        with request.urlopen(f'https://api.github.com/repos/{GITHUB_REPO}/releases') as url:
             data = json.loads(url.read().decode())
-    except urllib.error.URLError:
+    except error.URLError:
         print('URL ERROR')
         return False
 
@@ -214,7 +215,7 @@ def download_file(update_url: str) -> None:
     try:
         ssl._create_default_https_context = ssl._create_unverified_context
         urllib.request.urlretrieve(update_url, update_zip_file)
-    except urllib.error.URLError:
+    except error.URLError:
         finish_update(error=t('download_file.cantConnect'))
         return
 

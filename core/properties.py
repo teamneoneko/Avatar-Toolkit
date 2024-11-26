@@ -29,6 +29,24 @@ def register() -> None:
         description=t("MergeArmatures.selected_armature.label")
     )))
 
+    register_property((bpy.types.Object, "material_group_expanded", bpy.props.BoolProperty(
+        name="Expand Material Group",
+        description="Show/hide materials for this mesh",
+        default=False
+    )))
+
+    register_property((bpy.types.Material, "material_expanded", bpy.props.BoolProperty(
+        name="Expand Material",
+        description="Show/hide material properties",
+        default=False
+    )))
+
+    register_property((bpy.types.Material, "include_in_atlas", bpy.props.BoolProperty(
+        name=t("TextureAtlas.include_in_atlas"),
+        description=t("TextureAtlas.include_in_atlas_desc"),
+        default=True
+    )))
+
     register_property((bpy.types.Scene, "merge_armature_apply_transforms", bpy.props.BoolProperty(
         default=False,
         name=t("MergeArmature.merge_armatures.apply_transforms.label"),
