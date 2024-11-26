@@ -169,6 +169,10 @@
     "Tools.remove_zero_weight_bones.threshold.label": "Weight Threshold",
     "Tools.remove_zero_weight_bones.threshold.desc": "If a bone is not weighted to any part of any mesh under the armature with a threshold greater than this, it is removed",
     "Tools.connect_bones.label": "Connect Bones",
+    "Tools.bone_tools.label": "Bone Tools",
+    "Tools.additional_tools.label": "Additional Tools",
+    "Tools.merge_twist_bones.label": "Merge Twist Bones",
+    "Tools.merge_twist_bones.desc": "Merge twist bones into their parent bones",
     "Tools.connect_bones.desc": "Connect bones with their respective children",
     "Tools.connect_bones.invalid_armature": "Invalid armature selected",
     "Tools.connect_bones.min_distance.label": "Minimum Distance",
@@ -223,6 +227,9 @@
     "VisemePanel.start_viseme_creation": "Starting viseme creation...",
     "VisemePanel.viseme_created_successfully": "Viseme {viseme_name} created successfully",
     "VisemePanel.viseme_creation_completed": "Viseme creation completed.",
+    "MMDOptions.title": "MMD Options",
+    "MMDOptions.no_armature_selected": "No armature selected",
+    "MMDOptions.label": "MMD Options",
     "MMDOptions.cleanup_mesh.label": "Cleanup Mesh",
     "MMDOptions.cleanup_mesh.desc": "Clean up the mesh by removing empty objects, unused vertex groups, unused vertices, and empty shape keys",
     "MMDOptions.removing_empty_objects": "Removing empty objects",
@@ -249,7 +256,8 @@
     "MMDOptions.renaming_bones": "Renaming bones",
     "MMDOptions.armature_optimization_complete": "Armature optimization complete",
     "MMDOptions.convert_materials.label": "Convert Materials",
-    "MMDOptions.convert_materials.desc": "Convert materials to use Principled BSDF shader and fix MMD and VRM shaders",    "MMDOptions.converting_materials": "Converting materials for {name}",
+    "MMDOptions.convert_materials.desc": "Convert materials to use Principled BSDF shader and fix MMD and VRM shaders",
+    "MMDOptions.converting_materials": "Converting materials for {name}",
     "Updater.label": "Updater",
     "Updater.CheckForUpdateButton.label": "Check for Updates",
     "Updater.CheckForUpdateButton.label_alt": "No Updates Available",
@@ -282,7 +290,11 @@
     "CreditsSupport.help_text1": "Check out our wiki first, we HIGHLY encourage",
     "CreditsSupport.help_text2": "that you read it before seeking further support.",
     "CreditsSupport.wiki_button": "Wiki",
-    "CreditsSupport.discord_button": "Join Discord"
- 
+    "CreditsSupport.discord_button": "Join Discord",
+    "TextureAtlas.include_in_atlas": "Include in Atlas",
+    "TextureAtlas.include_in_atlas_desc": "Include this material in the texture atlas",
+    "Scene.avatar_toolkit_updater_version_list.name": "Version List",
+    "Scene.avatar_toolkit_updater_version_list.description": "List of available versions to update to",
+    "TextureAtlas.no_materials_selected": "No materials selected for atlas"
   }
 }

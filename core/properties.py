@@ -23,12 +23,6 @@ def register() -> None:
         description=t("VisemePanel.selected_mesh.desc")
     )))
 
-    register_property((bpy.types.Scene, "merge_armature_source", bpy.props.EnumProperty(
-        items=get_armatures_that_are_not_selected,
-        name=t("MergeArmatures.selected_armature.label"),
-        description=t("MergeArmatures.selected_armature.label")
-    )))
-
     register_property((bpy.types.Object, "material_group_expanded", bpy.props.BoolProperty(
         name="Expand Material Group",
         description="Show/hide materials for this mesh",
