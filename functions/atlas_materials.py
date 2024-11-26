@@ -24,19 +24,24 @@ class MaterialImageList:
         self.h: int = 0
         self.fit = None
 
-def scale_images_to_largest(images:list[Image]) -> set:
-    print([image.name for image in images])
-    x: int=0
-    y: int=0
-    for image in images:
-        x = max(x,image.size[0])
-        y = max(y,image.size[1])
-        print(x,y)
+def scale_images_to_largest(images: list[Image]) -> set:
+    x: int = 0
+    y: int = 0
     
-    for image in images:
+    # Filter out None or invalid images
+    valid_images = [img for img in images if img and img.has_data]
+    
+    if not valid_images:
+        return 0, 0
+        
+    for image in valid_images:
+        x = max(x, image.size[0])
+        y = max(y, image.size[1])
+    
+    for image in valid_images:
         image.scale(width=int(x), height=int(y))
 
-    return x,y
+    return x, y
 
 def MaterialImageList_to_Image_list(classitem: MaterialImageList) -> list[Image]:
     list_of_images: list[Image] = []
@@ -57,7 +62,8 @@ def get_material_images_from_scene(context: Context) -> list[MaterialImageList]:
     for obj in context.scene.objects:
         if obj.type == 'MESH':
             for mat_slot in obj.material_slots:
-                if mat_slot.material and mat_slot.material.include_in_atlas:
+                # Only process materials that are selected for atlas
+                if mat_slot.material and mat_slot.material.include_in_atlas is True:
                     new_mat_image_item = MaterialImageList()
                     try:
                         new_mat_image_item.albedo = bpy.data.images[mat_slot.material.texture_atlas_albedo]
@@ -114,6 +120,7 @@ def get_material_images_from_scene(context: Context) -> list[MaterialImageList]:
     
     return material_image_list
 
+
 def prep_images_in_scene(context: Context) -> list[MaterialImageList]:
     preped_images: list[MaterialImageList] = get_material_images_from_scene(context)
     for MaterialImageClass in preped_images:
@@ -141,14 +148,14 @@ class AvatarToolKit_OT_AtlasMaterials(Operator):
     
     def execute(self, context: Context) -> set:
         try:
-            # Only get materials marked for atlas creation
-            mat_images: list[MaterialImageList] = [m for m in prep_images_in_scene(context) if m.material.include_in_atlas]
+            # Get only materials that are explicitly marked for inclusion
+            selected_materials = [m for m in prep_images_in_scene(context) if m.material and m.material.include_in_atlas is True]
             
-            if not mat_images:
+            if not selected_materials:
                 self.report({'WARNING'}, t("TextureAtlas.no_materials_selected"))
                 return {'CANCELLED'}
 
-            packer: BinPacker = BinPacker(mat_images)
+            packer: BinPacker = BinPacker(selected_materials)
             mat_images = packer.fit()
 
             size: list[int] = [max([matimg.fit.w + matimg.albedo.size[0] for matimg in mat_images]),
@@ -274,13 +281,13 @@ class AvatarToolKit_OT_AtlasMaterials(Operator):
             atlased_mat.material.node_tree.links.new(output_node.inputs["Surface"], principled_node.outputs["BSDF"])
             atlased_mat.material.node_tree.links.new(normal_map_node.inputs["Color"], normal_node.outputs["Color"])
 
-            # Only update materials for meshes that had materials included in the atlas
+            # Only update selected materials for meshes
             for obj in context.scene.objects:
                 if obj.type == 'MESH':
-                    if any(mat_slot.material and mat_slot.material.include_in_atlas for mat_slot in obj.material_slots):
-                        mesh: Mesh = obj.data
-                        mesh.materials.clear()
-                        mesh.materials.append(atlased_mat.material)
+                    mesh: Mesh = obj.data
+                    for i, mat_slot in enumerate(obj.material_slots):
+                        if mat_slot.material and mat_slot.material.include_in_atlas is True:
+                            mesh.materials[i] = atlased_mat.material
 
             self.report({'INFO'}, t("TextureAtlas.atlas_completed"))
             return {"FINISHED"}

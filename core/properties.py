@@ -41,6 +41,12 @@ def register() -> None:
         default=False
     )))
 
+    register_property((bpy.types.Scene, "material_search_filter", bpy.props.StringProperty(
+        name="Search Materials",
+        description="Filter materials by name",
+        default=""
+    )))
+
     register_property((bpy.types.Material, "include_in_atlas", bpy.props.BoolProperty(
         name=t("TextureAtlas.include_in_atlas"),
         description=t("TextureAtlas.include_in_atlas_desc"),

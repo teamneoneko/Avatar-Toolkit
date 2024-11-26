@@ -1,10 +1,55 @@
 from bpy.types import UIList, Panel, UILayout, Object, Context,Material, Operator
 import bpy
+from math import sqrt
 from ..core.register import register_wrap
 from .panel import AvatarToolKit_PT_AvatarToolkitPanel, CATEGORY_NAME
 from ..core.common import SceneMatClass, MaterialListBool, get_selected_armature
 from ..functions.atlas_materials import AvatarToolKit_OT_AtlasMaterials
 from ..functions.translations import t
+
+@register_wrap
+class AvatarToolKit_OT_SelectAllMaterials(Operator):
+    bl_idname = 'avatar_toolkit.select_all_materials'
+    bl_label = "Select All"
+    bl_description = "Select all materials for atlas"
+
+    def execute(self, context):
+        for item in context.scene.materials:
+            item.mat.include_in_atlas = True
+        return {'FINISHED'}
+
+@register_wrap
+class AvatarToolKit_OT_SelectNoneMaterials(Operator):
+    bl_idname = 'avatar_toolkit.select_none_materials'
+    bl_label = "Select None"
+    bl_description = "Deselect all materials"
+
+    def execute(self, context):
+        for item in context.scene.materials:
+            item.mat.include_in_atlas = False
+        return {'FINISHED'}
+
+@register_wrap
+class AvatarToolKit_OT_ExpandAllMaterials(Operator):
+    bl_idname = 'avatar_toolkit.expand_all_materials'
+    bl_label = "Expand All"
+    bl_description = "Expand all material settings"
+
+    def execute(self, context):
+        for item in context.scene.materials:
+            item.mat.material_expanded = True
+        return {'FINISHED'}
+
+@register_wrap
+class AvatarToolKit_OT_CollapseAllMaterials(Operator):
+    bl_idname = 'avatar_toolkit.collapse_all_materials'
+    bl_label = "Collapse All"
+    bl_description = "Collapse all material settings"
+
+    def execute(self, context):
+        for item in context.scene.materials:
+            item.mat.material_expanded = False
+        return {'FINISHED'}
 
 @register_wrap
 class AvatarToolKit_OT_ExpandSectionMaterials(Operator):
@@ -40,26 +85,70 @@ class AvatarToolKit_UL_MaterialTextureAtlasProperties(UIList):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
 
+    def draw_header(self, context):
+        layout = self.layout
+        row = layout.row(align=True)
+        
+        row.operator("avatar_toolkit.select_all_materials", text="", icon='CHECKBOX_HLT')
+        row.operator("avatar_toolkit.select_none_materials", text="", icon='CHECKBOX_DEHLT')
+        row.operator("avatar_toolkit.expand_all_materials", text="", icon='DISCLOSURE_TRI_DOWN')
+        row.operator("avatar_toolkit.collapse_all_materials", text="", icon='DISCLOSURE_TRI_RIGHT')
+        row.prop(context.scene, "material_search_filter", text="", icon='VIEWZOOM')
+        
+        box = layout.box()
+        row = box.row()
+        row.label(text=f"Estimated Atlas Size: {self.calculate_atlas_size(context)}px")
+
     def draw_item(self, context: Context, layout: UILayout, data: Object, item: SceneMatClass, icon, active_data, active_propname, index):
         if context.scene.texture_atlas_Has_Mat_List_Shown:
-            box = layout.box()
-            row = box.row()
+            if context.scene.material_search_filter and context.scene.material_search_filter.lower() not in item.mat.name.lower():
+                return
+
+            row = layout.row()
             
-            # Draw material entry
+            # Add a clear checkbox for material selection
+            row.prop(item.mat, "include_in_atlas", text="", icon='CHECKBOX_HLT' if item.mat.include_in_atlas else 'CHECKBOX_DEHLT')
+            
+            # Material name and expansion toggle
             row.prop(item.mat, "material_expanded", 
                     text=item.mat.name,
                     icon='DOWNARROW_HLT' if item.mat.material_expanded else 'RIGHTARROW',
                     emboss=False)
-            row.prop(item.mat, "include_in_atlas", text="")
             
+            # Show texture settings if expanded
             if item.mat.material_expanded and item.mat.include_in_atlas:
+                box = layout.box()
                 col = box.column(align=True)
-                col.prop(item.mat, "texture_atlas_albedo")
-                col.prop(item.mat, "texture_atlas_normal")
-                col.prop(item.mat, "texture_atlas_emission")
-                col.prop(item.mat, "texture_atlas_ambient_occlusion")
-                col.prop(item.mat, "texture_atlas_height")
-                col.prop(item.mat, "texture_atlas_roughness")
+                self.draw_texture_row(col, item.mat, "texture_atlas_albedo", "IMAGE_RGB")
+                self.draw_texture_row(col, item.mat, "texture_atlas_normal", "NORMALS_FACE")
+                self.draw_texture_row(col, item.mat, "texture_atlas_emission", "LIGHT")
+                self.draw_texture_row(col, item.mat, "texture_atlas_ambient_occlusion", "SHADING_SOLID")
+                self.draw_texture_row(col, item.mat, "texture_atlas_height", "IMAGE_ZDEPTH")
+                self.draw_texture_row(col, item.mat, "texture_atlas_roughness", "MATERIAL")
+                
+                col.separator(factor=0.5)
+
+    def draw_texture_row(self, layout, material, prop_name, icon):
+        row = layout.row()
+        row.prop(material, prop_name, icon=icon)
+        if getattr(material, prop_name):
+            row.label(text="", icon='CHECKMARK')
+        else:
+            row.label(text="", icon='X')
+
+    def is_material_ready(self, material):
+        return bool(material.texture_atlas_albedo or 
+                   material.texture_atlas_normal or 
+                   material.texture_atlas_emission)
+
+    def calculate_atlas_size(self, context):
+        total_size = 0
+        for mat in context.scene.materials:
+            if mat.mat.include_in_atlas:
+                if mat.mat.texture_atlas_albedo:
+                    img = bpy.data.images[mat.mat.texture_atlas_albedo]
+                    total_size += img.size[0] * img.size[1]
+        return f"{int(sqrt(total_size))}x{int(sqrt(total_size))}"
 
 @register_wrap
 class AvatarToolKit_PT_TextureAtlasPanel(Panel):
@@ -106,4 +195,3 @@ class AvatarToolKit_PT_TextureAtlasPanel(Panel):
                         icon='NODE_TEXTURE')
         else:
             layout.label(text=t("Tools.select_armature"), icon='ERROR')
-
