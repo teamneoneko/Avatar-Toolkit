@@ -113,10 +113,16 @@ def get_armature(context: Context, armature_name: Optional[str] = None) -> Optio
     return next((obj for obj in context.view_layer.objects if obj.type == 'ARMATURE'), None)
     
 def get_armatures(self, context: Context) -> List[Tuple[str, str, str]]:
-    return [(obj.name, obj.name, "") for obj in bpy.data.objects if obj.type == 'ARMATURE']
+    armatures = [(obj.name, obj.name, "") for obj in bpy.data.objects if obj.type == 'ARMATURE']
+    if not armatures:
+        return [('NONE', 'No Armature', '')]
+    return armatures
 
 def get_armatures_that_are_not_selected(self, context: Context) -> List[Tuple[str, str, str]]:
-    return [(obj.name, obj.name, "") for obj in bpy.data.objects if ((obj.type == 'ARMATURE') and (obj.name != context.scene.selected_armature))]
+    armatures = [(obj.name, obj.name, "") for obj in bpy.data.objects if ((obj.type == 'ARMATURE') and (obj.name != context.scene.selected_armature))]
+    if not armatures:
+        return [('NONE', 'No Other Armature', '')]
+    return armatures
 
 def get_selected_armature(context: Context) -> Optional[Object]:
     try:
@@ -211,106 +217,90 @@ def apply_shapekey_to_basis(context: bpy.types.Context, obj: bpy.types.Object, s
         mesh.shape_keys.key_blocks[shape_key_name].name = shape_key_name + "_reversed"
     return True
 
-def apply_pose_as_rest(context: Context, armature_obj: bpy.types.Object, meshes: list[bpy.types.Object]) -> bool:
-    for obj in meshes:
-        mesh_data: Mesh = obj.data
+def apply_pose_as_rest(context: Context, armature_obj: Object, meshes: list[Object]) -> bool:
+    for mesh_obj in meshes:
+        if not mesh_obj.data:
+            continue
 
-        if mesh_data.shape_keys:
-            shape_key_obj_list: list[bpy.types.Object] = []
-            modifier_armature_name: str = ""
-
-            for modifier in obj.modifiers:
-                if modifier.type == "ARMATURE":
-                    arm_modifier: bpy.types.ArmatureModifier = modifier
-                    if not (arm_modifier.object == armature_obj):
-                        continue
-                    modifier_armature_name = arm_modifier.object.name
-            
-            if modifier_armature_name == "":
-                continue
-            for idx,shape in enumerate(mesh_data.shape_keys.key_blocks):
-                if idx == 0:
-                    continue
-                context.view_layer.objects.active = obj
-                
-                bpy.ops.object.mode_set(mode="OBJECT")
-                bpy.ops.object.select_all(action="DESELECT")
-                context.view_layer.objects.active = obj
-                obj.select_set(True)
-
-                #create duplicate of object
-                bpy.ops.object.duplicate()
-
-                shape_obj = context.view_layer.objects.active
-
-                #make current shapekey a separate object
-                shape_obj.active_shape_key_index = idx
-                shape_obj.name = shape.name
-                
-                bpy.ops.object.shape_key_move(type="TOP")
-
-                bpy.ops.object.mode_set(mode="EDIT")
-                bpy.ops.object.mode_set(mode="OBJECT")
-
-                bpy.ops.object.shape_key_remove(all=True)
-
-                bpy.ops.object.modifier_apply(modifier=modifier_armature_name)
-
-                #for modifier_name in [i.name for i in shape_obj.modifiers]:
-                #    bpy.ops.object.modifier_remove(modifier=modifier_name)
-
-                shape_key_obj_list.append(shape_obj) #add to a list of shape key objects
-            context.view_layer.objects.active = obj
-                
-            bpy.ops.object.mode_set(mode="OBJECT")
-            context.view_layer.objects.active.select_set(True)
-            bpy.ops.object.shape_key_remove(all=True)
-            bpy.ops.object.modifier_apply(modifier=modifier_armature_name)
-            bpy.ops.object.select_all(action="DESELECT")
-
-            for shapekey_obj in shape_key_obj_list:
-                shapekey_obj.select_set(True)
-            context.view_layer.objects.active = obj
-            context.view_layer.objects.active.select_set(True)
-
-            try:
-                bpy.ops.object.join_shapes()
-            except:
-                
-                #delete shapekey objects to not leave ourselves in a bad exit state - @989onan
-                context.view_layer.objects.active = shape_key_obj_list[0]
-                obj.select_set(False)
-                bpy.ops.object.delete(confirm=False)
-                return False
-            context.view_layer.objects.active = shape_key_obj_list[0]
-            obj.select_set(False)
-            bpy.ops.object.delete(confirm=False)
+        if mesh_obj.data.shape_keys and mesh_obj.data.shape_keys.key_blocks:
+            if len(mesh_obj.data.shape_keys.key_blocks) == 1:
+                basis = mesh_obj.data.shape_keys.key_blocks[0]
+                basis_name = basis.name
+                mesh_obj.shape_key_remove(basis)
+                apply_armature_to_mesh(armature_obj, mesh_obj)
+                mesh_obj.shape_key_add(name=basis_name)
+            else:
+                apply_armature_to_mesh_with_shapekeys(armature_obj, mesh_obj, context)
         else:
-            modifier_armature_name: str = ""
+            apply_armature_to_mesh(armature_obj, mesh_obj)
 
-            for modifier in obj.modifiers:
-                if modifier.type == "ARMATURE":
-                    arm_modifier: bpy.types.ArmatureModifier = modifier
-                    if not (arm_modifier.object == armature_obj):
-                        continue
-                    modifier_armature_name = arm_modifier.object.name
-            
-            if modifier_armature_name == "":
-                continue
-            context.view_layer.objects.active = obj
-            bpy.ops.object.mode_set(mode="OBJECT")
-            bpy.ops.object.select_all(action="DESELECT")
-            context.view_layer.objects.active.select_set(True)
-            bpy.ops.object.modifier_apply(modifier=modifier_armature_name)
-        
-    context.view_layer.objects.active = armature_obj
-    armature_obj.select_set(True)
-    bpy.ops.object.mode_set(mode="OBJECT")
-    bpy.ops.object.mode_set(mode="POSE")
-
+    bpy.ops.object.mode_set(mode='POSE')
     bpy.ops.pose.armature_apply(selected=False)
+    bpy.ops.object.mode_set(mode='OBJECT')
+    
     return True
 
+def apply_armature_to_mesh(armature_obj: Object, mesh_obj: Object) -> None:
+    armature_mod = mesh_obj.modifiers.new('PoseToRest', 'ARMATURE')
+    armature_mod.object = armature_obj
+    
+    if bpy.app.version >= (3, 5):
+        mesh_obj.modifiers.move(mesh_obj.modifiers.find(armature_mod.name), 0)
+    else:
+        for _ in range(len(mesh_obj.modifiers) - 1):
+            bpy.ops.object.modifier_move_up(modifier=armature_mod.name)
+
+    with bpy.context.temp_override(object=mesh_obj):
+        bpy.ops.object.modifier_apply(modifier=armature_mod.name)
+
+def apply_armature_to_mesh_with_shapekeys(armature_obj: Object, mesh_obj: Object, context: Context) -> None:
+    old_active_index = mesh_obj.active_shape_key_index
+    old_show_only = mesh_obj.show_only_shape_key
+    mesh_obj.show_only_shape_key = True
+
+    shape_keys = mesh_obj.data.shape_keys.key_blocks
+    vertex_groups = []
+    mutes = []
+    for sk in shape_keys:
+        vertex_groups.append(sk.vertex_group)
+        sk.vertex_group = ''
+        mutes.append(sk.mute)
+        sk.mute = False
+
+    disabled_mods = []
+    for mod in mesh_obj.modifiers:
+        if mod.show_viewport:
+            mod.show_viewport = False
+            disabled_mods.append(mod)
+
+    arm_mod = mesh_obj.modifiers.new('PoseToRest', 'ARMATURE')
+    arm_mod.object = armature_obj
+
+    co_length = len(mesh_obj.data.vertices) * 3
+    eval_cos = np.empty(co_length, dtype=np.single)
+    
+    for i, shape_key in enumerate(shape_keys):
+        mesh_obj.active_shape_key_index = i
+        
+        depsgraph = context.evaluated_depsgraph_get()
+        eval_mesh = mesh_obj.evaluated_get(depsgraph)
+        eval_mesh.data.vertices.foreach_get('co', eval_cos)
+        
+        shape_key.data.foreach_set('co', eval_cos)
+        if i == 0:
+            mesh_obj.data.vertices.foreach_set('co', eval_cos)
+
+    for mod in disabled_mods:
+        mod.show_viewport = True
+    mesh_obj.modifiers.remove(arm_mod)
+    
+    for sk, vg, mute in zip(shape_keys, vertex_groups, mutes):
+        sk.vertex_group = vg
+        sk.mute = mute
+        
+    mesh_obj.active_shape_key_index = old_active_index
+    mesh_obj.show_only_shape_key = old_show_only
+    
 def get_all_meshes(context: Context) -> List[Object]:
     armature = get_selected_armature(context)
     if armature and is_valid_armature(armature):

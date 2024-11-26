@@ -191,6 +191,10 @@ def finish_update_checking(error: str = '') -> None:
     return None  # Important for bpy.app.timers
 
 def update_now(latest: bool = False) -> None:
+    if not version_list:
+        print("No version list available. Please check for updates first.")
+        return
+        
     if latest:
         update_link = version_list[latest_version_str][0]
     else:

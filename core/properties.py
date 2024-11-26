@@ -73,7 +73,15 @@ def register() -> None:
     register_property((bpy.types.Scene, "selected_armature", bpy.props.EnumProperty(
         items=get_armatures,
         name=t("Quick_Access.selected_armature.label"),
-        description=t("Quick_Access.selected_armature.desc")
+        description=t("Quick_Access.selected_armature.desc"),
+        default=0
+    )))
+
+    register_property((bpy.types.Scene, "merge_armature_source", bpy.props.EnumProperty(
+        items=get_armatures_that_are_not_selected,
+        name=t("MergeArmatures.selected_armature.label"),
+        description=t("MergeArmatures.selected_armature.label"),
+        default=0
     )))
 
     register_property((bpy.types.Scene, "avatar_toolkit_updater_version_list", bpy.props.EnumProperty(
