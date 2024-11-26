@@ -61,6 +61,14 @@ class PMXMaterial:
         self.comment = comment
         self.surface_count = surface_count
 
+class PMXMorph:
+    def __init__(self, name, english_name, panel, morph_type, offsets):
+        self.name = name
+        self.english_name = english_name
+        self.panel = panel
+        self.morph_type = morph_type
+        self.offsets = offsets
+
 def read_pmx_header(file: BufferedReader):
     magic = file.read(4)
     if magic != b'PMX ':
@@ -105,6 +113,35 @@ def replace_char(string, index, character):
     temp = list(string)
     temp[index] = character
     return "".join(temp)
+
+def read_morph(file: BufferedReader, vertex_struct, vertex_size):
+    try:
+        name_length = struct.unpack('<i', file.read(4))[0]
+        name = str(file.read(name_length), 'utf-16-le', errors='replace')
+        
+        english_name_length = struct.unpack('<i', file.read(4))[0]
+        english_name = str(file.read(english_name_length), 'utf-16-le', errors='replace')
+        
+        panel = int.from_bytes(file.read(1), byteorder='little', signed=True)
+        morph_type = int.from_bytes(file.read(1), byteorder='little', signed=True)
+        
+        # Read offset count with error checking
+        offset_count_bytes = file.read(4)
+        if len(offset_count_bytes) != 4:
+            return PMXMorph(name, english_name, panel, morph_type, [])
+            
+        offset_count = struct.unpack('<i', offset_count_bytes)[0]
+        
+        offsets = []
+        if morph_type == 1:  # Vertex morph
+            for _ in range(offset_count):
+                vertex_index = struct.unpack(replace_char(vertex_struct, 1, '1'), file.read(vertex_size))[0]
+                offset = struct.unpack('<3f', file.read(12))
+                offsets.append((vertex_index, offset))
+                
+        return PMXMorph(name, english_name, panel, morph_type, offsets)
+    except:
+        return PMXMorph("", "", 0, 0, [])
 
 def read_vertex(file: BufferedReader, string_build, byte_size, additional_uvs):
     position = struct.unpack('<3f', file.read(12))
@@ -271,6 +308,83 @@ def read_bone(file: BufferedReader, string_build, byte_size):
                   flag, tail_position, inherit_bone_parent_index, inherit_bone_parent_influence,
                   fixed_axis, local_x_vector, local_z_vector, external_key,
                   ik_target_bone_index, ik_loop_count, ik_limit_radian, ik_links)
+
+def create_bone_constraints(armature_obj: bpy.types.Object, bones: list[PMXBone]):
+    bpy.context.view_layer.objects.active = armature_obj
+    bpy.ops.object.mode_set(mode='POSE')
+    
+    # Clear existing constraints
+    for pose_bone in armature_obj.pose.bones:
+        while pose_bone.constraints:
+            pose_bone.constraints.remove(pose_bone.constraints[0])
+
+    # Handle rotation inheritance first
+    for bone_data in bones:
+        pose_bone = armature_obj.pose.bones.get(bone_data.name)
+        if not pose_bone or bone_data.parent_index < 0:
+            continue
+
+        # Check if bone has vertex groups
+        if not pose_bone.bone.use_deform:
+            continue
+
+        if bone_data.flag & 0x0100:  # Rotation inheritance
+            if bone_data.inherit_parent_index >= 0:
+                constraint = pose_bone.constraints.new('COPY_ROTATION')
+                constraint.name = "MMD Rotation"
+                constraint.target = armature_obj
+                constraint.subtarget = bones[bone_data.inherit_parent_index].name
+                constraint.influence = bone_data.inherit_influence
+                constraint.target_space = 'LOCAL'
+                constraint.owner_space = 'LOCAL'
+
+    # Then handle IK constraints
+    for bone_data in bones:
+        pose_bone = armature_obj.pose.bones.get(bone_data.name)
+        if not pose_bone:
+            continue
+
+        # Skip non-deforming bones
+        if not pose_bone.bone.use_deform:
+            continue
+
+        if bone_data.flag & 0x0020:  # IK
+            if bone_data.ik_target_index >= 0:
+                constraint = pose_bone.constraints.new('IK')
+                constraint.name = "MMD IK"
+                constraint.target = armature_obj
+                constraint.subtarget = bones[bone_data.ik_target_index].name
+                constraint.chain_count = min(len(bone_data.ik_links), 3)
+                constraint.iterations = min(bone_data.ik_loop_count, 8)
+                constraint.use_tail = False
+                constraint.use_stretch = False
+                
+                # Configure IK chain
+                for link_bone_index, has_limits, angle_limits in bone_data.ik_links:
+                    link_pose_bone = armature_obj.pose.bones.get(bones[link_bone_index].name)
+                    if link_pose_bone and link_pose_bone.bone.use_deform:
+                        link_pose_bone.rotation_mode = 'XYZ'
+                        link_pose_bone.use_ik_limit_x = True
+                        link_pose_bone.use_ik_limit_y = True
+                        link_pose_bone.use_ik_limit_z = True
+                        
+                        if has_limits and angle_limits:
+                            min_angles, max_angles = angle_limits
+                            link_pose_bone.ik_min_x = max(-1.4, min_angles[0])
+                            link_pose_bone.ik_max_x = min(1.4, max_angles[0])
+                            link_pose_bone.ik_min_y = max(-1.4, min_angles[1])
+                            link_pose_bone.ik_max_y = min(1.4, max_angles[1])
+                            link_pose_bone.ik_min_z = max(-1.4, min_angles[2])
+                            link_pose_bone.ik_max_z = min(1.4, max_angles[2])
+
+    # Reset pose to default state
+    bpy.ops.pose.select_all(action='SELECT')
+    bpy.ops.pose.transforms_clear()
+    bpy.ops.pose.select_all(action='DESELECT')
+    
+    bpy.ops.object.mode_set(mode='OBJECT')
+
+
 
 def create_armature(model_name: str, bones: list[PMXBone]) -> bpy.types.Object:
     armature = bpy.data.armatures.new(f"{model_name}_Armature")
@@ -476,6 +590,12 @@ def import_pmx(filepath: str):
             bones = []
             for _ in range(bone_count):
                 bones.append(read_bone(file, bone_struct, bone_size))
+
+            # Read morphs
+            morph_count = struct.unpack('<i', file.read(4))[0]
+            morphs = []
+            for _ in range(morph_count):
+                morphs.append(read_morph(file, vertex_struct, vertex_size))
             
             # Create mesh and object
             mesh = bpy.data.meshes.new(model_name)
@@ -488,6 +608,20 @@ def import_pmx(filepath: str):
             # Create and set up armature
             armature_obj = create_armature(model_name, bones)
             obj.parent = armature_obj
+
+            # Create shape keys
+            for morph in morphs:
+                if morph.morph_type == 1:  # Vertex morph
+                    if not obj.data.shape_keys:
+                        obj.shape_key_add(name='Basis')
+                    
+                    shape_key = obj.shape_key_add(name=morph.name)
+                    for vertex_index, offset in morph.offsets:
+                        shape_key.data[vertex_index].co = (
+                            vertices[vertex_index].position[0] + offset[0],
+                            vertices[vertex_index].position[1] + offset[1],
+                            vertices[vertex_index].position[2] + offset[2]
+                        )
             
             # Add armature modifier
             mod = obj.modifiers.new(name="Armature", type='ARMATURE')
@@ -507,9 +641,17 @@ def import_pmx(filepath: str):
             obj.select_set(True)
             bpy.context.view_layer.objects.active = armature_obj
 
+            armature_obj.data.use_mirror_x = False  # Prevent automatic mirroring
+
+            # Add constraints
+            create_bone_constraints(armature_obj, bones)
+
             # Apply transforms
             bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
             
+            # Ensure we end in object mode
+            bpy.context.view_layer.objects.active = armature_obj
+            bpy.ops.object.mode_set(mode='OBJECT')
             return {'FINISHED'}
             
     except Exception as e:
