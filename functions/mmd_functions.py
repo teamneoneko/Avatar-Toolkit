@@ -123,7 +123,13 @@ class AvatarToolKit_OT_OptimizeArmature(Operator):
 
         init_progress(context, 9)
 
-        # Store initial bone transforms
+        # Ensure proper object selection and mode
+        bpy.ops.object.mode_set(mode='OBJECT')
+        bpy.ops.object.select_all(action='DESELECT')
+        armature.select_set(True)
+        context.view_layer.objects.active = armature
+
+        # Store initial transforms
         bpy.ops.object.mode_set(mode='EDIT')
         initial_transforms = {}
         for bone in armature.data.edit_bones:
@@ -169,7 +175,13 @@ class AvatarToolKit_OT_OptimizeArmature(Operator):
                 bone.matrix = transform['matrix']
 
         update_progress(self, context, t("MMDOptions.armature_optimization_complete"))
-        bpy.ops.object.mode_set(mode='OBJECT') 
+        
+        # Ensure we end in object mode with proper selection
+        bpy.ops.object.mode_set(mode='OBJECT')
+        bpy.ops.object.select_all(action='DESELECT')
+        armature.select_set(True)
+        context.view_layer.objects.active = armature
+
         finish_progress(context)
         return {'FINISHED'}
 
