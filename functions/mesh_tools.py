@@ -104,10 +104,13 @@ class AvatarToolKit_OT_JoinAllMeshes(Operator):
             raise ValueError(t("Optimization.no_armature_selected"))
 
         armature = get_selected_armature(context)
+        
         bpy.ops.object.mode_set(mode='OBJECT')
+        
         bpy.ops.object.select_all(action='DESELECT')
 
         meshes: List[Object] = get_all_meshes(context)
+        
         if not meshes:
             raise ValueError(t("Optimization.no_meshes_found"))
 
@@ -133,6 +136,7 @@ class AvatarToolKit_OT_JoinAllMeshes(Operator):
                 raise RuntimeError(f"{t('Optimization.transform_apply_failed')}: {str(e)}")
 
             update_progress(self, context, t("Optimization.fixing_uv_coordinates"))
+            bpy.ops.object.mode_set(mode='OBJECT')
             fix_uv_coordinates(context)
             
             update_progress(self, context, t("Optimization.finalizing"))
@@ -144,6 +148,7 @@ class AvatarToolKit_OT_JoinAllMeshes(Operator):
 
         context.view_layer.objects.active = armature
         finish_progress(context)
+
 
 @register_wrap
 class AvatarToolKit_OT_JoinSelectedMeshes(Operator):

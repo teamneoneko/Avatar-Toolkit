@@ -74,20 +74,63 @@ def clean_material_names(mesh: Mesh) -> None:
 def fix_uv_coordinates(context: Context) -> None:
     obj = context.object
 
-    # Check if the object is in Edit Mode
-    if obj.mode != 'EDIT':
-        bpy.ops.object.mode_set(mode='EDIT')
+    # Store current mode and selection
+    current_mode = context.mode
+    current_active = context.view_layer.objects.active
+    current_selected = context.selected_objects.copy()
+
+    # Ensure we're in object mode and select the object
+    bpy.ops.object.mode_set(mode='OBJECT')
+    obj.select_set(True)
+    context.view_layer.objects.active = obj
 
     # Check if the object has any mesh data
     if obj.type == 'MESH' and obj.data:
-        bpy.context.view_layer.objects.active = obj
+
+        # Switch to Edit Mode
+        bpy.ops.object.mode_set(mode='EDIT')
+
+        # Select all UVs
         bpy.ops.mesh.select_all(action='SELECT')
-        bpy.ops.uv.average_islands_scale()
+
+        # Try to find UV Editor area, fall back to 3D View if not found
+        area = next((area for area in context.screen.areas if area.type == 'UV_EDITOR'), None)
+        if not area:
+            area = next((area for area in context.screen.areas if area.type == 'VIEW_3D'), None)
+
+        # Get the region and space data
+        region = next((region for region in area.regions if region.type == 'WINDOW'), None)
+        space_data = area.spaces.active
+
+        # Create a context override
+        override = {
+            'area': area,
+            'region': region,
+            'space_data': space_data,
+            'edit_object': obj,
+            'active_object': obj,
+            'selected_objects': [obj],
+            'mode': 'EDIT_MESH',
+        }
+
+        try:
+            # Ensure UVs are selected
+            bpy.ops.uv.select_all(override, action='SELECT')
+            # Average UV island scales
+            bpy.ops.uv.average_islands_scale(override)
+        except Exception as e:
+            print(f"UV Fix - Error during UV scaling: {str(e)}")
 
         # Switch back to Object Mode
         bpy.ops.object.mode_set(mode='OBJECT')
+        print("UV Fix - Switched back to Object Mode")
+
+        # Restore previous selection and active object
+        for sel_obj in current_selected:
+            sel_obj.select_set(True)
+        context.view_layer.objects.active = current_active
     else:
-        print("Object is not a valid mesh with UV data")
+        print("UV Fix - Object is not a valid mesh with UV data")
 
 def has_shapekeys(mesh_obj: Object) -> bool:
     return mesh_obj.data.shape_keys is not None
