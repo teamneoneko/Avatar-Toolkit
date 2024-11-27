@@ -169,6 +169,7 @@ class AvatarToolKit_OT_OptimizeArmature(Operator):
                 bone.matrix = transform['matrix']
 
         update_progress(self, context, t("MMDOptions.armature_optimization_complete"))
+        bpy.ops.object.mode_set(mode='OBJECT') 
         finish_progress(context)
         return {'FINISHED'}
 
