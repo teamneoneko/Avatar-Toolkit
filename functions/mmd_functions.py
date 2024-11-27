@@ -123,19 +123,17 @@ class AvatarToolKit_OT_OptimizeArmature(Operator):
 
         init_progress(context, 9)
 
-        update_progress(self, context, t("MMDOptions.fixing_bone_rolls"))
+        # Store initial bone transforms
         bpy.ops.object.mode_set(mode='EDIT')
+        initial_transforms = {}
         for bone in armature.data.edit_bones:
-            bone.roll = 0
-
-        update_progress(self, context, t("MMDOptions.aligning_bones"))
-        for bone in armature.data.edit_bones:
-            if bone.parent:
-                bone.head = bone.parent.tail
-
-        update_progress(self, context, t("MMDOptions.connecting_bones"))
-        bpy.ops.object.mode_set(mode='OBJECT')
-        bpy.ops.avatar_toolkit.connect_bones('EXEC_DEFAULT')
+            initial_transforms[bone.name] = {
+                'head': bone.head.copy(),
+                'tail': bone.tail.copy(),
+                'roll': bone.roll,
+                'matrix': bone.matrix.copy(),
+                'parent': bone.parent.name if bone.parent else None
+            }
 
         update_progress(self, context, t("MMDOptions.deleting_bone_constraints"))
         bpy.ops.avatar_toolkit.delete_bone_constraints('EXEC_DEFAULT')
@@ -159,6 +157,16 @@ class AvatarToolKit_OT_OptimizeArmature(Operator):
 
         update_progress(self, context, t("MMDOptions.renaming_bones"))
         self.rename_bones(armature)
+
+        # Restore original bone transforms
+        bpy.ops.object.mode_set(mode='EDIT')
+        for bone_name, transform in initial_transforms.items():
+            if bone_name in armature.data.edit_bones:
+                bone = armature.data.edit_bones[bone_name]
+                bone.head = transform['head']
+                bone.tail = transform['tail']
+                bone.roll = transform['roll']
+                bone.matrix = transform['matrix']
 
         update_progress(self, context, t("MMDOptions.armature_optimization_complete"))
         finish_progress(context)

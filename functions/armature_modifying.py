@@ -117,7 +117,6 @@ class AvatarToolkit_OT_ApplyPoseAsRest(Operator):
             return {'CANCELLED'}
         return {'FINISHED'}
 
-
 @register_wrap
 class AvatarToolkit_OT_RemoveZeroWeightBones(Operator):
     bl_idname = "avatar_toolkit.remove_zero_weight_bones"
@@ -144,10 +143,22 @@ class AvatarToolkit_OT_RemoveZeroWeightBones(Operator):
 
         weighted_bones: list[str] = []
 
-
         bpy.ops.object.mode_set(mode='OBJECT')
         bpy.ops.object.select_all(action='DESELECT')
 
+        # Store initial transforms
+        initial_transforms = {}
+        bpy.ops.object.mode_set(mode='EDIT')
+        for bone in armature.data.edit_bones:
+            initial_transforms[bone.name] = {
+                'head': bone.head.copy(),
+                'tail': bone.tail.copy(),
+                'roll': bone.roll,
+                'matrix': bone.matrix.copy(),
+                'parent': bone.parent.name if bone.parent else None
+            }
+
+        # Get weighted bones
         armature.select_set(True)
         context.view_layer.objects.active = armature
 
@@ -157,25 +168,55 @@ class AvatarToolkit_OT_RemoveZeroWeightBones(Operator):
             for vertex in mesh_data.vertices:
                 for group in vertex.groups:
                     if group.weight > self.threshold: 
-                        weighted_bones.append(mesh.vertex_groups[group.group].name) #add bone name to list of bones that are greater than the weight threshold
+                        weighted_bones.append(mesh.vertex_groups[group.group].name)
         
         bpy.ops.object.mode_set(mode='EDIT')
         amature_data: Armature = armature.data
         unweighted_bones: list[str] = []
 
-        #doing 2 loops to prevent modification of array during iteration
+        # Identify unweighted bones
         for bone in amature_data.edit_bones:
             if bone.name not in weighted_bones:
-                unweighted_bones.append(bone.name) #add bones that arent in the list of bones that have weight into the list of bones that don't
+                unweighted_bones.append(bone.name)
 
+        # Process bone removal while preserving positions
         for bone_name in unweighted_bones:
-            for edit_bone in amature_data.edit_bones[bone_name].children: 
-                edit_bone.use_connect = False #to fix randomly moving bones
-                edit_bone.parent = amature_data.edit_bones[bone_name].parent #to fix unparented bones.
-            amature_data.edit_bones.remove(amature_data.edit_bones[bone_name]) #delete list of unweighted bones from the armature
+            bone = amature_data.edit_bones[bone_name]
+            
+            # Store children data
+            children = bone.children
+            children_data = {}
+            for child in children:
+                children_data[child.name] = initial_transforms[child.name]
+            
+            # Reparent children
+            for child in children:
+                child.use_connect = False
+                if bone.parent:
+                    child.parent = bone.parent
+            
+            # Remove bone
+            amature_data.edit_bones.remove(bone)
+            
+            # Restore children positions
+            for child_name, data in children_data.items():
+                if child_name in amature_data.edit_bones:
+                    child = amature_data.edit_bones[child_name]
+                    child.head = data['head']
+                    child.tail = data['tail']
+                    child.roll = data['roll']
+                    child.matrix = data['matrix']
 
+        # Final position verification
+        for bone_name, transform in initial_transforms.items():
+            if bone_name in amature_data.edit_bones:
+                bone = amature_data.edit_bones[bone_name]
+                bone.matrix = transform['matrix']
+
+        bpy.ops.object.mode_set(mode='OBJECT')
         self.report({'INFO'}, t("Tools.remove_zero_weight_bones.success"))
         return {'FINISHED'}
+
 
 @register_wrap
 class AvatarToolkit_OT_MergeBonesToActive(Operator):
@@ -233,43 +274,73 @@ class AvatarToolkit_OT_MergeBonesToParents(Operator):
     bl_description = t("Tools.merge_bones_to_parents.desc")
     bl_options = {'REGISTER', 'UNDO'}
 
-    delete_old: bpy.props.BoolProperty(name=t("Tools.merge_bones_to_parents.delete_old.label"), description=t("Tools.merge_bones_to_parents.delete_old.desc"), default=False)
+    delete_old: bpy.props.BoolProperty(
+        name=t("Tools.merge_bones_to_parents.delete_old.label"),
+        description=t("Tools.merge_bones_to_parents.delete_old.desc"),
+        default=False
+    )
 
     @classmethod
     def poll(cls, context: Context) -> bool:
-        if common.get_selected_armature(context) is not None:
-            if common.get_selected_armature(context) == context.view_layer.objects.active:
-                if context.mode == "POSE":
-                    return len(context.selected_pose_bones) > 0
-                elif context.mode == "EDIT_ARMATURE":
-                    return len(context.selected_bones) > 0
+        armature = common.get_selected_armature(context)
+        if armature and armature == context.view_layer.objects.active:
+            if context.mode == "POSE":
+                return len(context.selected_pose_bones) > 0
+            elif context.mode == "EDIT_ARMATURE":
+                return len(context.selected_editable_bones) > 0
         return False
 
-    def execute(cls, context: Context) -> set[str]:
+    def execute(self, context: Context) -> set[str]:
+        prev_mode = context.mode
 
-        prev_mode: str = "EDIT"
-        if context.mode == "POSE":
-            prev_mode = "POSE"
-        #get active bone and a list of all other selected bones
+        # Map 'EDIT_ARMATURE' to 'EDIT' for bpy.ops.object.mode_set
+        if prev_mode == 'EDIT_ARMATURE':
+            prev_mode = 'EDIT'
+
+        # Switch to Edit Mode
         bpy.ops.object.mode_set(mode='EDIT')
         armature_data: Armature = context.view_layer.objects.active.data
 
+        # Get selected bones in Edit Mode
+        selected_bones = context.selected_editable_bones
+        selected_bone_names = [bone.name for bone in selected_bones]
+
+        if not selected_bone_names:
+            self.report({'ERROR'}, t("No bones selected"))
+            return {'CANCELLED'}
+
         for obj in common.get_all_meshes(context):
-            for bone in [i.name for i in context.selected_bones]:
-                if armature_data.edit_bones[bone].parent != None:
-                    bone_name: str = armature_data.edit_bones[bone].name
-                    common.transfer_vertex_weights(context=context,obj=obj,source_group=bone_name,target_group=armature_data.edit_bones[bone].parent.name)
+            for bone_name in selected_bone_names:
+                bone = armature_data.edit_bones.get(bone_name)
+                if bone and bone.parent:
+                    # Transfer weights from bone to its parent
+                    common.transfer_vertex_weights(
+                        context=context,
+                        obj=obj,
+                        source_group=bone_name,
+                        target_group=bone.parent.name
+                    )
+                    # Ensure we're in Edit Mode after transfer
                     bpy.ops.object.mode_set(mode='EDIT')
-        
-        for bone in [i.name for i in context.selected_bones]:   
-            if cls.delete_old:
-                for bone_child in armature_data.edit_bones[bone].children:
-                    bone_child.parent = armature_data.edit_bones[bone].parent
-                armature_data.edit_bones.remove(armature_data.edit_bones[bone])
-        
+                else:
+                    self.report({'WARNING'}, f"Bone '{bone_name}' has no parent or not found; skipping")
+
+        # Optionally delete old bones
+        if self.delete_old:
+            for bone_name in selected_bone_names:
+                bone = armature_data.edit_bones.get(bone_name)
+                if bone:
+                    # Reassign children to the parent of the bone being deleted
+                    for child in bone.children:
+                        child.parent = bone.parent
+                    # Remove the bone
+                    armature_data.edit_bones.remove(bone)
+                else:
+                    self.report({'WARNING'}, f"Bone '{bone_name}' not found in armature; cannot delete")
+
+        # Return to previous mode
         bpy.ops.object.mode_set(mode=prev_mode)
         return {'FINISHED'}
-
 
 @register_wrap
 class AvatarToolkit_OT_MergeArmatures(Operator):

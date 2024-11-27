@@ -467,23 +467,33 @@ def finish_progress(context):
     context.area.header_text_set(None)
 
 def transfer_vertex_weights(context: Context, obj: bpy.types.Object, source_group: str, target_group: str, delete_source_group: bool = True) -> bool:
-    
-    modifier: bpy.types.VertexWeightMixModifier = obj.modifiers.new(name="merge_weights",type="VERTEX_WEIGHT_MIX")
-
-    modifier.mix_set = 'B'
+    # Create and configure the Vertex Weight Mix modifier
+    modifier = obj.modifiers.new(name="merge_weights", type="VERTEX_WEIGHT_MIX")
+    modifier.show_viewport = True
+    modifier.show_render = True
+    modifier.mix_set = 'B'  # Replace weights in A with weights from B
     modifier.vertex_group_a = target_group
     modifier.vertex_group_b = source_group
     modifier.mask_constant = 1.0
 
+    # Ensure we're in Object Mode
     bpy.ops.object.mode_set(mode='OBJECT')
-    prev_obj: bpy.types.Object = context.view_layer.objects.active
+
+    # Deselect all objects and select only our target object
+    bpy.ops.object.select_all(action='DESELECT')
+    obj.select_set(True)
     context.view_layer.objects.active = obj
+
+    # Move modifier to the top of the stack if necessary
+    if len(obj.modifiers) > 1:
+        obj.modifiers.move(obj.modifiers.find(modifier.name), 0)
+
+    # Apply modifier
     bpy.ops.object.modifier_apply(modifier=modifier.name)
-    if delete_source_group:
-        obj.vertex_groups.remove(obj.vertex_groups.get(source_group))
-    bpy.ops.object.mode_set(mode='EDIT')
-    bpy.ops.object.mode_set(mode='OBJECT')
-    context.view_layer.objects.active = prev_obj
+
+    # Clean up
+    if delete_source_group and source_group in obj.vertex_groups:
+        obj.vertex_groups.remove(obj.vertex_groups[source_group])
 
     return True
 
