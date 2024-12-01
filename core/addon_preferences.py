@@ -1,6 +1,6 @@
 import bpy
 import os
-import toml
+import tomllib
 import json
 from bpy.types import AddonPreferences
 from typing import Any, Dict
@@ -12,8 +12,8 @@ PREFERENCES_FILE = os.path.join(PREFERENCES_DIR, "preferences.json")
 def get_current_version():
     main_dir = os.path.dirname(os.path.dirname(__file__))
     manifest_path = os.path.join(main_dir, "blender_manifest.toml")
-    with open(manifest_path, 'r') as f:
-        manifest_data = toml.load(f)
+    with open(manifest_path, 'rb') as f: 
+        manifest_data = tomllib.load(f)
     return manifest_data.get('version', 'Unknown')
 
 def save_preference(key: str, value: Any) -> None:
