@@ -264,8 +264,8 @@ class AvatarToolkit_OT_MergeArmatures(Operator):
     bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod
-    def poll(cls, context: Context) -> bool:
-        return (common.get_selected_armature(context) is not None) and (context.scene.merge_armature_source is not None)
+    def poll(cls, context):
+        return (common.get_selected_armature(context) is not None) and (common.get_merge_armature_source(context) is not None)
 
     def make_active(self, obj: bpy.types.Object, context: Context):
         context.view_layer.objects.active = obj
