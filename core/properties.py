@@ -23,10 +23,28 @@ def register() -> None:
         description=t("VisemePanel.selected_mesh.desc")
     )))
 
-    register_property((bpy.types.Scene, "merge_armature_source", bpy.props.EnumProperty(
-        items=get_armatures_that_are_not_selected,
-        name=t("MergeArmatures.selected_armature.label"),
-        description=t("MergeArmatures.selected_armature.label")
+    register_property((bpy.types.Object, "material_group_expanded", bpy.props.BoolProperty(
+        name="Expand Material Group",
+        description="Show/hide materials for this mesh",
+        default=False
+    )))
+
+    register_property((bpy.types.Material, "material_expanded", bpy.props.BoolProperty(
+        name="Expand Material",
+        description="Show/hide material properties",
+        default=False
+    )))
+
+    register_property((bpy.types.Scene, "material_search_filter", bpy.props.StringProperty(
+        name="Search Materials",
+        description="Filter materials by name",
+        default=""
+    )))
+
+    register_property((bpy.types.Material, "include_in_atlas", bpy.props.BoolProperty(
+        name=t("TextureAtlas.include_in_atlas"),
+        description=t("TextureAtlas.include_in_atlas_desc"),
+        default=True
     )))
 
     register_property((bpy.types.Scene, "merge_armature_apply_transforms", bpy.props.BoolProperty(
@@ -73,7 +91,15 @@ def register() -> None:
     register_property((bpy.types.Scene, "selected_armature", bpy.props.EnumProperty(
         items=get_armatures,
         name=t("Quick_Access.selected_armature.label"),
-        description=t("Quick_Access.selected_armature.desc")
+        description=t("Quick_Access.selected_armature.desc"),
+        default=0
+    )))
+
+    register_property((bpy.types.Scene, "merge_armature_source", bpy.props.EnumProperty(
+        items=get_armatures_that_are_not_selected,
+        name=t("MergeArmatures.selected_armature.label"),
+        description=t("MergeArmatures.selected_armature.label"),
+        default=0
     )))
 
     register_property((bpy.types.Scene, "avatar_toolkit_updater_version_list", bpy.props.EnumProperty(

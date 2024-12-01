@@ -64,25 +64,38 @@ class AvatarToolkit_OT_ApplyPoseAsShapekey(Operator):
 
     @classmethod
     def poll(cls, context):
-        return get_selected_armature(context) != None and context.mode == "POSE"
-    
-    def execute(self, context: Context):
-        bpy.ops.object.mode_set(mode="OBJECT")
-        for obj in get_all_meshes(context):
-
-            modifier_armature_name: str = ""
-            context.view_layer.objects.active = obj
-                    
-            bpy.ops.object.mode_set(mode="OBJECT")
-            bpy.ops.object.select_all(action="DESELECT")
-            context.view_layer.objects.active = obj
-            obj.select_set(True)
-            for modifier in obj.modifiers:
-                if modifier.type == "ARMATURE":
-                    arm_modifier: bpy.types.ArmatureModifier = modifier
-                    modifier_armature_name = arm_modifier.object.name
-            bpy.ops.object.modifier_apply_as_shapekey(modifier=modifier_armature_name,keep_modifier=True,report=True)
+        armature = common.get_selected_armature(context)
+        return armature and context.mode == 'POSE'
         
+    def execute(self, context):
+        armature_obj = common.get_selected_armature(context)
+        mesh_objects = common.get_all_meshes(context)
+
+        for mesh_obj in mesh_objects:
+            if not mesh_obj.data:
+                continue
+
+            # Ensure basis exists
+            if not mesh_obj.data.shape_keys:
+                mesh_obj.shape_key_add(name='Basis')
+                
+            # Store current pose as new shapekey
+            new_shape = mesh_obj.shape_key_add(name='Pose_Shapekey', from_mix=False)
+            
+            # Evaluate mesh in current pose
+            depsgraph = context.evaluated_depsgraph_get()
+            eval_mesh = mesh_obj.evaluated_get(depsgraph)
+            
+            # Apply evaluated vertices to new shapekey
+            for i, v in enumerate(eval_mesh.data.vertices):
+                new_shape.data[i].co = v.co.copy()
+
+        # Reset pose
+        bpy.ops.pose.select_all(action='SELECT')
+        bpy.ops.pose.transforms_clear()
+        bpy.ops.object.mode_set(mode='OBJECT')
+
+        self.report({'INFO'}, t('Tools.apply_pose_as_rest.success'))
         return {'FINISHED'}
 
 @register_wrap
@@ -97,11 +110,13 @@ class AvatarToolkit_OT_ApplyPoseAsRest(Operator):
         return get_selected_armature(context) != None and context.mode == "POSE"
     
     def execute(self, context: Context):
-        
-        if common.apply_pose_as_rest(armature_obj=get_selected_armature(context),meshes=get_all_meshes(context), context=context):
+        if not common.apply_pose_as_rest(armature_obj=get_selected_armature(context),
+                                    meshes=get_all_meshes(context), 
+                                    context=context):
             self.report({'ERROR'}, t("Quick_Access.apply_armature_failed"))
-            return {'FINISHED'}
+            return {'CANCELLED'}
         return {'FINISHED'}
+
 
 @register_wrap
 class AvatarToolkit_OT_RemoveZeroWeightBones(Operator):

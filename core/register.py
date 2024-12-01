@@ -26,10 +26,19 @@ def register_properties():
             setattr(prop[0], prop[1], prop[2])
         else:
             prop() 
+
+def clear_registration():
+    __bl_classes.clear()
+    __bl_ordered_classes.clear()
+    __bl_props.clear()
             
 def unregister_properties():
     for prop in reversed(__bl_props):
-        delattr(prop[0], prop[1])
+        try:
+            delattr(prop[0], prop[1])
+        except AttributeError:
+            continue
+    clear_registration()
 
 #- @989onan had to add this from Cats. This is extremely important else you will be screamed at by register order issues!
 # Find order to register to solve dependencies
