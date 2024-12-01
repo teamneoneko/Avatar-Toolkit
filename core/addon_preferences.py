@@ -1,6 +1,6 @@
 import bpy
 import os
-import toml
+import tomllib
 import json
 from bpy.types import AddonPreferences
 from typing import Any, Dict
