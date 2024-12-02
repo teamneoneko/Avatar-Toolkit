@@ -1,9 +1,7 @@
 import bpy
-from ..core.register import register_wrap
-from ..functions.translations import t
-from .panel import draw_title
+from ..core.translations import t
+from .main_panel import draw_title
 
-@register_wrap
 class UVTools_PT_MainPanel(bpy.types.Panel):
     bl_label = t("AvatarToolkit.label")
     bl_idname = "OBJECT_PT_avatar_toolkit_uv"
@@ -13,5 +11,4 @@ class UVTools_PT_MainPanel(bpy.types.Panel):
 
     def draw(self: bpy.types.Panel, context: bpy.types.Context):
         layout = self.layout
-
         draw_title(self)

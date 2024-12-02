@@ -1,13 +1,11 @@
 import bpy
-from ..core.register import register_wrap
-from .panel import AvatarToolKit_PT_AvatarToolkitPanel, CATEGORY_NAME
-from ..functions.translations import t
+from .main_panel import AvatarToolKit_PT_AvatarToolkitPanel, CATEGORY_NAME
+from ..core.translations import t
 from ..functions.remove_doubles_safely import AvatarToolKit_OT_RemoveDoublesSafely, AvatarToolKit_OT_RemoveDoublesSafelyAdvanced
 from ..core.common import get_selected_armature
 from ..functions.mesh_tools import AvatarToolKit_OT_JoinAllMeshes, AvatarToolKit_OT_JoinSelectedMeshes
 from ..functions.combine_materials import AvatarToolKit_OT_CombineMaterials
 
-@register_wrap
 class AvatarToolkit_PT_OptimizationPanel(bpy.types.Panel):
     bl_label = t("Optimization.label")
     bl_idname = "OBJECT_PT_avatar_toolkit_optimization"
@@ -17,7 +15,7 @@ class AvatarToolkit_PT_OptimizationPanel(bpy.types.Panel):
     bl_parent_id = AvatarToolKit_PT_AvatarToolkitPanel.bl_idname
     bl_order = 2
 
-    def draw(self: bpy.types.Panel, context: bpy.types.Context):
+    def draw(self, context: bpy.types.Context):
         layout = self.layout
         armature = get_selected_armature(context)
         
@@ -46,5 +44,3 @@ class AvatarToolkit_PT_OptimizationPanel(bpy.types.Panel):
             
         else:
             layout.label(text=t("Optimization.select_armature"), icon='ERROR')
-
-

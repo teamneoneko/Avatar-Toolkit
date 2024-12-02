@@ -1,17 +1,20 @@
 import bpy
-from ..core.register import register_wrap
-from .panel import AvatarToolKit_PT_AvatarToolkitPanel, CATEGORY_NAME
+from .main_panel import AvatarToolKit_PT_AvatarToolkitPanel, CATEGORY_NAME
 from bpy.types import Context
 from ..functions.digitigrade_legs import AvatarToolKit_OT_CreateDigitigradeLegs
 from ..functions.resonite_functions import AvatarToolKit_OT_ConvertToResonite
-from ..functions.translations import t
+from ..core.translations import t
 from ..core.common import get_selected_armature
 from ..functions.mesh_tools import AvatarToolkit_OT_RemoveUnusedShapekeys
-from ..functions.additional_tools import AvatarToolKit_OT_ApplyTransforms, AvatarToolKit_OT_ConnectBones, AvatarToolKit_OT_DeleteBoneConstraints, AvatarToolKit_OT_SeparateByMaterials, AvatarToolKit_OT_SeparateByLooseParts
-from ..functions.armature_modifying import AvatarToolkit_OT_RemoveZeroWeightBones, AvatarToolkit_OT_MergeBonesToActive, AvatarToolkit_OT_MergeBonesToParents
-from ..functions.rigify_functions import AvatarToolKit_OT_ConvertRigifyToUnity
+from ..functions.additional_tools import (AvatarToolKit_OT_ApplyTransforms, 
+                                        AvatarToolKit_OT_ConnectBones, 
+                                        AvatarToolKit_OT_DeleteBoneConstraints, 
+                                        AvatarToolKit_OT_SeparateByMaterials, 
+                                        AvatarToolKit_OT_SeparateByLooseParts)
+from ..functions.armature_modifying import (AvatarToolkit_OT_RemoveZeroWeightBones,
+                                          AvatarToolkit_OT_MergeBonesToActive,
+                                          AvatarToolkit_OT_MergeBonesToParents)
 
-@register_wrap
 class AvatarToolkit_PT_ToolsPanel(bpy.types.Panel):
     bl_label = t("Tools.label")
     bl_idname = "OBJECT_PT_avatar_toolkit_tools"
@@ -32,10 +35,6 @@ class AvatarToolkit_PT_ToolsPanel(bpy.types.Panel):
             row = layout.row(align=True)
             row.scale_y = 1.5  
             row.operator(AvatarToolKit_OT_ConvertToResonite.bl_idname, text=t("Tools.convert_to_resonite.label"), icon='SCENE_DATA')
-            
-            row = layout.row(align=True)
-            row.scale_y = 1.5
-            row.operator(AvatarToolKit_OT_ConvertRigifyToUnity.bl_idname, text=t("Tools.convert_rigify_to_unity.label"), icon='ARMATURE_DATA')
             
             layout.separator(factor=1.0)
             
@@ -62,7 +61,7 @@ class AvatarToolkit_PT_ToolsPanel(bpy.types.Panel):
             row.operator(AvatarToolKit_OT_DeleteBoneConstraints.bl_idname, text=t("Tools.delete_bone_constraints.label"), icon='CONSTRAINT_BONE')
             
             row = layout.row()
-            row.prop(context.scene, "merge_twist_bones")
+            row.prop(context.scene.avatar_toolkit, "merge_twist_bones")
             
             layout.separator(factor=1.0)
             
@@ -74,3 +73,4 @@ class AvatarToolkit_PT_ToolsPanel(bpy.types.Panel):
             layout.separator(factor=1.0) 
         else:
             layout.label(text=t("Tools.select_armature"), icon='ERROR')
+

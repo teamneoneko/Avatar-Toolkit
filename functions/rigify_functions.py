@@ -1,18 +1,9 @@
 # This code is heavily based on the Rigify-Move-DEF by NyankoNyan (https://github.com/NyankoNyan/Rigify-Move-DEF), which is licensed under the MIT License. We just heavily improve the code and add some new features.
-
 import bpy
-from ..core.register import register_wrap
 from ..core.common import get_selected_armature, is_valid_armature
-from ..functions.translations import t
+from ..core.translations import t
 from bpy.types import Operator, Context
 
-import bpy
-from ..core.register import register_wrap
-from ..core.common import get_selected_armature, is_valid_armature
-from ..functions.translations import t
-from bpy.types import Operator, Context
-
-@register_wrap
 class AvatarToolKit_OT_ConvertRigifyToUnity(Operator):
     bl_idname = "avatar_toolkit.convert_rigify_to_unity"
     bl_label = t("Tools.convert_rigify_to_unity.label")

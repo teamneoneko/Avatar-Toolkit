@@ -1,6 +1,7 @@
 import bpy
-from ..core.register import register_wrap
-from ..functions.translations import t
+from ..core.translations import t
+
+CATEGORY_NAME = "Avatar Toolkit"
 
 def draw_title(self: bpy.types.Panel):
     layout = self.layout
@@ -8,9 +9,6 @@ def draw_title(self: bpy.types.Panel):
     layout.label(text=t("AvatarToolkit.desc2"))
     layout.label(text=t("AvatarToolkit.desc3"))
 
-CATEGORY_NAME = "Avatar Toolkit"
-
-@register_wrap
 class AvatarToolKit_PT_AvatarToolkitPanel(bpy.types.Panel):
     bl_label = t("AvatarToolkit.label")
     bl_idname = "OBJECT_PT_avatar_toolkit"
@@ -21,4 +19,3 @@ class AvatarToolKit_PT_AvatarToolkitPanel(bpy.types.Panel):
     def draw(self: bpy.types.Panel, context: bpy.types.Context):
         draw_title(self)
 
-        

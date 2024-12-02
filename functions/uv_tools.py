@@ -4,15 +4,14 @@ from bpy.types import Operator, Object, Context, Mesh, MeshUVLoopLayer
 import bmesh
 import numpy as np
 import math
-from ..functions.translations import t
-from ..core.register import register_wrap
+from ..core.translations import t
 
 class GenerateLoopTreeResult(TypedDict):
     tree: dict[str, set[str]]
     selected_loops: dict[str,list[int]]
     selected_verts: dict[str,int]
 
-@register_wrap
+
 class AvatarToolkit_OT_AlignUVEdgesToTarget(Operator):
     bl_idname = "avatar_toolkit.align_uv_edges_to_target"
     bl_label = t("avatar_toolkit.align_uv_edges_to_target.label")

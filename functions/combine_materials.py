@@ -3,8 +3,7 @@ import re
 from typing import List, Tuple, Optional, Set, Dict
 from bpy.types import Material, Operator, Context, Object, NodeTree
 from ..core.common import clean_material_names, get_selected_armature, is_valid_armature, get_all_meshes, init_progress, update_progress, finish_progress
-from ..core.register import register_wrap
-from ..functions.translations import t
+from ..core.translations import t
 
 def textures_match(tex1: bpy.types.ImageTexture, tex2: bpy.types.ImageTexture) -> bool:
     return tex1.image == tex2.image and tex1.extension == tex2.extension
@@ -52,7 +51,7 @@ def get_base_name(name: str) -> str:
     mat_match = re.match(r"^(.*)\.\d{3}$", name)
     return mat_match.group(1) if mat_match else name
 
-@register_wrap
+
 class AvatarToolKit_OT_CombineMaterials(Operator):
     bl_idname = "avatar_toolkit.combine_materials"
     bl_label = t("Optimization.combine_materials.label")

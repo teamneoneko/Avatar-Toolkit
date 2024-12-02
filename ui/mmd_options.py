@@ -1,13 +1,11 @@
 import bpy
-from ..core.register import register_wrap
-from .panel import AvatarToolKit_PT_AvatarToolkitPanel, CATEGORY_NAME
-from ..functions.translations import t
+from .main_panel import AvatarToolKit_PT_AvatarToolkitPanel, CATEGORY_NAME
+from ..core.translations import t
 from ..functions.mmd_functions import *
 from ..functions.mesh_tools import AvatarToolKit_OT_JoinAllMeshes
 from ..functions.combine_materials import AvatarToolKit_OT_CombineMaterials
 from ..functions.additional_tools import AvatarToolKit_OT_ApplyTransforms
 
-@register_wrap
 class AvatarToolkit_PT_MMDOptionsPanel(bpy.types.Panel):
     bl_label = t("MMDOptions.label")
     bl_idname = "OBJECT_PT_avatar_toolkit_mmd_options"
@@ -48,4 +46,3 @@ class AvatarToolkit_PT_MMDOptionsPanel(bpy.types.Panel):
         row = layout.row()
         row.scale_y = 1.2
         row.operator(AvatarToolKit_OT_ConvertMaterials.bl_idname, icon='SHADING_TEXTURE')
-

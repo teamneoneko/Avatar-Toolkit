@@ -1,10 +1,8 @@
 import bpy
-from ..core.register import register_wrap
-from .panel import AvatarToolKit_PT_AvatarToolkitPanel, CATEGORY_NAME
-from ..functions.translations import t
+from .main_panel import AvatarToolKit_PT_AvatarToolkitPanel, CATEGORY_NAME
+from ..core.translations import t
 from ..core.common import open_web_after_delay_multi_threaded
 
-@register_wrap
 class AvatarToolkit_PT_CreditsSupport(bpy.types.Panel):
     bl_label = t("CreditsSupport.label")
     bl_idname = "OBJECT_PT_avatar_toolkit_credits_support"

@@ -1,17 +1,15 @@
 import bpy
-from ..core.register import register_wrap
-from .panel import AvatarToolKit_PT_AvatarToolkitPanel, CATEGORY_NAME
-from ..core.export_resonite import AvatarToolKit_OT_ExportResonite
+from .main_panel import AvatarToolKit_PT_AvatarToolkitPanel, CATEGORY_NAME
+from ..core.exporters.export_resonite import AvatarToolKit_OT_ExportResonite
 from bpy.types import Context, Mesh, Panel, Operator
-from ..functions.translations import t
-
-from ..core.import_pmx import import_pmx
-from ..core.import_pmd import import_pmd
+from ..core.translations import t
+from ..core.common import get_selected_armature
 from ..functions.import_anything import AvatarToolKit_OT_ImportAnyModel
-from ..functions.armature_modifying import AvatarToolkit_OT_StartPoseMode, AvatarToolkit_OT_StopPoseMode, AvatarToolkit_OT_ApplyPoseAsRest, AvatarToolkit_OT_ApplyPoseAsShapekey
-from ..core.common import get_selected_armature, set_selected_armature, get_all_meshes
+from ..functions.armature_modifying import (AvatarToolkit_OT_StartPoseMode, 
+                                          AvatarToolkit_OT_StopPoseMode, 
+                                          AvatarToolkit_OT_ApplyPoseAsRest, 
+                                          AvatarToolkit_OT_ApplyPoseAsShapekey)
 
-@register_wrap
 class AvatarToolkitQuickAccessPanel(Panel):
     bl_label = t("Quick_Access.label")
     bl_idname = "OBJECT_PT_avatar_toolkit_quick_access"
@@ -28,7 +26,7 @@ class AvatarToolkitQuickAccessPanel(Panel):
         layout.separator(factor=1.0)
 
         layout.label(text=t("Quick_Access.select_armature"), icon='ARMATURE_DATA')
-        layout.prop(context.scene, "selected_armature", text="")
+        layout.prop(context.scene.avatar_toolkit, "selected_armature", text="")
 
         layout.separator(factor=1.0)
 
@@ -58,8 +56,6 @@ class AvatarToolkitQuickAccessPanel(Panel):
                 row.scale_y = 1.2
                 row.operator(AvatarToolkit_OT_StartPoseMode.bl_idname, text=t("Quick_Access.start_pose_mode.label"), icon='POSE_HLT')
 
-
-@register_wrap
 class AVATAR_TOOLKIT_OT_ExportMenu(bpy.types.Operator):
     bl_idname = "avatar_toolkit.export_menu"
     bl_label = t("Quick_Access.export_menu.label")
@@ -82,7 +78,6 @@ class AVATAR_TOOLKIT_OT_ExportMenu(bpy.types.Operator):
         layout.operator(AvatarToolKit_OT_ExportResonite.bl_idname, text=t("Quick_Access.select_export_resonite.label"), icon='SCENE_DATA')
         layout.operator(AVATAR_TOOLKIT_OT_ExportFbx.bl_idname, text=t("Quick_Access.export_fbx.label"), icon='OBJECT_DATA')
 
-@register_wrap
 class AVATAR_TOOLKIT_OT_ExportFbx(bpy.types.Operator):
     bl_idname = 'avatar_toolkit.export_fbx'
     bl_label = t("Quick_Access.export_fbx.label")

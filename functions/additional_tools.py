@@ -1,11 +1,10 @@
 import bpy
 import math
 from bpy.types import Context, Operator
-from ..core.register import register_wrap
 from ..core.common import get_selected_armature, is_valid_armature, get_all_meshes
-from ..functions.translations import t
+from ..core.translations import t
 
-@register_wrap
+
 class AvatarToolKit_OT_ApplyTransforms(Operator):
     bl_idname = "avatar_toolkit.apply_transforms"
     bl_label = t("Tools.apply_transforms.label")
@@ -37,7 +36,7 @@ class AvatarToolKit_OT_ApplyTransforms(Operator):
         self.report({'INFO'}, t("Tools.apply_transforms.success"))
         return {'FINISHED'}
     
-@register_wrap
+
 class AvatarToolKit_OT_ConnectBones(Operator):
     bl_idname = "avatar_toolkit.connect_bones"
     bl_label = t("Tools.connect_bones.label")
@@ -90,7 +89,7 @@ class AvatarToolKit_OT_ConnectBones(Operator):
         layout = self.layout
         layout.prop(self, "min_distance")
 
-@register_wrap
+
 class AvatarToolKit_OT_DeleteBoneConstraints(Operator):
     bl_idname = "avatar_toolkit.delete_bone_constraints"
     bl_label = t("Tools.delete_bone_constraints.label")
@@ -120,7 +119,7 @@ class AvatarToolKit_OT_DeleteBoneConstraints(Operator):
         self.report({'INFO'}, t("Tools.delete_bone_constraints.success").format(constraints_removed=constraints_removed))
         return {'FINISHED'}
 
-@register_wrap
+
 class AvatarToolKit_OT_SeparateByMaterials(Operator):
     bl_idname = "avatar_toolkit.separate_by_materials"
     bl_label = t("Tools.separate_by_materials.label")
@@ -140,7 +139,7 @@ class AvatarToolKit_OT_SeparateByMaterials(Operator):
         self.report({'INFO'}, t("Tools.separate_by_materials.success"))
         return {'FINISHED'}
 
-@register_wrap
+
 class AvatarToolKit_OT_SeparateByLooseParts(Operator):
     bl_idname = "avatar_toolkit.separate_by_loose_parts"
     bl_label = t("Tools.separate_by_loose_parts.label")

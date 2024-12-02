@@ -1,11 +1,10 @@
 import bpy
 from ..core import common
-from ..core.register import register_wrap
-from ..functions.translations import t
+from ..core.translations import t
 from typing import List, Tuple
 from ..core.common import get_selected_armature, is_valid_armature, get_all_meshes, init_progress, update_progress, finish_progress
 
-@register_wrap
+
 class AvatarToolKit_OT_AutoVisemeButton(bpy.types.Operator):
     bl_idname = 'avatar_toolkit.create_visemes'
     bl_label = t('AutoVisemeButton.label')

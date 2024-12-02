@@ -1,16 +1,15 @@
 import bpy
 from bpy.types import Operator
 from bpy_extras.io_utils import ImportHelper
-from ..core.register import register_wrap
-from ..core.importer import imports, import_types
+from ..core.importers.importer import imports, import_types
 from ..core.common import remove_default_objects
-from ..functions.translations import t
+from ..core.translations import t
 import pathlib
 import os
 
 VRM_IMPORTER_URL = "https://github.com/saturday06/VRM_Addon_for_Blender"
 
-@register_wrap
+
 class AvatarToolKit_OT_ImportAnyModel(Operator, ImportHelper):
     bl_idname = 'avatar_toolkit.import_any_model'
     bl_label = t('Tools.import_any_model.label')
@@ -67,7 +66,7 @@ class AvatarToolKit_OT_ImportAnyModel(Operator, ImportHelper):
         self.report({'INFO'}, t('Quick_Access.import_success'))
         return {'FINISHED'}
 
-@register_wrap
+
 class VRMImporterPopup(Operator):
     bl_idname = "wm.vrm_importer_popup"
     bl_label = "VRM Importer Not Installed"
@@ -87,7 +86,7 @@ class VRMImporterPopup(Operator):
 #TODO: This needs to be done with our own MMD importer.
 """ 
 #stolen from cats. Oh wait I made this code riiiiiiight - @989onan
-@register_wrap
+
 class ImportMMDAnimation(bpy.types.Operator, ImportHelper):
     bl_idname = 'avatar_toolkit.import_mmd_animation'
     bl_label = t('Importer.mmd_anim_importer.label')

@@ -2,13 +2,12 @@ import bpy
 import numpy as np
 import re
 from bpy.types import Operator, Context, Material, ShaderNodeTexImage, ShaderNodeGroup, Object
-from ..core.register import register_wrap
-from ..functions.translations import t
+from ..core.translations import t
 from ..core.common import get_selected_armature, is_valid_armature, get_all_meshes, init_progress, update_progress, finish_progress
 from ..functions.additional_tools import AvatarToolKit_OT_ConnectBones, AvatarToolKit_OT_DeleteBoneConstraints
 from ..functions.armature_modifying import AvatarToolkit_OT_RemoveZeroWeightBones, AvatarToolkit_OT_MergeBonesToParents
 
-@register_wrap
+
 class AvatarToolKit_OT_CleanupMesh(Operator):
     bl_idname = "avatar_toolkit.cleanup_mesh"
     bl_label = t("MMDOptions.cleanup_mesh.label")
@@ -61,7 +60,7 @@ class AvatarToolKit_OT_CleanupMesh(Operator):
                 if key.name != 'Basis' and all(abs(key.data[i].co[j] - obj.data.shape_keys.reference_key.data[i].co[j]) < 0.0001 for i in range(len(key.data)) for j in range(3)):
                     obj.shape_key_remove(key)
 
-@register_wrap
+
 class AvatarToolKit_OT_OptimizeWeights(Operator):
     bl_idname = "avatar_toolkit.optimize_weights"
     bl_label = t("MMDOptions.optimize_weights.label")
@@ -108,7 +107,7 @@ class AvatarToolKit_OT_OptimizeWeights(Operator):
                 for g in sorted_groups[self.max_weights:]:
                     obj.vertex_groups[g.group].remove([v.index])
 
-@register_wrap
+
 class AvatarToolKit_OT_OptimizeArmature(Operator):
     bl_idname = "avatar_toolkit.optimize_armature"
     bl_label = t("MMDOptions.optimize_armature.label")
@@ -339,7 +338,7 @@ def fix_vrm_shader(material: Material):
                     material.node_tree.links = [link for link in material.node_tree.links 
                                                 if not (link.from_node == node or link.to_node == node)]
 
-@register_wrap
+
 class AvatarToolKit_OT_ConvertMaterials(Operator):
     bl_idname = "avatar_toolkit.convert_materials"
     bl_label = t("MMDOptions.convert_materials.label")

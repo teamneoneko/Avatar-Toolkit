@@ -10,10 +10,9 @@ import time
 from urllib import request, error
 from threading import Thread
 from bpy.app.handlers import persistent
-from ..functions.translations import t
+from .translations import t
 from .addon_preferences import get_preference, get_current_version, save_preference
-from .register import register_wrap
-from ..ui.panel import AvatarToolKit_PT_AvatarToolkitPanel, CATEGORY_NAME
+from ..ui.main_panel import AvatarToolKit_PT_AvatarToolkitPanel, CATEGORY_NAME
 from typing import Dict, List, Tuple, Optional, Set, Any
 
 GITHUB_REPO = "teamneoneko/Avatar-Toolkit"
@@ -27,7 +26,7 @@ version_list: Optional[Dict[str, List[str]]] = None
 main_dir: str = os.path.dirname(os.path.dirname(__file__))
 downloads_dir: str = os.path.join(main_dir, "downloads")
 
-@register_wrap
+
 class AvatarToolkit_OT_CheckForUpdate(bpy.types.Operator):
     bl_idname = 'avatar_toolkit.check_for_update'
     bl_label = t('CheckForUpdateButton.label')
@@ -38,7 +37,7 @@ class AvatarToolkit_OT_CheckForUpdate(bpy.types.Operator):
         check_for_update_background()
         return {'FINISHED'}
 
-@register_wrap
+
 class AvatarToolkit_OT_UpdateToLatest(bpy.types.Operator):
     bl_idname = 'avatar_toolkit.update_latest'
     bl_label = t('UpdateToLatestButton.label')
@@ -49,7 +48,7 @@ class AvatarToolkit_OT_UpdateToLatest(bpy.types.Operator):
         update_now(latest=True)
         return {'FINISHED'}
 
-@register_wrap
+
 class AvatarToolkit_OT_UpdateNotificationPopup(bpy.types.Operator):
     bl_idname = "avatar_toolkit.update_notification_popup"
     bl_label = t('UpdateNotificationPopup.label')
@@ -69,7 +68,7 @@ class AvatarToolkit_OT_UpdateNotificationPopup(bpy.types.Operator):
         col = layout.column(align=True)
         col.label(text=t('UpdateNotificationPopup.newUpdate', default="New update available: {version}").format(version=latest_version_str))
 
-@register_wrap
+
 class AvatarToolkit_PT_UpdaterPanel(bpy.types.Panel):
     bl_label = t("Updater.label")
     bl_idname = "OBJECT_PT_avatar_toolkit_updater"
@@ -83,7 +82,7 @@ class AvatarToolkit_PT_UpdaterPanel(bpy.types.Panel):
         layout = self.layout
         draw_updater_panel(context, layout)
 
-@register_wrap
+
 class AvatarToolkit_OT_RestartBlenderPopup(bpy.types.Operator):
     bl_idname = "avatar_toolkit.restart_blender_popup"
     bl_label = t('RestartBlenderPopup.label', default="Restart Blender")

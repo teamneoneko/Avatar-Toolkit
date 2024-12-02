@@ -1,9 +1,8 @@
 import bpy
 from typing import List, TypedDict, Any
 from bpy.types import Operator, Context, Object
-from ..core.register import register_wrap
 from ..core.common import get_selected_armature, is_valid_armature, select_current_armature, get_all_meshes
-from ..functions.translations import t
+from ..core.translations import t
 
 class meshEntry(TypedDict):
     mesh: Object
@@ -11,7 +10,7 @@ class meshEntry(TypedDict):
     vertices: int
     cur_vertex_pass: int
 
-@register_wrap
+
 class AvatarToolKit_OT_RemoveDoublesSafelyAdvanced(Operator):
     bl_idname = "avatar_toolkit.remove_doubles_safely_advanced"
     bl_label = t("Optimization.remove_doubles_safely_advanced.label")
@@ -39,7 +38,7 @@ class AvatarToolKit_OT_RemoveDoublesSafelyAdvanced(Operator):
         return {'RUNNING_MODAL'}
 
 
-@register_wrap
+
 class AvatarToolKit_OT_RemoveDoublesSafely(Operator):
     bl_idname = "avatar_toolkit.remove_doubles_safely"
     bl_label = t("Optimization.remove_doubles_safely.label")

@@ -6,7 +6,6 @@ import time
 import webbrowser
 import typing
 
-from ..core.register import register_wrap
 from typing import List, Optional, Tuple
 from bpy.types import Object, ShapeKey, Mesh, Context, Material, PropertyGroup
 from functools import lru_cache

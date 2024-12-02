@@ -1,169 +1,180 @@
 import bpy
-from ..functions.translations import t, get_languages_list, update_language
-from ..core.register import register_property
-from bpy.types import Scene, Object, Material, Context
-from bpy.props import BoolProperty, EnumProperty, IntProperty, CollectionProperty, StringProperty, FloatVectorProperty, PointerProperty
-from ..core.addon_preferences import get_preference
-from ..core.common import SceneMatClass, MaterialListBool, get_armatures, get_mesh_items, get_armatures_that_are_not_selected
+from .translations import t, get_languages_list, update_language
+from bpy.types import PropertyGroup, Material, Scene, Object, Context
+from bpy.props import (StringProperty, BoolProperty, EnumProperty, 
+                      IntProperty, FloatProperty, CollectionProperty,
+                      PointerProperty)
+from .addon_preferences import get_preference
+from .common import SceneMatClass, MaterialListBool, get_armatures, get_mesh_items, get_armatures_that_are_not_selected
 from .updater import get_version_list
 
-def register() -> None:
-    default_language = get_preference("language", 0)
-    register_property((bpy.types.Scene, "avatar_toolkit_language", bpy.props.EnumProperty(
-        name=t("Settings.language.label", "Language"),
-        description=t("Settings.language.desc", "Select the language for the addon"),
+class AvatarToolkitSceneProperties(PropertyGroup):
+    language: EnumProperty(
+        name="Language",
+        description="Select the language for the addon",
         items=get_languages_list,
-        default=default_language,
         update=update_language
-    )))
-
-    register_property((bpy.types.Scene, "selected_mesh", bpy.props.EnumProperty(
+    )
+    
+    selected_mesh: EnumProperty(
         items=get_mesh_items,
-        name=t("VisemePanel.selected_mesh.label"),
-        description=t("VisemePanel.selected_mesh.desc")
-    )))
+        name="Selected Mesh",
+        description="Select mesh to modify"
+    )
 
-    register_property((bpy.types.Object, "material_group_expanded", bpy.props.BoolProperty(
-        name="Expand Material Group",
-        description="Show/hide materials for this mesh",
-        default=False
-    )))
-
-    register_property((bpy.types.Material, "material_expanded", bpy.props.BoolProperty(
-        name="Expand Material",
-        description="Show/hide material properties",
-        default=False
-    )))
-
-    register_property((bpy.types.Scene, "material_search_filter", bpy.props.StringProperty(
+    material_search_filter: StringProperty(
         name="Search Materials",
         description="Filter materials by name",
         default=""
-    )))
+    )
 
-    register_property((bpy.types.Material, "include_in_atlas", bpy.props.BoolProperty(
-        name=t("TextureAtlas.include_in_atlas"),
-        description=t("TextureAtlas.include_in_atlas_desc"),
-        default=True
-    )))
-
-    register_property((bpy.types.Scene, "merge_armature_apply_transforms", bpy.props.BoolProperty(
+    merge_armature_apply_transforms: BoolProperty(
         default=False,
-        name=t("MergeArmature.merge_armatures.apply_transforms.label"),
-        description=t("MergeArmature.merge_armatures.apply_transforms.desc")
-    )))
-    register_property((bpy.types.Scene, "merge_armature_align_bones", bpy.props.BoolProperty(
+        name="Apply Transforms",
+        description="Apply transforms when merging armatures"
+    )
+
+    merge_armature_align_bones: BoolProperty(
         default=False,
-        name=t("MergeArmature.merge_armatures.align_bones.label"),
-        description=t("MergeArmature.merge_armatures.align_bones.desc")
-    )))
-    
-    register_property((bpy.types.Scene, "avatar_toolkit_language_changed", bpy.props.BoolProperty(default=False)))
+        name="Align Bones",
+        description="Align bones when merging armatures"
+    )
 
-    register_property((bpy.types.Scene, "avatar_toolkit_progress_steps", bpy.props.IntProperty(default=0)))
-    register_property((bpy.types.Scene, "avatar_toolkit_progress_current", bpy.props.IntProperty(default=0)))
+    progress_steps: IntProperty(default=0)
+    progress_current: IntProperty(default=0)
+    language_changed: BoolProperty(default=False)
 
-    register_property((bpy.types.Scene, "avatar_toolkit_mouth_a", bpy.props.StringProperty(
-        name=t("VisemePanel.mouth_a.label"),
-        description=t("VisemePanel.mouth_a.desc")
-    )))
-    register_property((bpy.types.Scene, "avatar_toolkit_mouth_o", bpy.props.StringProperty(
-        name=t("VisemePanel.mouth_o.label"),
-        description=t("VisemePanel.mouth_o.desc")
-    )))
-    register_property((bpy.types.Scene, "avatar_toolkit_mouth_ch", bpy.props.StringProperty(
-        name=t("VisemePanel.mouth_ch.label"),
-        description=t("VisemePanel.mouth_ch.desc")
-    )))
-    register_property((bpy.types.Scene, "avatar_toolkit_shape_intensity", bpy.props.FloatProperty(
-        name=t("VisemePanel.shape_intensity"),
-        description=t("VisemePanel.shape_intensity_desc"),
+    mouth_a: StringProperty(
+        name="Mouth A",
+        description="Shape key for A sound"
+    )
+
+    mouth_o: StringProperty(
+        name="Mouth O",
+        description="Shape key for O sound"
+    )
+
+    mouth_ch: StringProperty(
+        name="Mouth CH",
+        description="Shape key for CH sound"
+    )
+
+    shape_intensity: FloatProperty(
+        name="Shape Intensity",
+        description="Intensity of shape key modifications",
         default=1.0,
         min=0.0,
         max=2.0
-    )))
-    register_property((bpy.types.Scene, "merge_twist_bones", bpy.props.BoolProperty(
-        name=t("Tools.merge_twist_bones.label"),
-        description=t("Tools.merge_twist_bones.desc"),
+    )
+
+    merge_twist_bones: BoolProperty(
+        name="Merge Twist Bones",
+        description="Merge twist bones during processing",
         default=True
-    )))
+    )
 
-    register_property((bpy.types.Scene, "selected_armature", bpy.props.EnumProperty(
+    selected_armature: EnumProperty(
         items=get_armatures,
-        name=t("Quick_Access.selected_armature.label"),
-        description=t("Quick_Access.selected_armature.desc"),
-        default=0
-    )))
+        name="Selected Armature",
+        description="Select the armature to work with"
+    )
 
-    register_property((bpy.types.Scene, "merge_armature_source", bpy.props.EnumProperty(
+    merge_armature_source: EnumProperty(
         items=get_armatures_that_are_not_selected,
-        name=t("MergeArmatures.selected_armature.label"),
-        description=t("MergeArmatures.selected_armature.label"),
-        default=0
-    )))
+        name="Source Armature",
+        description="Select the source armature for merging"
+    )
 
-    register_property((bpy.types.Scene, "avatar_toolkit_updater_version_list", bpy.props.EnumProperty(
-        name=t('Scene.avatar_toolkit_updater_version_list.name'),
-        description=t('Scene.avatar_toolkit_updater_version_list.description'),
-        items=get_version_list
-    )))
-    
-    #happy with how compressed this get_texture_node_list method is - @989onan
-    def get_texture_node_list(self: Material, context: Context) -> list[set[3]]:
-        
-        if self.use_nodes:
-            
-            Object.Enum = [((i.image.name if i.image else i.name+"_image"),(i.image.name if i.image else "node with no image..."),(i.image.name if i.image else i.name),index+1) for index,i in enumerate(self.node_tree.nodes) if i.bl_idname == "ShaderNodeTexImage"]
-            if not len(Object.Enum):
-                Object.Enum = [(t("TextureAtlas.error.label"), t("TextureAtlas.no_images_error.desc") , t("TextureAtlas.error.label"), 0)]
-        else:
-            Object.Enum = [(t("TextureAtlas.error.label"), t("TextureAtlas.no_nodes_error.desc"), t("TextureAtlas.error.label"), 0)]
-        Object.Enum.append((t("TextureAtlas.none.label"), t("TextureAtlas.none.label"), t("TextureAtlas.none.label"), 0))
-        return Object.Enum
-    
-    register_property((Material, "texture_atlas_albedo", EnumProperty(
-        name=t("TextureAtlas.albedo"), 
-        description=t("TextureAtlas.texture_use_atlas.desc").format(name=t("TextureAtlas.albedo").lower()), 
-        default=0, 
-        items=get_texture_node_list)))
-    register_property((Material, "texture_atlas_normal", EnumProperty(
-        name=t("TextureAtlas.normal"), 
-        description=t("TextureAtlas.texture_use_atlas.desc").format(name=t("TextureAtlas.normal").lower()), 
-        default=0, 
-        items=get_texture_node_list)))
-    register_property((Material, "texture_atlas_emission", EnumProperty(
-        name=t("TextureAtlas.emission"), 
-        description=t("TextureAtlas.texture_use_atlas.desc").format(name=t("TextureAtlas.emission").lower()), 
-        default=0, 
-        items=get_texture_node_list)))
-    register_property((Material, "texture_atlas_ambient_occlusion", EnumProperty(
-        name=t("TextureAtlas.ambient_occlusion"), 
-        description=t("TextureAtlas.texture_use_atlas.desc").format(name=t("TextureAtlas.ambient_occlusion").lower()), 
-        default=0, 
-        items=get_texture_node_list)))
-    register_property((Material, "texture_atlas_height", EnumProperty(
-        name=t("TextureAtlas.height"),
-        description=t("TextureAtlas.texture_use_atlas.desc").format(name=t("TextureAtlas.height").lower()), 
-        default=0, 
-        items=get_texture_node_list)))
-    register_property((Material, "texture_atlas_roughness", EnumProperty(
-        name=t("TextureAtlas.roughness"), 
-        description=t("TextureAtlas.texture_use_atlas.desc").format(name=t("TextureAtlas.roughness").lower()), 
-        default=0, 
-        items=get_texture_node_list)))
-    
-    register_property((Scene, "texture_atlas_material_index", IntProperty(
-        default=-1, 
-        get=(lambda self : -1), 
-        set=(lambda self,context : None))))
+    texture_atlas_material_index: IntProperty(
+        default=-1,
+        get=lambda self: -1,
+        set=lambda self, context: None
+    )
 
-    register_property((Scene, "materials", CollectionProperty(type=SceneMatClass)))
-
-    register_property((Scene, "texture_atlas_Has_Mat_List_Shown", BoolProperty(
+    materials: CollectionProperty(type=SceneMatClass)
+    
+    texture_atlas_Has_Mat_List_Shown: BoolProperty(
         default=False,
-        get=MaterialListBool.get_bool, 
-        set=MaterialListBool.set_bool)))
+        get=MaterialListBool.get_bool,
+        set=MaterialListBool.set_bool
+    )
 
-def unregister() -> None:
-    #if you register properties with register_property then you shouldn't need this function.
-    pass
+class AvatarToolkitMaterialProperties(PropertyGroup):
+    material_expanded: BoolProperty(
+        name="Expand Material",
+        description="Show/hide material properties",
+        default=False
+    )
+
+    include_in_atlas: BoolProperty(
+        name="Include in Atlas",
+        description="Include this material in texture atlas",
+        default=True
+    )
+
+    def get_texture_node_list(self, context):
+        if self.use_nodes:
+            nodes = [(i.image.name if i.image else i.name+"_image",
+                     i.image.name if i.image else "node with no image...",
+                     i.image.name if i.image else i.name, index+1)
+                    for index, i in enumerate(self.node_tree.nodes)
+                    if i.bl_idname == "ShaderNodeTexImage"]
+            if not nodes:
+                nodes = [("Error", "No images found", "Error", 0)]
+        else:
+            nodes = [("Error", "No node tree found", "Error", 0)]
+        nodes.append(("None", "None", "None", 0))
+        return nodes
+
+    texture_atlas_albedo: EnumProperty(
+        name="Albedo",
+        description="Albedo texture for atlas",
+        items=get_texture_node_list
+    )
+
+    texture_atlas_normal: EnumProperty(
+        name="Normal",
+        description="Normal map for atlas",
+        items=get_texture_node_list
+    )
+
+    texture_atlas_emission: EnumProperty(
+        name="Emission",
+        description="Emission texture for atlas",
+        items=get_texture_node_list
+    )
+
+    texture_atlas_ambient_occlusion: EnumProperty(
+        name="Ambient Occlusion",
+        description="AO texture for atlas",
+        items=get_texture_node_list
+    )
+
+    texture_atlas_height: EnumProperty(
+        name="Height",
+        description="Height map for atlas",
+        items=get_texture_node_list
+    )
+
+    texture_atlas_roughness: EnumProperty(
+        name="Roughness",
+        description="Roughness map for atlas",
+        items=get_texture_node_list
+    )
+
+class AvatarToolkitObjectProperties(PropertyGroup):
+    material_group_expanded: BoolProperty(
+        name="Expand Material Group",
+        description="Show/hide materials for this mesh",
+        default=False
+    )
+
+def register():
+    bpy.types.Scene.avatar_toolkit = PointerProperty(type=AvatarToolkitSceneProperties)
+    bpy.types.Material.avatar_toolkit = PointerProperty(type=AvatarToolkitMaterialProperties)
+    bpy.types.Object.avatar_toolkit = PointerProperty(type=AvatarToolkitObjectProperties)
+
+def unregister():
+    del bpy.types.Scene.avatar_toolkit
+    del bpy.types.Material.avatar_toolkit
+    del bpy.types.Object.avatar_toolkit

@@ -1,13 +1,12 @@
 import bpy
-from ..core.register import register_wrap
 from bpy.types import Context, Mesh, Panel, Operator, Armature, EditBone
-from ..functions.translations import t
+from ..core.translations import t
 from ..core.common import get_selected_armature, get_all_meshes
 from ..core import common
 from ..core.dictionaries import bone_names
 from mathutils import Matrix
 
-@register_wrap
+
 class AvatarToolkit_OT_StartPoseMode(Operator):
     bl_idname = 'avatar_toolkit.start_pose_mode'
     bl_label = t("Quick_Access.start_pose_mode.label")
@@ -33,7 +32,7 @@ class AvatarToolkit_OT_StartPoseMode(Operator):
 
         return {'FINISHED'}
 
-@register_wrap
+
 class AvatarToolkit_OT_StopPoseMode(Operator):
     bl_idname = 'avatar_toolkit.stop_pose_mode'
     bl_label = t("Quick_Access.stop_pose_mode.label")
@@ -55,7 +54,7 @@ class AvatarToolkit_OT_StopPoseMode(Operator):
 
         return {'FINISHED'}
 
-@register_wrap
+
 class AvatarToolkit_OT_ApplyPoseAsShapekey(Operator):
     bl_idname = 'avatar_toolkit.apply_pose_as_shapekey'
     bl_label = t("Quick_Access.apply_pose_as_shapekey.label")
@@ -98,7 +97,7 @@ class AvatarToolkit_OT_ApplyPoseAsShapekey(Operator):
         self.report({'INFO'}, t('Tools.apply_pose_as_rest.success'))
         return {'FINISHED'}
 
-@register_wrap
+
 class AvatarToolkit_OT_ApplyPoseAsRest(Operator):
     bl_idname = 'avatar_toolkit.apply_pose_as_rest'
     bl_label = t("Quick_Access.apply_pose_as_rest.label")
@@ -117,7 +116,7 @@ class AvatarToolkit_OT_ApplyPoseAsRest(Operator):
             return {'CANCELLED'}
         return {'FINISHED'}
 
-@register_wrap
+
 class AvatarToolkit_OT_RemoveZeroWeightBones(Operator):
     bl_idname = "avatar_toolkit.remove_zero_weight_bones"
     bl_label = t("Tools.remove_zero_weight_bones.label")
@@ -218,7 +217,7 @@ class AvatarToolkit_OT_RemoveZeroWeightBones(Operator):
         return {'FINISHED'}
 
 
-@register_wrap
+
 class AvatarToolkit_OT_MergeBonesToActive(Operator):
     bl_idname = "avatar_toolkit.merge_bones_to_active"
     bl_label = t("Tools.merge_bones_to_active.label")
@@ -267,7 +266,7 @@ class AvatarToolkit_OT_MergeBonesToActive(Operator):
         bpy.ops.object.mode_set(mode=prev_mode)
         return {'FINISHED'}
     
-@register_wrap
+
 class AvatarToolkit_OT_MergeBonesToParents(Operator):
     bl_idname = "avatar_toolkit.merge_bones_to_parents"
     bl_label = t("Tools.merge_bones_to_parents.label")
@@ -342,7 +341,7 @@ class AvatarToolkit_OT_MergeBonesToParents(Operator):
         bpy.ops.object.mode_set(mode=prev_mode)
         return {'FINISHED'}
 
-@register_wrap
+
 class AvatarToolkit_OT_MergeArmatures(Operator):
     bl_idname = "avatar_toolkit.merge_armatures"
     bl_label = t("MergeArmature.merge_armatures.label")

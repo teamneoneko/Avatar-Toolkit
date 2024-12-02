@@ -5,10 +5,9 @@ import bpy
 import os
 from typing import List, Tuple, Optional
 from bpy.types import Material, Operator, Context, Object, Image, Mesh, MeshUVLoopLayer, Float2AttributeValue, ShaderNodeTexImage, ShaderNodeBsdfPrincipled, ShaderNodeNormalMap
-from ..core.register import register_wrap
 from ..core.common import SceneMatClass, MaterialListBool
 from ..core.packer.rectangle_packer import MaterialImageList, BinPacker
-from ..functions.translations import t
+from ..core.translations import t
 
 class MaterialImageList:
     def __init__(self):
@@ -134,7 +133,7 @@ def prep_images_in_scene(context: Context) -> list[MaterialImageList]:
 
 
 
-@register_wrap
+
 class AvatarToolKit_OT_AtlasMaterials(Operator):
 
     bl_idname = "avatar_toolkit.atlas_materials"

@@ -1,11 +1,10 @@
 import bpy
 from ..core import common
-from ..core import register_wrap
-from .translations import t
+from ..core.translations import t
 import re
 
 
-@register_wrap
+
 class AvatarToolKit_OT_CreateDigitigradeLegs(bpy.types.Operator):
     bl_idname = "avatar_toolkit.create_digitigrade_legs"
     bl_label = t('Tools.create_digitigrade_legs.label')

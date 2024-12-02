@@ -3,10 +3,9 @@ import bpy
 from typing import List, Optional, Set
 from bpy.types import Operator, Context, Object
 from ..core.common import fix_uv_coordinates, get_selected_armature, get_all_meshes, is_valid_armature, apply_shapekey_to_basis, has_shapekeys, select_current_armature, init_progress, update_progress, finish_progress
-from ..functions.translations import t
-from ..core.register import register_wrap
+from ..core.translations import t
 
-@register_wrap
+
 class AvatarToolkit_OT_RemoveUnusedShapekeys(bpy.types.Operator):
     tolerance: bpy.props.FloatProperty(name=t("Tools.remove_unused_shapekeys.tolerance.label"), default=0.001, description=t("Tools.remove_unused_shapekeys.tolerance.desc"))
     bl_idname = "avatar_toolkit.remove_unused_shapekeys"
@@ -56,7 +55,7 @@ class AvatarToolkit_OT_RemoveUnusedShapekeys(bpy.types.Operator):
                     continue
                 ob.shape_key_remove(ob.data.shape_keys.key_blocks[kb_name])
 
-@register_wrap
+
 class AvatarToolkit_OT_ApplyShapeKey(bpy.types.Operator):
     bl_idname = "avatar_toolkit.apply_shape_key"
     bl_label = t("Tools.apply_shape_key.label")
@@ -79,7 +78,7 @@ class AvatarToolkit_OT_ApplyShapeKey(bpy.types.Operator):
             self.report({'ERROR'}, t("Tools.apply_shape_key.error"))
             return {'FINISHED'}
 
-@register_wrap
+
 class AvatarToolKit_OT_JoinAllMeshes(Operator):
     bl_idname = "avatar_toolkit.join_all_meshes"
     bl_label = t("Optimization.join_all_meshes.label")
@@ -150,7 +149,7 @@ class AvatarToolKit_OT_JoinAllMeshes(Operator):
         finish_progress(context)
 
 
-@register_wrap
+
 class AvatarToolKit_OT_JoinSelectedMeshes(Operator):
     bl_idname = "avatar_toolkit.join_selected_meshes"
     bl_label = t("Optimization.join_selected_meshes.label")

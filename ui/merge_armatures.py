@@ -1,13 +1,10 @@
-
 import bpy
-from ..core.register import register_wrap
-from .panel import AvatarToolKit_PT_AvatarToolkitPanel, CATEGORY_NAME
+from .main_panel import AvatarToolKit_PT_AvatarToolkitPanel, CATEGORY_NAME
 from bpy.types import Panel, Context
 from ..core.common import get_selected_armature
-from ..functions.translations import t
+from ..core.translations import t
 from ..functions.armature_modifying import AvatarToolkit_OT_MergeArmatures
 
-@register_wrap
 class AvatarToolkit_PT_MergeArmaturesPanel(Panel):
     bl_label = t("MergeArmatures.label")
     bl_idname = "OBJECT_PT_avatar_toolkit_merge_armatures"
@@ -29,14 +26,14 @@ class AvatarToolkit_PT_MergeArmaturesPanel(Panel):
             box = layout.box()
             col = box.column(align=True)
             
-            col.prop(context.scene, property="selected_armature", text=t("MergeArmatures.target_armature.label"), icon="ARMATURE_DATA")
-            col.prop(context.scene, property="merge_armature_source", icon="OUTLINER_OB_ARMATURE")
+            col.prop(context.scene.avatar_toolkit, "selected_armature", text=t("MergeArmatures.target_armature.label"), icon="ARMATURE_DATA")
+            col.prop(context.scene.avatar_toolkit, "merge_armature_source", icon="OUTLINER_OB_ARMATURE")
             
             layout.separator(factor=0.5)
             
             col = layout.column(align=True)
-            col.prop(context.scene, property="merge_armature_align_bones", icon="BONE_DATA")
-            col.prop(context.scene, property="merge_armature_apply_transforms", icon="OBJECT_ORIGIN")
+            col.prop(context.scene.avatar_toolkit, "merge_armature_align_bones", icon="BONE_DATA")
+            col.prop(context.scene.avatar_toolkit, "merge_armature_apply_transforms", icon="OBJECT_ORIGIN")
             
             layout.separator(factor=1.0)
             

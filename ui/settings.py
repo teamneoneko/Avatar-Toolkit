@@ -1,9 +1,7 @@
 import bpy
-from ..core.register import register_wrap
-from .panel import AvatarToolKit_PT_AvatarToolkitPanel, CATEGORY_NAME
-from ..functions.translations import t
+from .main_panel import AvatarToolKit_PT_AvatarToolkitPanel, CATEGORY_NAME
+from ..core.translations import t
 
-@register_wrap
 class AvatarToolkitSettingsPanel(bpy.types.Panel):
     bl_label = t("Settings.label")
     bl_idname = "OBJECT_PT_avatar_toolkit_settings"
@@ -17,9 +15,8 @@ class AvatarToolkitSettingsPanel(bpy.types.Panel):
         layout = self.layout
         
         layout.label(text=t("Settings.language.label"))
-        layout.prop(context.scene, "avatar_toolkit_language", text="", icon='WORLD')
+        layout.prop(context.scene.avatar_toolkit, "language", text="", icon='WORLD')
 
-@register_wrap
 class AVATAR_TOOLKIT_OT_translation_restart_popup(bpy.types.Operator):
     bl_idname = "avatar_toolkit.translation_restart_popup"
     bl_label = t("Settings.translation_restart_popup.label")
@@ -27,9 +24,9 @@ class AVATAR_TOOLKIT_OT_translation_restart_popup(bpy.types.Operator):
     bl_options = {'INTERNAL'}
 
     def execute(self, context):
-        if context.scene.avatar_toolkit_language_changed:
+        if context.scene.avatar_toolkit.language_changed:
             bpy.ops.script.reload()
-            context.scene.avatar_toolkit_language_changed = False
+            context.scene.avatar_toolkit.language_changed = False
         return {'FINISHED'}
 
     def invoke(self, context, event):
@@ -39,4 +36,3 @@ class AVATAR_TOOLKIT_OT_translation_restart_popup(bpy.types.Operator):
         layout = self.layout
         layout.label(text=t("Settings.translation_restart_popup.message1"), icon='INFO')
         layout.label(text=t("Settings.translation_restart_popup.message2"), icon='FILE_REFRESH')
-
