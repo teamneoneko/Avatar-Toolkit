@@ -469,7 +469,7 @@ def transfer_vertex_weights(context: Context, obj: bpy.types.Object, source_grou
     modifier = obj.modifiers.new(name="merge_weights", type="VERTEX_WEIGHT_MIX")
     modifier.show_viewport = True
     modifier.show_render = True
-    modifier.mix_set = 'B'  # Replace weights in A with weights from B
+    modifier.mix_set = 'B'
     modifier.vertex_group_a = target_group
     modifier.vertex_group_b = source_group
     modifier.mask_constant = 1.0
@@ -482,16 +482,19 @@ def transfer_vertex_weights(context: Context, obj: bpy.types.Object, source_grou
     obj.select_set(True)
     context.view_layer.objects.active = obj
 
-    # Move modifier to the top of the stack if necessary
+    # Move modifier to the top of the stack
     if len(obj.modifiers) > 1:
         obj.modifiers.move(obj.modifiers.find(modifier.name), 0)
 
-    # Apply modifier
-    bpy.ops.object.modifier_apply(modifier=modifier.name)
+    # Apply modifier with correct syntax
+    with context.temp_override(active_object=obj):
+        bpy.ops.object.modifier_apply(modifier=modifier.name)
 
     # Clean up
     if delete_source_group and source_group in obj.vertex_groups:
         obj.vertex_groups.remove(obj.vertex_groups[source_group])
 
     return True
+
+
 

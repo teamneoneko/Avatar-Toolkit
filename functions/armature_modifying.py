@@ -145,7 +145,7 @@ class AvatarToolkit_OT_RemoveZeroWeightBones(Operator):
         bpy.ops.object.mode_set(mode='OBJECT')
         bpy.ops.object.select_all(action='DESELECT')
 
-        # Store initial transforms
+        # Modify the initial transforms collection section to include all bones:
         initial_transforms = {}
         bpy.ops.object.mode_set(mode='EDIT')
         for bone in armature.data.edit_bones:
@@ -156,14 +156,14 @@ class AvatarToolkit_OT_RemoveZeroWeightBones(Operator):
                 'matrix': bone.matrix.copy(),
                 'parent': bone.parent.name if bone.parent else None
             }
-            # Add end bones to transforms
-            if bone.name.endswith('_end'):
-                initial_transforms[bone.name] = {
-                    'head': bone.head.copy(),
-                    'tail': bone.tail.copy(),
-                    'roll': bone.roll,
-                    'matrix': bone.matrix.copy(),
-                    'parent': bone.parent.name if bone.parent else None
+            # Handle any child bones including _end bones
+            for child in bone.children:
+                initial_transforms[child.name] = {
+                    'head': child.head.copy(),
+                    'tail': child.tail.copy(),
+                    'roll': child.roll,
+                    'matrix': child.matrix.copy(),
+                    'parent': child.parent.name if child.parent else None
                 }
 
         # Get weighted bones
@@ -300,14 +300,19 @@ class AvatarToolkit_OT_MergeBonesToParents(Operator):
 
     def execute(self, context: Context) -> set[str]:
         prev_mode = context.mode
-
+        armature = common.get_selected_armature(context)
+        
         # Map 'EDIT_ARMATURE' to 'EDIT' for bpy.ops.object.mode_set
         if prev_mode == 'EDIT_ARMATURE':
             prev_mode = 'EDIT'
 
-        # Switch to Edit Mode
+        # Set active object and mode
+        context.view_layer.objects.active = armature
+        bpy.ops.object.select_all(action='DESELECT')
+        armature.select_set(True)
         bpy.ops.object.mode_set(mode='EDIT')
-        armature_data: Armature = context.view_layer.objects.active.data
+        
+        armature_data: Armature = armature.data
 
         # Get selected bones in Edit Mode
         selected_bones = context.selected_editable_bones
@@ -322,13 +327,16 @@ class AvatarToolkit_OT_MergeBonesToParents(Operator):
                 bone = armature_data.edit_bones.get(bone_name)
                 if bone and bone.parent:
                     # Transfer weights from bone to its parent
+                    context.view_layer.objects.active = obj
                     common.transfer_vertex_weights(
                         context=context,
                         obj=obj,
                         source_group=bone_name,
                         target_group=bone.parent.name
                     )
-                    # Ensure we're in Edit Mode after transfer
+                    # Return to armature edit mode
+                    context.view_layer.objects.active = armature
+                    armature.select_set(True)
                     bpy.ops.object.mode_set(mode='EDIT')
                 else:
                     self.report({'WARNING'}, f"Bone '{bone_name}' has no parent or not found; skipping")
@@ -347,9 +355,10 @@ class AvatarToolkit_OT_MergeBonesToParents(Operator):
                     self.report({'WARNING'}, f"Bone '{bone_name}' not found in armature; cannot delete")
 
         # Return to previous mode
+        context.view_layer.objects.active = armature
+        armature.select_set(True)
         bpy.ops.object.mode_set(mode=prev_mode)
         return {'FINISHED'}
-
 
 class AvatarToolkit_OT_MergeArmatures(Operator):
     bl_idname = "avatar_toolkit.merge_armatures"
@@ -362,7 +371,6 @@ class AvatarToolkit_OT_MergeArmatures(Operator):
         return (common.get_selected_armature(context) is not None) and (common.get_merge_armature_source(context) is not None)
 
     def make_active(self, obj: bpy.types.Object, context: Context):
-        context.view_layer.objects.active = obj
         bpy.ops.object.mode_set(mode='OBJECT')
         bpy.ops.object.select_all(action='DESELECT')
         context.view_layer.objects.active = obj
