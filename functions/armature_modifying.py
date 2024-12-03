@@ -156,6 +156,15 @@ class AvatarToolkit_OT_RemoveZeroWeightBones(Operator):
                 'matrix': bone.matrix.copy(),
                 'parent': bone.parent.name if bone.parent else None
             }
+            # Add end bones to transforms
+            if bone.name.endswith('_end'):
+                initial_transforms[bone.name] = {
+                    'head': bone.head.copy(),
+                    'tail': bone.tail.copy(),
+                    'roll': bone.roll,
+                    'matrix': bone.matrix.copy(),
+                    'parent': bone.parent.name if bone.parent else None
+                }
 
         # Get weighted bones
         armature.select_set(True)

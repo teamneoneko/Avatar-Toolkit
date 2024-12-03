@@ -84,11 +84,11 @@ def get_languages_list(self, context) -> List[Tuple[str, str, str]]:
     return [(str(i), get_language_display_name(lang), f"Use {lang} language") for i, lang in enumerate(languages)]
 
 def update_language(self, context):
-    print(f"Updating language to: {self.avatar_toolkit_language}")  # Debug print
-    save_preference("language", int(self.avatar_toolkit_language))
+    print(f"Updating language to: {self.language}")  # Debug print
+    save_preference("language", int(self.language))
     load_translations()
     # Set a flag to indicate that a language change has occurred
-    context.scene.avatar_toolkit_language_changed = True
+    context.scene.avatar_toolkit.language_changed = True
     # Show popup after language change
     bpy.ops.avatar_toolkit.translation_restart_popup('INVOKE_DEFAULT')
 

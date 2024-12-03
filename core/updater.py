@@ -287,7 +287,7 @@ def draw_updater_panel(context: bpy.types.Context, layout: bpy.types.UILayout) -
 
     col.separator()
     row = col.row(align=True)
-    row.prop(context.scene, 'avatar_toolkit_updater_version_list', text='')
+    row.prop(context.scene.avatar_toolkit, 'avatar_toolkit_updater_version_list', text='')
     row.operator(AvatarToolkit_OT_UpdateToLatest.bl_idname, text=t('Updater.UpdateToSelectedButton.label'))
 
     col.separator()

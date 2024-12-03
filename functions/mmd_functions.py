@@ -302,7 +302,6 @@ def add_principled_shader(material: Material, bake_mmd=True):
     if material.blend_method != 'OPAQUE':
         principled_shader.inputs["Alpha"].default_value = material.alpha_threshold
         material.blend_method = 'CLIP'
-        material.shadow_method = 'CLIP'
 
 def fix_mmd_shader(material: Material):
     mmd_shader_node = material.node_tree.nodes.get("mmd_shader")

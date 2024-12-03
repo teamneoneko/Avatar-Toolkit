@@ -51,9 +51,11 @@ class AvatarToolkit_OT_RemoveUnusedShapekeys(bpy.types.Operator):
                     to_delete.append(kb.name)
 
             for kb_name in to_delete:
-                if ("-" in kb_name) or ("=" in kb_name) or ("~" in kb_name): #don't delete category names. - @989onan
+                if ("-" in kb_name) or ("=" in kb_name) or ("~" in kb_name): 
                     continue
                 ob.shape_key_remove(ob.data.shape_keys.key_blocks[kb_name])
+                
+        return {'FINISHED'}
 
 
 class AvatarToolkit_OT_ApplyShapeKey(bpy.types.Operator):

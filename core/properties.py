@@ -99,6 +99,13 @@ class AvatarToolkitSceneProperties(PropertyGroup):
         set=MaterialListBool.set_bool
     )
 
+    avatar_toolkit_updater_version_list: EnumProperty(
+        items=get_version_list,
+        name="Version List",
+        description="List of available versions"
+    )
+
+
 class AvatarToolkitMaterialProperties(PropertyGroup):
     material_expanded: BoolProperty(
         name="Expand Material",
@@ -113,11 +120,13 @@ class AvatarToolkitMaterialProperties(PropertyGroup):
     )
 
     def get_texture_node_list(self, context):
-        if self.use_nodes:
+        # Access the material through the property group's id_data
+        material = self.id_data
+        if material and material.use_nodes:
             nodes = [(i.image.name if i.image else i.name+"_image",
-                     i.image.name if i.image else "node with no image...",
-                     i.image.name if i.image else i.name, index+1)
-                    for index, i in enumerate(self.node_tree.nodes)
+                    i.image.name if i.image else "node with no image...",
+                    i.image.name if i.image else i.name, index+1)
+                    for index, i in enumerate(material.node_tree.nodes)
                     if i.bl_idname == "ShaderNodeTexImage"]
             if not nodes:
                 nodes = [("Error", "No images found", "Error", 0)]

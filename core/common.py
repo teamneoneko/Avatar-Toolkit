@@ -161,15 +161,15 @@ def get_armatures(self, context: Context) -> List[Tuple[str, str, str]]:
     return armatures
 
 def get_armatures_that_are_not_selected(self, context: Context) -> List[Tuple[str, str, str]]:
-    armatures = [(obj.name, obj.name, "") for obj in bpy.data.objects if ((obj.type == 'ARMATURE') and (obj.name != context.scene.selected_armature))]
+    armatures = [(obj.name, obj.name, "") for obj in bpy.data.objects if ((obj.type == 'ARMATURE') and (obj.name != context.scene.avatar_toolkit.selected_armature))]
     if not armatures:
         return [('NONE', 'No Other Armature', '')]
     return armatures
 
 def get_selected_armature(context: Context) -> Optional[Object]:
     try:
-        if hasattr(context.scene, 'selected_armature'):
-            armature_name = context.scene.selected_armature
+        if hasattr(context.scene, 'avatar_toolkit'):
+            armature_name = context.scene.avatar_toolkit.selected_armature
             if isinstance(armature_name, bytes):
                 try:
                     armature_name = armature_name.decode('utf-8')
@@ -209,9 +209,8 @@ def get_merge_armature_source(context: Context) -> Optional[Object]:
         pass
     return None
 
-
 def set_selected_armature(context: Context, armature: Optional[Object]) -> None:
-    context.scene.selected_armature = armature.name if armature else ""
+    context.scene.avatar_toolkit.selected_armature = armature.name if armature else ""
 
 def is_valid_armature(armature: Object) -> bool:
     if not armature or armature.type != 'ARMATURE':
@@ -451,12 +450,12 @@ def remove_default_objects():
 
 def init_progress(context, steps):
     context.window_manager.progress_begin(0, 100)
-    context.scene.avatar_toolkit_progress_steps = steps
-    context.scene.avatar_toolkit_progress_current = 0
+    context.scene.avatar_toolkit.progress_steps = steps
+    context.scene.avatar_toolkit.progress_current = 0
 
 def update_progress(self, context, message):
-    context.scene.avatar_toolkit_progress_current += 1
-    progress = (context.scene.avatar_toolkit_progress_current / context.scene.avatar_toolkit_progress_steps) * 100
+    context.scene.avatar_toolkit.progress_current += 1
+    progress = (context.scene.avatar_toolkit.progress_current / context.scene.avatar_toolkit.progress_steps) * 100
     context.window_manager.progress_update(progress)
     context.area.header_text_set(message)
     self.report({'INFO'}, message)
