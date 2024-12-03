@@ -276,22 +276,48 @@ def get_version_list(self, context: bpy.types.Context) -> List[Tuple[str, str, s
     return [(v, v, '') for v in version_list.keys()] if version_list else []
 
 def draw_updater_panel(context: bpy.types.Context, layout: bpy.types.UILayout) -> None:
-    col = layout.column(align=True)
-
+    box = layout.box()
+    col = box.column(align=True)
+    
+    # Header
+    row = col.row()
+    row.scale_y = 1.2
+    row.label(text=t('Updater.label'), icon='DOWNARROW_HLT')
+    
+    col.separator()
+    
+    # Update check/status section
     if is_checking_for_update:
-        col.operator(AvatarToolkit_OT_CheckForUpdate.bl_idname, text=t('Updater.CheckForUpdateButton.label'))
+        col.operator(AvatarToolkit_OT_CheckForUpdate.bl_idname, 
+                    text=t('Updater.CheckForUpdateButton.label'),
+                    icon='SORTTIME')
     elif update_needed:
-        col.operator(AvatarToolkit_OT_UpdateToLatest.bl_idname, text=t('Updater.UpdateToLatestButton.label', name=latest_version_str))
+        update_row = col.row(align=True)
+        update_row.scale_y = 1.5
+        update_row.alert = True
+        update_row.operator(AvatarToolkit_OT_UpdateToLatest.bl_idname, 
+                          text=t('Updater.UpdateToLatestButton.label', name=latest_version_str),
+                          icon='IMPORT')
     else:
-        col.operator(AvatarToolkit_OT_CheckForUpdate.bl_idname, text=t('Updater.CheckForUpdateButton.label_alt'))
+        col.operator(AvatarToolkit_OT_CheckForUpdate.bl_idname, 
+                    text=t('Updater.CheckForUpdateButton.label_alt'),
+                    icon='FILE_REFRESH')
 
+    # Version selection section
     col.separator()
-    row = col.row(align=True)
+    box_inner = col.box()
+    box_inner.label(text=t('Updater.selectVersion'), icon='SETTINGS')
+    row = box_inner.row(align=True)
     row.prop(context.scene.avatar_toolkit, 'avatar_toolkit_updater_version_list', text='')
-    row.operator(AvatarToolkit_OT_UpdateToLatest.bl_idname, text=t('Updater.UpdateToSelectedButton.label'))
+    row.operator(AvatarToolkit_OT_UpdateToLatest.bl_idname, 
+                text=t('Updater.UpdateToSelectedButton.label'),
+                icon='IMPORT')
 
+    # Current version info
     col.separator()
-    col.label(text=t('Updater.currentVersion').format(name=get_current_version()))
+    curr_ver_row = col.row()
+    curr_ver_row.label(text=t('Updater.currentVersion').format(name=get_current_version()),
+                      icon='CHECKMARK')
 
 def ui_refresh() -> None:
     for windowManager in bpy.data.window_managers:
