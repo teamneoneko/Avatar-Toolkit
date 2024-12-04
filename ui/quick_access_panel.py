@@ -87,9 +87,7 @@ class AvatarToolKit_PT_QuickAccessPanel(Panel):
         # Armature Validation
         active_armature = get_active_armature(context)
         if active_armature:
-            is_valid: bool
-            message: str
-            is_valid, message = validate_armature(active_armature)
+            is_valid, messages = validate_armature(active_armature)
             
             if is_valid:
                 info_box: UILayout = col.box()
@@ -103,7 +101,9 @@ class AvatarToolKit_PT_QuickAccessPanel(Panel):
                     info_box.label(text=t("QuickAccess.pose_bones_available"), icon='POSE_HLT')
             else:
                 col.separator(factor=0.5)
-                col.label(text=message, icon='ERROR')
+                # Display each validation message
+                for message in messages:
+                    col.label(text=message, icon='ERROR')
 
             # Pose Mode Controls
             pose_box: UILayout = layout.box()

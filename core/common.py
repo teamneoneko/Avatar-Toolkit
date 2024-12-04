@@ -1,9 +1,47 @@
 import bpy
 import numpy as np
-from bpy.types import Context, Object
-from typing import Optional, Tuple, List, Set
+import logging
+from bpy.types import Context, Object, Modifier
+from typing import Optional, Tuple, List, Set, Dict, Any, Generator, Callable
 from ..core.translations import t
 from ..core.dictionaries import bone_names
+
+logger = logging.getLogger('avatar_toolkit')
+logger.setLevel(logging.DEBUG)
+
+def setup_logging() -> None:
+    """Configure logging for Avatar Toolkit"""
+    handler = logging.StreamHandler()
+    handler.setLevel(logging.DEBUG)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+
+class ProgressTracker:
+    """Universal progress tracking for Avatar Toolkit operations"""
+    
+    def __init__(self, context: Context, total_steps: int, operation_name: str = "Operation"):
+        self.context = context
+        self.total = total_steps
+        self.current = 0
+        self.operation_name = operation_name
+        self.wm = context.window_manager
+        
+    def step(self, message: str = "") -> None:
+        """Update progress by one step"""
+        self.current += 1
+        progress = self.current / self.total
+        self.wm.progress_begin(0, 100)
+        self.wm.progress_update(progress * 100)
+        logger.debug(f"{self.operation_name} - {progress:.1%}: {message}")
+        
+    def __enter__(self):
+        logger.info(f"Starting {self.operation_name}")
+        return self
+        
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.wm.progress_end()
+        logger.info(f"Completed {self.operation_name}")
 
 def get_active_armature(context: bpy.types.Context) -> Optional[bpy.types.Object]:
     """Get the currently selected armature from Avatar Toolkit properties"""
@@ -25,27 +63,95 @@ def get_armature_list(self=None, context: bpy.types.Context = None) -> List[Tupl
         return [('NONE', t("Armature.validation.no_armature"), '')]
     return armatures
 
-def validate_armature(armature: bpy.types.Object) -> Tuple[bool, str]:
-    """
-    Validate if the selected object is a proper armature and has required bones
-    Returns tuple of (is_valid, message)
-    """
-    if not armature:
-        return False, t("Armature.validation.no_armature")
-    if armature.type != 'ARMATURE':
-        return False, t("Armature.validation.not_armature")
-    if not armature.data.bones:
-        return False, t("Armature.validation.no_bones")
-        
-    essential_bones: Set[str] = {'hips', 'spine', 'chest', 'neck', 'head'}
-    found_bones: Set[str] = {bone.name.lower() for bone in armature.data.bones}
+def validate_armature(armature: bpy.types.Object, validation_level: str = 'standard') -> Tuple[bool, List[str]]:
+    """Enhanced armature validation with multiple checks and validation levels"""
+    messages = []
     
+    # Basic checks
+    if not armature or armature.type != 'ARMATURE' or not armature.data.bones:
+        return False, [t("Armature.validation.basic_check_failed")]
+        
+    found_bones = {bone.name.lower(): bone for bone in armature.data.bones}
+    
+    # Essential bones check
+    essential_bones = {'hips', 'spine', 'chest', 'neck', 'head'}
+    missing_bones = []
     for bone in essential_bones:
         if not any(alt_name in found_bones for alt_name in bone_names[bone]):
-            return False, t("Armature.validation.missing_bone", bone=bone)
-            
-    return True, t("QuickAccess.valid_armature")
+            missing_bones.append(bone)
+    
+    if missing_bones:
+        messages.append(t("Armature.validation.missing_bones", bones=", ".join(missing_bones)))
+    
+    if validation_level in ['standard', 'strict']:
+        # Hierarchy validation
+        hierarchy = [('hips', 'spine'), ('spine', 'chest'), ('chest', 'neck'), ('neck', 'head')]
+        for parent, child in hierarchy:
+            if not validate_bone_hierarchy(found_bones, parent, child):
+                messages.append(t("Armature.validation.invalid_hierarchy", parent=parent, child=child))
+        
+        # Symmetry validation
+        symmetry_pairs = [('arm', 'l', 'r'), ('leg', 'l', 'r')]
+        for base, left, right in symmetry_pairs:
+            if not validate_symmetry(found_bones, base, left, right):
+                messages.append(t("Armature.validation.asymmetric_bones", bone=base))
+                
+        # Special handling for hand/wrist symmetry
+        if (not validate_symmetry(found_bones, 'hand', 'l', 'r') and 
+            not validate_symmetry(found_bones, 'wrist', 'l', 'r')):
+            messages.append(t("Armature.validation.asymmetric_hand_wrist"))
+    
+    is_valid = len(messages) == 0
+    return is_valid, messages
 
+def validate_bone_hierarchy(bones: Dict[str, bpy.types.Bone], parent_name: str, child_name: str) -> bool:
+    """Validate if there is a valid parent-child relationship between bones"""
+    # Find matching parent and child bones using bone_names dictionary
+    parent_bone = None
+    child_bone = None
+    
+    # Check for parent bone matches
+    for alt_name in bone_names[parent_name]:
+        if alt_name in bones:
+            parent_bone = bones[alt_name]
+            break
+            
+    # Check for child bone matches
+    for alt_name in bone_names[child_name]:
+        if alt_name in bones:
+            child_bone = bones[alt_name]
+            break
+    
+    if not parent_bone or not child_bone:
+        return False
+        
+    # Check if child's parent matches parent bone
+    return child_bone.parent == parent_bone
+
+def validate_symmetry(bones: Dict[str, bpy.types.Bone], base: str, left: str, right: str) -> bool:
+    """
+    Validate if matching left and right bones exist for a given base bone name
+    """
+    # Define common naming patterns
+    left_patterns = [
+        f"{base}.{left}",
+        f"{base}_{left}",
+        f"{left}_{base}"
+    ]
+    
+    right_patterns = [
+        f"{base}.{right}",
+        f"{base}_{right}", 
+        f"{right}_{base}"
+    ]
+    
+    # Check if any of the patterns exist in the bones dictionary
+    left_exists = any(pattern in bones for pattern in left_patterns)
+    right_exists = any(pattern in bones for pattern in right_patterns)
+    
+    return left_exists and right_exists
+
+    
 def auto_select_single_armature(context: bpy.types.Context) -> None:
     """Automatically select armature if only one exists in scene"""
     armatures = get_armature_list(context)
@@ -69,33 +175,79 @@ def get_armature_stats(armature: bpy.types.Object) -> dict:
     }
 
 def get_all_meshes(context: Context) -> List[Object]:
+    """Get all mesh objects parented to the active armature"""
     armature = get_active_armature(context)
     if armature:
         return [obj for obj in bpy.data.objects if obj.type == 'MESH' and obj.parent == armature]
     return []
 
-def apply_pose_as_rest(context: Context, armature_obj: Object, meshes: List[Object]) -> bool:
-    for mesh_obj in meshes:
-        if not mesh_obj.data:
-            continue
-        if mesh_obj.data.shape_keys and mesh_obj.data.shape_keys.key_blocks:
-            if len(mesh_obj.data.shape_keys.key_blocks) == 1:
-                basis = mesh_obj.data.shape_keys.key_blocks[0]
-                basis_name = basis.name
-                mesh_obj.shape_key_remove(basis)
-                apply_armature_to_mesh(armature_obj, mesh_obj)
-                mesh_obj.shape_key_add(name=basis_name)
-            else:
-                apply_armature_to_mesh_with_shapekeys(armature_obj, mesh_obj, context)
-        else:
-            apply_armature_to_mesh(armature_obj, mesh_obj)
+def validate_mesh_for_pose(mesh_obj: Object) -> Tuple[bool, str]:
+    """Validate mesh object for pose operations"""
+    if not mesh_obj.data:
+        return False, t("Mesh.validation.no_data")
+        
+    if not mesh_obj.vertex_groups:
+        return False, t("Mesh.validation.no_vertex_groups")
+        
+    armature_mods = [mod for mod in mesh_obj.modifiers if mod.type == 'ARMATURE']
+    if not armature_mods:
+        return False, t("Mesh.validation.no_armature_modifier")
+    
+    return True, t("Mesh.validation.valid")
+
+def cache_vertex_positions(mesh_obj: Object) -> np.ndarray:
+    """Cache vertex positions for a mesh object"""
+    vertices = mesh_obj.data.vertices
+    positions = np.empty(len(vertices) * 3, dtype=np.float32)
+    vertices.foreach_get('co', positions)
+    return positions.reshape(-1, 3)
+
+def apply_vertex_positions(vertices: Object, positions: np.ndarray) -> None:
+    """Apply cached vertex positions to mesh in batch"""
+    vertices.foreach_set('co', positions.flatten())
+
+def process_armature_modifiers(mesh_obj: Object) -> List[Dict[str, Any]]:
+    """Process and store armature modifier states"""
+    modifier_states = []
+    for mod in mesh_obj.modifiers:
+        if mod.type == 'ARMATURE':
+            modifier_states.append({
+                'name': mod.name,
+                'object': mod.object,
+                'vertex_group': mod.vertex_group,
+                'show_viewport': mod.show_viewport
+            })
+    return modifier_states
+
+def apply_pose_as_rest(context: Context, armature_obj: Object, meshes: List[Object]) -> Tuple[bool, str]:
+    """Apply current pose as rest pose for armature and update meshes"""
+    try:
+        logger.info(f"Starting pose application for {len(meshes)} meshes")
+        
+        with ProgressTracker(context, len(meshes), "Applying Pose") as progress:
+            for mesh_obj in meshes:
+                if not mesh_obj.data:
+                    continue
+                    
+                if mesh_obj.data.shape_keys and mesh_obj.data.shape_keys.key_blocks:
+                    apply_armature_to_mesh_with_shapekeys(armature_obj, mesh_obj, context)
+                else:
+                    apply_armature_to_mesh(armature_obj, mesh_obj)
+                
+                progress.step(f"Processed {mesh_obj.name}")
             
-    bpy.ops.object.mode_set(mode='POSE')
-    bpy.ops.pose.armature_apply(selected=False)
-    bpy.ops.object.mode_set(mode='OBJECT')
-    return True
+            bpy.ops.object.mode_set(mode='POSE')
+            bpy.ops.pose.armature_apply(selected=False)
+            bpy.ops.object.mode_set(mode='OBJECT')
+            
+            return True, t("Operation.pose_applied")
+            
+    except Exception as e:
+        logger.error(f"Error applying pose as rest: {str(e)}")
+        return False, str(e)
 
 def apply_armature_to_mesh(armature_obj: Object, mesh_obj: Object) -> None:
+    """Apply armature deformation to mesh"""
     armature_mod = mesh_obj.modifiers.new('PoseToRest', 'ARMATURE')
     armature_mod.object = armature_obj
     
@@ -109,6 +261,7 @@ def apply_armature_to_mesh(armature_obj: Object, mesh_obj: Object) -> None:
         bpy.ops.object.modifier_apply(modifier=armature_mod.name)
 
 def apply_armature_to_mesh_with_shapekeys(armature_obj: Object, mesh_obj: Object, context: Context) -> None:
+    """Apply armature deformation to mesh with shape keys"""
     old_active_index = mesh_obj.active_shape_key_index
     old_show_only = mesh_obj.show_only_shape_key
     mesh_obj.show_only_shape_key = True
