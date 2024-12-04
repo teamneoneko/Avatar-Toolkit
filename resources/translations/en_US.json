@@ -46,6 +46,10 @@
     "QuickAccess.apply_pose_as_rest.label": "Apply Pose as Rest",
     "QuickAccess.apply_pose_as_rest.desc": "Apply current pose as rest pose",
     "QuickAccess.apply_armature_failed": "Failed to apply armature modifications",
+    "QuickAccess.validation_basic_warning": "Limited Validation Active",
+    "QuickAccess.validation_basic_details": "Only essential bone structure is being validated",
+    "QuickAccess.validation_none_warning": "Validation Disabled",
+    "QuickAccess.validation_none_details": "No armature validation checks are being performed",
 
     "PoseMode.error.start": "Failed to start pose mode: {error}",
     "PoseMode.error.stop": "Failed to stop pose mode: {error}",
@@ -74,6 +78,30 @@
     "Operation.pose_applied": "Pose applied successfully",
 
     "Scene.avatar_toolkit_updater_version_list.name": "Version List",
-    "Scene.avatar_toolkit_updater_version_list.description": "List of available versions"
+    "Scene.avatar_toolkit_updater_version_list.description": "List of available versions",
+
+    "Settings.label": "Settings",
+    "Settings.language": "Language",
+    "Settings.language_desc": "Select interface language",
+    "Settings.validation_mode": "Validation Mode",
+    "Settings.validation_mode_desc": "Choose how strictly to validate armatures",
+    "Settings.validation_mode.strict": "Strict",
+    "Settings.validation_mode.strict_desc": "Full validation including bone hierarchy and symmetry",
+    "Settings.validation_mode.basic": "Basic",
+    "Settings.validation_mode.basic_desc": "Essential bones check only",
+    "Settings.validation_mode.none": "None",
+    "Settings.validation_mode.none_desc": "No armature validation",
+    "Settings.debug": "Debug Settings",
+    "Settings.logging": "Logging",
+    "Settings.enable_logging": "Enable Debug Logging",
+    "Settings.enable_logging_desc": "Enable detailed debug logging for troubleshooting",
+    "Settings.logging_enabled": "Debug logging enabled",
+    "Settings.logging_disabled": "Debug logging disabled",
+    "Language.auto": "Automatic",
+    "Language.en_US": "English",
+    "Language.ja_JP": "Japanese",
+    "Language.changed.title": "Language Changed",
+    "Language.changed.success": "Language changed successfully!",
+    "Language.changed.restart": "Some UI elements may require restarting Blender"
   }
 }

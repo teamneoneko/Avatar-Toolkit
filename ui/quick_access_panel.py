@@ -1,6 +1,14 @@
 import bpy
-from typing import Set, Optional, List, Tuple
-from bpy.types import Operator, Panel, Menu, Context, UILayout
+from typing import Set, Dict, List, Optional, Tuple
+from bpy.types import (
+    Operator, 
+    Panel, 
+    Menu, 
+    Context, 
+    UILayout, 
+    WindowManager,
+    Object
+)
 from .main_panel import AvatarToolKit_PT_AvatarToolkitPanel, CATEGORY_NAME
 from ..core.translations import t
 from ..core.common import (
@@ -20,8 +28,8 @@ from ..functions.pose_mode import (
 
 class AvatarToolKit_OT_Import(Operator):
     """Import FBX files into Blender with Avatar Toolkit settings"""
-    bl_idname = "avatar_toolkit.import"
-    bl_label = t("QuickAccess.import")
+    bl_idname: str = "avatar_toolkit.import"
+    bl_label: str = t("QuickAccess.import")
     
     def execute(self, context: Context) -> Set[str]:
         clear_default_objects()
@@ -30,8 +38,8 @@ class AvatarToolKit_OT_Import(Operator):
 
 class AvatarToolKit_OT_ExportFBX(Operator):
     """Export selected objects as FBX"""
-    bl_idname = "avatar_toolkit.export_fbx"
-    bl_label = t("QuickAccess.export_fbx")
+    bl_idname: str = "avatar_toolkit.export_fbx"
+    bl_label: str = t("QuickAccess.export_fbx")
     
     def execute(self, context: Context) -> Set[str]:
         bpy.ops.export_scene.fbx('INVOKE_DEFAULT')
@@ -39,8 +47,8 @@ class AvatarToolKit_OT_ExportFBX(Operator):
 
 class AvatarToolKit_MT_ExportMenu(Menu):
     """Export menu containing various export options"""
-    bl_idname = "AVATAR_TOOLKIT_MT_export_menu"
-    bl_label = t("QuickAccess.export")
+    bl_idname: str = "AVATAR_TOOLKIT_MT_export_menu"
+    bl_label: str = t("QuickAccess.export")
 
     def draw(self, context: Context) -> None:
         layout: UILayout = self.layout
@@ -49,22 +57,23 @@ class AvatarToolKit_MT_ExportMenu(Menu):
 
 class AvatarToolKit_OT_ExportMenu(Operator):
     """Open the export menu"""
-    bl_idname = "avatar_toolkit.export"
-    bl_label = t("QuickAccess.export")
+    bl_idname: str = "avatar_toolkit.export"
+    bl_label: str = t("QuickAccess.export")
     
     def execute(self, context: Context) -> Set[str]:
-        bpy.ops.wm.call_menu(name=AvatarToolKit_MT_ExportMenu.bl_idname)
+        wm: WindowManager = context.window_manager
+        wm.call_menu(name=AvatarToolKit_MT_ExportMenu.bl_idname)
         return {'FINISHED'}
 
 class AvatarToolKit_PT_QuickAccessPanel(Panel):
     """Quick access panel for common Avatar Toolkit operations"""
-    bl_label = t("QuickAccess.label")
-    bl_idname = "OBJECT_PT_avatar_toolkit_quick_access"
-    bl_space_type = 'VIEW_3D'
-    bl_region_type = 'UI'
-    bl_category = CATEGORY_NAME
-    bl_parent_id = AvatarToolKit_PT_AvatarToolkitPanel.bl_idname
-    bl_order = 0
+    bl_label: str = t("QuickAccess.label")
+    bl_idname: str = "OBJECT_PT_avatar_toolkit_quick_access"
+    bl_space_type: str = 'VIEW_3D'
+    bl_region_type: str = 'UI'
+    bl_category: str = CATEGORY_NAME
+    bl_parent_id: str = AvatarToolKit_PT_AvatarToolkitPanel.bl_idname
+    bl_order: int = 0
 
     @classmethod
     def poll(cls, context: Context) -> bool:
@@ -85,25 +94,41 @@ class AvatarToolKit_PT_QuickAccessPanel(Panel):
         col.prop(context.scene.avatar_toolkit, "active_armature", text="")
         
         # Armature Validation
-        active_armature = get_active_armature(context)
+        active_armature: Optional[Object] = get_active_armature(context)
         if active_armature:
+            is_valid: bool
+            messages: List[str]
             is_valid, messages = validate_armature(active_armature)
             
+            # Create info box for all validation information
+            info_box: UILayout = col.box()
+            
             if is_valid:
-                info_box: UILayout = col.box()
                 row: UILayout = info_box.row()
                 split: UILayout = row.split(factor=0.6)
                 split.label(text=t("QuickAccess.valid_armature"), icon='CHECKMARK')
-                stats: dict = get_armature_stats(active_armature)
+                stats: Dict[str, int] = get_armature_stats(active_armature)
                 split.label(text=t("QuickAccess.bones_count", count=stats['bone_count']))
                 
                 if stats['has_pose']:
                     info_box.label(text=t("QuickAccess.pose_bones_available"), icon='POSE_HLT')
             else:
-                col.separator(factor=0.5)
-                # Display each validation message
+                # Display validation failure messages
                 for message in messages:
-                    col.label(text=message, icon='ERROR')
+                    info_box.label(text=message, icon='ERROR')
+
+            # Validation Mode Warnings - always show in info box
+            validation_mode = context.scene.avatar_toolkit.validation_mode
+            if validation_mode == 'BASIC':
+                warning_row = info_box.box()
+                warning_row.alert = True
+                warning_row.label(text=t("QuickAccess.validation_basic_warning"), icon='INFO')
+                warning_row.label(text=t("QuickAccess.validation_basic_details"))
+            elif validation_mode == 'NONE':
+                warning_row = info_box.box()
+                warning_row.alert = True
+                warning_row.label(text=t("QuickAccess.validation_none_warning"), icon='ERROR')
+                warning_row.label(text=t("QuickAccess.validation_none_details"))
 
             # Pose Mode Controls
             pose_box: UILayout = layout.box()
@@ -130,3 +155,5 @@ class AvatarToolKit_PT_QuickAccessPanel(Panel):
         button_row.scale_y = 1.5
         button_row.operator("avatar_toolkit.import", text=t("QuickAccess.import"), icon='IMPORT')
         button_row.operator("avatar_toolkit.export", text=t("QuickAccess.export"), icon='EXPORT')
+
+

@@ -1,21 +1,10 @@
 import bpy
 import numpy as np
-import logging
 from bpy.types import Context, Object, Modifier
 from typing import Optional, Tuple, List, Set, Dict, Any, Generator, Callable
+from ..core.logging_setup import logger
 from ..core.translations import t
 from ..core.dictionaries import bone_names
-
-logger = logging.getLogger('avatar_toolkit')
-logger.setLevel(logging.DEBUG)
-
-def setup_logging() -> None:
-    """Configure logging for Avatar Toolkit"""
-    handler = logging.StreamHandler()
-    handler.setLevel(logging.DEBUG)
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
 
 class ProgressTracker:
     """Universal progress tracking for Avatar Toolkit operations"""
@@ -63,17 +52,23 @@ def get_armature_list(self=None, context: bpy.types.Context = None) -> List[Tupl
         return [('NONE', t("Armature.validation.no_armature"), '')]
     return armatures
 
-def validate_armature(armature: bpy.types.Object, validation_level: str = 'standard') -> Tuple[bool, List[str]]:
-    """Enhanced armature validation with multiple checks and validation levels"""
+def validate_armature(armature: bpy.types.Object) -> Tuple[bool, List[str]]:
+    """Enhanced armature validation with multiple validation modes"""
+    validation_mode = bpy.context.scene.avatar_toolkit.validation_mode
+    
+    # Skip validation if mode is NONE
+    if validation_mode == 'NONE':
+        return True, []
+        
     messages = []
     
-    # Basic checks
+    # Basic checks always run if not NONE
     if not armature or armature.type != 'ARMATURE' or not armature.data.bones:
         return False, [t("Armature.validation.basic_check_failed")]
         
     found_bones = {bone.name.lower(): bone for bone in armature.data.bones}
     
-    # Essential bones check
+    # Essential bones check (BASIC and STRICT)
     essential_bones = {'hips', 'spine', 'chest', 'neck', 'head'}
     missing_bones = []
     for bone in essential_bones:
@@ -83,7 +78,8 @@ def validate_armature(armature: bpy.types.Object, validation_level: str = 'stand
     if missing_bones:
         messages.append(t("Armature.validation.missing_bones", bones=", ".join(missing_bones)))
     
-    if validation_level in ['standard', 'strict']:
+    # Additional checks for STRICT mode only
+    if validation_mode == 'STRICT':
         # Hierarchy validation
         hierarchy = [('hips', 'spine'), ('spine', 'chest'), ('chest', 'neck'), ('neck', 'head')]
         for parent, child in hierarchy:

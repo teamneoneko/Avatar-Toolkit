@@ -23,6 +23,14 @@ def init() -> None:
     """Initialize the auto-loader by discovering modules and classes"""
     global modules
     global ordered_classes
+
+    # Configure logging first
+    from .logging_setup import configure_logging
+    configure_logging(False)
+    
+    from .addon_preferences import get_preference
+    configure_logging(get_preference("enable_logging", False))
+
     print("Auto-load init starting")
     modules = get_all_submodules(Path(__file__).parent.parent)
     ordered_classes = get_ordered_classes_to_register(modules)

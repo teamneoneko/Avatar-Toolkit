@@ -1,8 +1,8 @@
 import bpy
-import logging
 from typing import Set, Dict, List, Tuple, Optional, Any
 from bpy.props import StringProperty
 from bpy.types import Operator, Context, Object, Event, Modifier
+from ..core.logging_setup import logger
 from ..core.translations import t
 from ..core.common import (
     get_active_armature,
@@ -15,8 +15,6 @@ from ..core.common import (
     process_armature_modifiers,
     ProgressTracker
 )
-
-logger = logging.getLogger('avatar_toolkit.pose')
 
 class BatchPoseOperationMixin:
     """Base class for batch pose operations"""

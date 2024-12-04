@@ -1,9 +1,14 @@
 import os
 import json
 import bpy
+import logging
 from bpy.app.translations import locale
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional, Any
+from ..core.logging_setup import logger
 from .addon_preferences import save_preference, get_preference
+
+# Set up logging
+logger = logging.getLogger(__name__)
 
 # Use __file__ to get the current file's directory
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -13,9 +18,15 @@ translations_dir = os.path.join(resources_dir, "translations")
 
 dictionary: Dict[str, str] = dict()
 languages: List[str] = []
+_translation_cache: Dict[str, Dict[str, str]] = {}
 verbose: bool = True
 
+def get_fallback_language() -> str:
+    """Return the default fallback language"""
+    return "en_US"
+
 def load_translations() -> bool:
+    """Load translations for the selected language"""
     global dictionary, languages
 
     old_dictionary = dictionary.copy()
@@ -29,69 +40,73 @@ def load_translations() -> bool:
         if lang != "auto":
             languages.append(lang)
 
-    language_index = get_preference("language", 0)
-    # print(f"Loading translations for language index: {language_index}")  # Debug print
+    language_index: int = get_preference("language", 0)
+    logger.debug(f"Loading translations for language index: {language_index}")
 
     if language_index == 0:  # "auto"
-        language = bpy.context.preferences.view.language
+        language: str = bpy.context.preferences.view.language
     else:
         try:
             language = languages[language_index]
         except IndexError:
             language = bpy.context.preferences.view.language
 
-    # print(f"Selected language: {language}")  # Debug print
+    logger.debug(f"Selected language: {language}")
+
+    # Check cache first
+    if language in _translation_cache:
+        dictionary = _translation_cache[language]
+        return dictionary != old_dictionary
 
     translation_file: str = os.path.join(translations_dir, language + ".json")
     if os.path.exists(translation_file):
-        with open(translation_file, 'r', encoding='utf-8') as file:
-            dictionary = json.load(file)["messages"]
-        # print(f"Loaded translations: {dictionary}")  # Debug print
+        dictionary = _load_translation_file(translation_file)
     else:
         custom_language: str = language.split("_")[0]
         custom_translation_file: str = os.path.join(translations_dir, custom_language + ".json")
         if os.path.exists(custom_translation_file):
-            with open(custom_translation_file, 'r', encoding='utf-8') as file:
-                dictionary = json.load(file)["messages"]
-            # print(f"Loaded custom translations: {dictionary}")  # Debug print
+            dictionary = _load_translation_file(custom_translation_file)
         else:
-            print(f"Translation file not found for language: {language}")
-            default_file: str = os.path.join(translations_dir, "en_US.json")
+            logger.warning(f"Translation file not found for language: {language}")
+            default_file: str = os.path.join(translations_dir, get_fallback_language() + ".json")
             if os.path.exists(default_file):
-                with open(default_file, 'r', encoding='utf-8') as file:
-                    dictionary = json.load(file)["messages"]
-                # print(f"Loaded default translations: {dictionary}")  # Debug print
+                dictionary = _load_translation_file(default_file)
             else:
-                print("Default translation file 'en_US.json' not found.")
+                logger.error("Default translation file not found")
 
+    _translation_cache[language] = dictionary
     return dictionary != old_dictionary
 
-def t(phrase: str, default: str = None, **kwargs) -> str:
-    output: str = dictionary.get(phrase)
+def _load_translation_file(file_path: str) -> Dict[str, str]:
+    """Load and parse a translation file"""
+    with open(file_path, 'r', encoding='utf-8') as file:
+        return json.load(file)["messages"]
+
+def t(phrase: str, default: Optional[str] = None, **kwargs) -> str:
+    """Get translation for a phrase with optional formatting"""
+    output: Optional[str] = dictionary.get(phrase)
     if output is None:
         if verbose:
-            print(f'Warning: Unknown phrase: {phrase}')
+            logger.warning(f'Unknown phrase: {phrase}')
         return default if default is not None else phrase
-    # print(f"Translating '{phrase}' to '{output}'")  # Debug print
     return output.format(**kwargs) if kwargs else output
 
 def get_language_display_name(lang: str) -> str:
-    if lang == "auto":
-        return t("Language.auto", "Automatic")
+    """Get the display name for a language code"""
     return t(f"Language.{lang}", lang)
 
-def get_languages_list(self, context) -> List[Tuple[str, str, str]]:
-    return [(str(i), get_language_display_name(lang), f"Use {lang} language") for i, lang in enumerate(languages)]
+def get_languages_list(self: Any, context: Any) -> List[Tuple[str, str, str]]:
+    """Get list of available languages for UI"""
+    return [(str(i), get_language_display_name(lang), f"Use {lang} language") 
+            for i, lang in enumerate(languages)]
 
-def update_language(self, context):
-    print(f"Updating language to: {self.language}")  # Debug print
+def update_language(self: Any, context: Any) -> None:
+    """Handle language update and UI refresh"""
+    logger.info(f"Updating language to: {self.language}")
     save_preference("language", int(self.language))
     load_translations()
-    # Set a flag to indicate that a language change has occurred
     context.scene.avatar_toolkit.language_changed = True
-    # Show popup after language change
     bpy.ops.avatar_toolkit.translation_restart_popup('INVOKE_DEFAULT')
 
 # Initial load of translations
-# print("Performing initial load of translations")  # Debug print
 load_translations()
