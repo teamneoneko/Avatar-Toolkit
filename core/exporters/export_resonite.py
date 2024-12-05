@@ -1,14 +1,10 @@
 import bpy
-
 from typing import List, Optional
-from .common import get_armature
+from ...core.common import get_active_armature
 from bpy.types import Object, ShapeKey, Mesh, Context, Operator
 from functools import lru_cache
-from ..core.register import register_wrap
-from ..functions.translations import t
+from ...core.translations import t
 
-
-@register_wrap
 class AvatarToolKit_OT_ExportResonite(Operator):
     bl_idname = 'avatar_toolkit.export_resonite'
     bl_label = t("Importer.export_resonite.label")
@@ -16,10 +12,9 @@ class AvatarToolKit_OT_ExportResonite(Operator):
     bl_options = {'REGISTER', 'UNDO'}
     filepath: bpy.props.StringProperty()
 
-
     @classmethod
     def poll(cls, context: Context):
-        if get_armature(context) is None:
+        if get_active_armature(context) is None:
             return False
         return True
 
