@@ -410,3 +410,78 @@ def restore_bone_transforms(bone: EditBone, transforms: Dict[str, Any]) -> None:
     bone.tail = transforms['tail'] 
     bone.roll = transforms['roll']
     bone.matrix = transforms['matrix']
+
+def get_vertex_weights(mesh_obj: Object, group_name: str) -> Dict[int, float]:
+    """Get vertex weights for a specific vertex group"""
+    weights = {}
+    group_index = mesh_obj.vertex_groups[group_name].index
+    for vertex in mesh_obj.data.vertices:
+        for group in vertex.groups:
+            if group.group == group_index:
+                weights[vertex.index] = group.weight
+    return weights
+
+def transfer_vertex_weights(mesh_obj: Object, 
+                          source_name: str, 
+                          target_name: str, 
+                          threshold: float = 0.01) -> None:
+    """Transfer vertex weights from source to target group"""
+    if source_name not in mesh_obj.vertex_groups:
+        return
+        
+    source_group = mesh_obj.vertex_groups[source_name]
+    target_group = mesh_obj.vertex_groups.get(target_name)
+    
+    if not target_group:
+        target_group = mesh_obj.vertex_groups.new(name=target_name)
+    
+    # Get source weights
+    weights = get_vertex_weights(mesh_obj, source_name)
+    
+    # Transfer weights above threshold
+    for vertex_index, weight in weights.items():
+        if weight > threshold:
+            target_group.add([vertex_index], weight, 'ADD')
+            
+    # Remove source group
+    mesh_obj.vertex_groups.remove(source_group)
+
+def remove_unused_shapekeys(mesh_obj: Object, tolerance: float = 0.001) -> int:
+    """Remove unused shape keys from a mesh object"""
+    if not mesh_obj.data.shape_keys:
+        return 0
+        
+    key_blocks = mesh_obj.data.shape_keys.key_blocks
+    vertex_count = len(mesh_obj.data.vertices)
+    removed_count = 0
+    
+    # Cache for relative key locations
+    cache = {}
+    locations = np.empty(3 * vertex_count, dtype=np.float32)
+    to_delete = []
+    
+    for key in key_blocks:
+        if key == key.relative_key:
+            continue
+            
+        # Get current key locations
+        key.data.foreach_get("co", locations)
+        
+        # Get or calculate relative key locations
+        if key.relative_key.name not in cache:
+            rel_locations = np.empty(3 * vertex_count, dtype=np.float32)
+            key.relative_key.data.foreach_get("co", rel_locations)
+            cache[key.relative_key.name] = rel_locations
+            
+        # Compare locations
+        locations -= cache[key.relative_key.name]
+        if (np.abs(locations) < tolerance).all():
+            if not any(c in key.name for c in "-=~"):  # Skip category markers
+                to_delete.append(key.name)
+                
+    # Remove marked shape keys
+    for key_name in to_delete:
+        mesh_obj.shape_key_remove(key_blocks[key_name])
+        removed_count += 1
+        
+    return removed_count

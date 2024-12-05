@@ -4,42 +4,6 @@ from bpy.types import Panel, Context, UILayout, Operator
 from .main_panel import AvatarToolKit_PT_AvatarToolkitPanel, CATEGORY_NAME
 from ..core.translations import t
 
-# Temporary Operator Classes for UI Preview
-class AvatarToolkit_OT_MergeToActive(Operator):
-    bl_idname = "avatar_toolkit.merge_to_active"
-    bl_label = "Merge to Active"
-    
-    def execute(self, context: Context) -> Set[str]:
-        return {'FINISHED'}
-
-class AvatarToolkit_OT_MergeToParent(Operator):
-    bl_idname = "avatar_toolkit.merge_to_parent"
-    bl_label = "Merge to Parent"
-    
-    def execute(self, context: Context) -> Set[str]:
-        return {'FINISHED'}
-
-class AvatarToolkit_OT_ConnectBones(Operator):
-    bl_idname = "avatar_toolkit.connect_bones"
-    bl_label = "Connect Bones"
-    
-    def execute(self, context: Context) -> Set[str]:
-        return {'FINISHED'}
-
-class AvatarToolkit_OT_ApplyTransforms(Operator):
-    bl_idname = "avatar_toolkit.apply_transforms"
-    bl_label = "Apply Transforms"
-    
-    def execute(self, context: Context) -> Set[str]:
-        return {'FINISHED'}
-
-class AvatarToolkit_OT_CleanShapekeys(Operator):
-    bl_idname = "avatar_toolkit.clean_shapekeys"
-    bl_label = "Remove Unused Shapekeys"
-    
-    def execute(self, context: Context) -> Set[str]:
-        return {'FINISHED'}
-
 class AvatarToolKit_PT_ToolsPanel(Panel):
     """Panel containing various tools for avatar customization and optimization"""
     bl_label: str = t("Tools.label")

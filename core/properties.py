@@ -100,6 +100,22 @@ class AvatarToolkitSceneProperties(PropertyGroup):
         max=0.9999999
     )
 
+    connect_bones_min_distance: FloatProperty(
+        name=t("Tools.connect_bones_min_distance"),
+        description=t("Tools.connect_bones_min_distance_desc"),
+        default=0.005,
+        min=0.001,
+        max=0.1
+    )
+
+    merge_weights_threshold: FloatProperty(
+        name=t("Tools.merge_weights_threshold"),
+        description=t("Tools.merge_weights_threshold_desc"),
+        default=0.01,
+        min=0.0001,
+        max=1.0
+    )
+
 def register() -> None:
     """Register the Avatar Toolkit property group"""
     logger.info("Registering Avatar Toolkit properties")
