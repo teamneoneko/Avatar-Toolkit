@@ -14,7 +14,7 @@ from .logging_setup import logger
 from .translations import t, get_languages_list, update_language
 from .addon_preferences import get_preference, save_preference
 from .updater import get_version_list
-from .common import get_armature_list
+from .common import get_armature_list, get_active_armature, get_all_meshes
 
 def update_validation_mode(self, context):
     logger.info(f"Updating validation mode to: {self.validation_mode}")
@@ -38,7 +38,7 @@ class AvatarToolkitSceneProperties(PropertyGroup):
     active_armature: EnumProperty(
         items=get_armature_list,
         name=t("QuickAccess.select_armature"),
-        description=t("QuickAccess.select_armature")
+        description=t("QuickAccess.select_armature"),
     )
 
     language: EnumProperty(
@@ -72,6 +72,20 @@ class AvatarToolkitSceneProperties(PropertyGroup):
         default=False
     )
 
+    remove_doubles_merge_distance: FloatProperty(
+        name=t("Optimization.merge_distance"),
+        description=t("Optimization.merge_distance_desc"),
+        default=0.0001,
+        min=0.00001,
+        max=0.1
+    )
+    
+    remove_doubles_advanced: BoolProperty(
+        name=t("Optimization.remove_doubles_advanced"),
+        description=t("Optimization.remove_doubles_advanced_desc"),
+        default=False
+    )
+
 def register() -> None:
     """Register the Avatar Toolkit property group"""
     logger.info("Registering Avatar Toolkit properties")
@@ -83,4 +97,3 @@ def unregister() -> None:
     logger.info("Unregistering Avatar Toolkit properties")
     del bpy.types.Scene.avatar_toolkit
     logger.debug("Properties unregistered successfully")
-

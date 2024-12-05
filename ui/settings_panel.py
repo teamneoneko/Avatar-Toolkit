@@ -36,7 +36,7 @@ class AvatarToolKit_PT_SettingsPanel(Panel):
     bl_region_type: str = 'UI'
     bl_category: str = CATEGORY_NAME
     bl_parent_id: str = AvatarToolKit_PT_AvatarToolkitPanel.bl_idname
-    bl_order: int = 2
+    bl_order: int = 4
 
     def draw(self, context: Context) -> None:
         """Draw the settings panel layout with language selection"""

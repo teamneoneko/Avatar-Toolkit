@@ -146,12 +146,12 @@ def validate_symmetry(bones: Dict[str, bpy.types.Bone], base: str, left: str, ri
     right_exists = any(pattern in bones for pattern in right_patterns)
     
     return left_exists and right_exists
-
-    
+  
 def auto_select_single_armature(context: bpy.types.Context) -> None:
     """Automatically select armature if only one exists in scene"""
     armatures = get_armature_list(context)
-    if len(armatures) == 1:
+    if len(armatures) == 1 and armatures[0][0] != 'NONE':
+        toolkit = context.scene.avatar_toolkit
         set_active_armature(context, armatures[0])
 
 def clear_default_objects() -> None:
@@ -306,3 +306,82 @@ def apply_armature_to_mesh_with_shapekeys(armature_obj: Object, mesh_obj: Object
         
     mesh_obj.active_shape_key_index = old_active_index
     mesh_obj.show_only_shape_key = old_show_only
+
+def validate_meshes(meshes: List[Object]) -> Tuple[bool, str]:
+    """Validates a list of mesh objects to ensure they are suitable for joining operations"""
+    if not meshes:
+        return False, t("Optimization.no_meshes")
+    if not all(mesh.data for mesh in meshes):
+        return False, t("Optimization.invalid_mesh_data")
+    if not all(mesh.type == 'MESH' for mesh in meshes):
+        return False, t("Optimization.non_mesh_objects")
+    return True, ""
+
+def join_mesh_objects(context: Context, meshes: List[Object], progress: Optional[ProgressTracker] = None) -> Tuple[bool, str]:
+    """Combines multiple mesh objects into a single mesh with proper cleanup and UV fixing"""
+    try:
+        bpy.ops.object.mode_set(mode='OBJECT')
+        bpy.ops.object.select_all(action='DESELECT')
+        
+        for mesh in meshes:
+            mesh.select_set(True)
+        
+        if context.selected_objects:
+            context.view_layer.objects.active = context.selected_objects[0]
+            
+            if progress:
+                progress.step(t("Optimization.joining_meshes"))
+            bpy.ops.object.join()
+            
+            if progress:
+                progress.step(t("Optimization.applying_transforms"))
+            bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+            
+            if progress:
+                progress.step(t("Optimization.fixing_uvs"))
+            fix_uv_coordinates(context)
+            
+            return True, t("Optimization.meshes_joined")
+            
+        return False, t("Optimization.no_mesh_selected")
+        
+    except Exception as e:
+        logger.error(f"Failed to join meshes: {str(e)}")
+        return False, str(e)
+
+def fix_uv_coordinates(context: Context) -> None:
+    """Normalizes and fixes UV coordinates for the active mesh object"""
+    obj: Object = context.object
+    current_mode: str = context.mode
+    current_active: Object = context.view_layer.objects.active
+    current_selected: List[Object] = context.selected_objects.copy()
+
+    try:
+        bpy.ops.object.mode_set(mode='OBJECT')
+        obj.select_set(True)
+        context.view_layer.objects.active = obj
+        bpy.ops.object.mode_set(mode='EDIT')
+        
+        bpy.ops.mesh.select_all(action='SELECT')
+
+        with context.temp_override(active_object=obj):
+            bpy.ops.uv.select_all(action='SELECT')
+            bpy.ops.uv.average_islands_scale()
+            
+        logger.debug(f"UV Fix - Successfully processed {obj.name}")
+
+    except Exception as e:
+        logger.warning(f"UV Fix - Skipped processing for {obj.name}: {str(e)}")
+
+    finally:
+        bpy.ops.object.mode_set(mode='OBJECT')
+        for sel_obj in current_selected:
+            sel_obj.select_set(True)
+        context.view_layer.objects.active = current_active
+
+def clear_unused_data_blocks(self) -> int:
+    """Removes all unused data blocks from the current Blender file"""
+    initial_count: int = sum(len(getattr(bpy.data, attr)) for attr in dir(bpy.data) if isinstance(getattr(bpy.data, attr), bpy.types.bpy_prop_collection))
+    bpy.ops.outliner.orphans_purge(do_local_ids=True, do_linked_ids=True, do_recursive=True)
+    final_count: int = sum(len(getattr(bpy.data, attr)) for attr in dir(bpy.data) if isinstance(getattr(bpy.data, attr), bpy.types.bpy_prop_collection))
+    return initial_count - final_count
