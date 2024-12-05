@@ -1,6 +1,6 @@
 import bpy
 import numpy as np
-from bpy.types import Context, Object, Modifier
+from bpy.types import Context, Object, Modifier, EditBone
 from typing import Optional, Tuple, List, Set, Dict, Any, Generator, Callable
 from ..core.logging_setup import logger
 from ..core.translations import t
@@ -385,3 +385,28 @@ def clear_unused_data_blocks(self) -> int:
     bpy.ops.outliner.orphans_purge(do_local_ids=True, do_linked_ids=True, do_recursive=True)
     final_count: int = sum(len(getattr(bpy.data, attr)) for attr in dir(bpy.data) if isinstance(getattr(bpy.data, attr), bpy.types.bpy_prop_collection))
     return initial_count - final_count
+
+def simplify_bonename(name: str) -> str:
+    """Simplify bone name by removing spaces, underscores, dots and converting to lowercase"""
+    return name.lower().translate(dict.fromkeys(map(ord, u" _.")))
+
+def duplicate_bone_chain(bones: List[EditBone]) -> List[EditBone]:
+    """Duplicate a chain of bones while preserving hierarchy"""
+    new_bones = []
+    parent_map = {}
+    
+    for bone in bones:
+        new_bone = duplicate_bone(bone)
+        if bone.parent and bone.parent in parent_map:
+            new_bone.parent = parent_map[bone.parent]
+        parent_map[bone] = new_bone
+        new_bones.append(new_bone)
+        
+    return new_bones
+
+def restore_bone_transforms(bone: EditBone, transforms: Dict[str, Any]) -> None:
+    """Restore bone transforms from stored data"""
+    bone.head = transforms['head']
+    bone.tail = transforms['tail'] 
+    bone.roll = transforms['roll']
+    bone.matrix = transforms['matrix']

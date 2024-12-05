@@ -86,6 +86,20 @@ class AvatarToolkitSceneProperties(PropertyGroup):
         default=False
     )
 
+    merge_twist_bones: BoolProperty(
+        name=t("Tools.merge_twist_bones"),
+        description=t("Tools.merge_twist_bones_desc"),
+        default=True
+    )
+
+    clean_weights_threshold: FloatProperty(
+        name=t("Tools.clean_weights_threshold"),
+        description=t("Tools.clean_weights_threshold_desc"),
+        default=0.01,
+        min=0.0000001,
+        max=0.9999999
+    )
+
 def register() -> None:
     """Register the Avatar Toolkit property group"""
     logger.info("Registering Avatar Toolkit properties")
