@@ -166,3 +166,79 @@ resonite_translations = {
     'thumb_2_r': "thumb2.R",
     'thumb_3_r': "thumb3.R"
 }
+
+mmd_bone_renames = {
+    # Core body
+    "センター": "Center",
+    "グルーブ": "Groove",
+    "腰": "Waist",
+    "上半身": "Upper Body",
+    "上半身2": "Upper Body 2",
+    "下半身": "Lower Body",
+    
+    # Head
+    "首": "Neck",
+    "頭": "Head",
+    "両目": "Eyes",
+    "左目": "Eye_L",
+    "右目": "Eye_R",
+    
+    # Arms
+    "左肩": "Shoulder_L",
+    "左腕": "Arm_L",
+    "左ひじ": "Elbow_L",
+    "左手首": "Wrist_L",
+    "右肩": "Shoulder_R",
+    "右腕": "Arm_R",
+    "右ひじ": "Elbow_R",
+    "右手首": "Wrist_R",
+    
+    # Fingers
+    "左親指１": "Thumb1_L",
+    "左親指２": "Thumb2_L",
+    "左人指１": "Index1_L",
+    "左人指２": "Index2_L",
+    "左人指３": "Index3_L",
+    "左中指１": "Middle1_L",
+    "左中指２": "Middle2_L",
+    "左中指３": "Middle3_L",
+    "左薬指１": "Ring1_L",
+    "左薬指２": "Ring2_L",
+    "左薬指３": "Ring3_L",
+    "左小指１": "Pinky1_L",
+    "左小指２": "Pinky2_L",
+    "左小指３": "Pinky3_L",
+    
+    "右親指１": "Thumb1_R",
+    "右親指２": "Thumb2_R",
+    "右人指１": "Index1_R",
+    "右人指２": "Index2_R",
+    "右人指３": "Index3_R",
+    "右中指１": "Middle1_R",
+    "右中指２": "Middle2_R",
+    "右中指３": "Middle3_R",
+    "右薬指１": "Ring1_R",
+    "右薬指２": "Ring2_R",
+    "右薬指３": "Ring3_R",
+    "右小指１": "Pinky1_R",
+    "右小指２": "Pinky2_R",
+    "右小指３": "Pinky3_R",
+    
+    # Legs
+    "左足": "Leg_L",
+    "左ひざ": "Knee_L",
+    "左足首": "Ankle_L",
+    "右足": "Leg_R",
+    "右ひざ": "Knee_R",
+    "右足首": "Ankle_R",
+    
+    # Toes
+    "左つま先": "Toe_L",
+    "右つま先": "Toe_R",
+    
+    # IK bones
+    "左足ＩＫ": "Leg_IK_L",
+    "右足ＩＫ": "Leg_IK_R",
+    "左つま先ＩＫ": "Toe_IK_L",
+    "右つま先ＩＫ": "Toe_IK_R"
+}

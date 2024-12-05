@@ -116,6 +116,32 @@ class AvatarToolkitSceneProperties(PropertyGroup):
         max=1.0
     )
 
+    mmd_keep_upper_chest: BoolProperty(
+        name=t("MMDTools.keep_upper_chest"),
+        description=t("MMDTools.keep_upper_chest_desc"),
+        default=True
+    )
+
+    mmd_remove_unused_bones: BoolProperty(
+        name=t("MMDTools.remove_unused"),
+        description=t("MMDTools.remove_unused_desc"), 
+        default=True
+    )
+
+    mmd_merge_distance: FloatProperty(
+        name=t("MMDTools.merge_distance"),
+        description=t("MMDTools.merge_distance_desc"),
+        default=0.001,
+        min=0.0001,
+        max=0.1
+    )
+
+    mmd_cleanup_shapekeys: BoolProperty(
+        name=t("MMDTools.cleanup_shapekeys"),
+        description=t("MMDTools.cleanup_shapekeys_desc"),
+        default=True
+    )
+
 def register() -> None:
     """Register the Avatar Toolkit property group"""
     logger.info("Registering Avatar Toolkit properties")
