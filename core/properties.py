@@ -116,30 +116,22 @@ class AvatarToolkitSceneProperties(PropertyGroup):
         max=1.0
     )
 
-    mmd_keep_upper_chest: BoolProperty(
-        name=t("MMDTools.keep_upper_chest"),
-        description=t("MMDTools.keep_upper_chest_desc"),
+    mmd_process_twist_bones: BoolProperty(
+        name=t("MMD.process_twist_bones"),
+        description=t("MMD.process_twist_bones_desc"),
+        default=True
+    )
+    
+    mmd_connect_bones: BoolProperty(
+        name=t("MMD.connect_bones"),
+        description=t("MMD.connect_bones_desc"),
         default=True
     )
 
-    mmd_remove_unused_bones: BoolProperty(
-        name=t("MMDTools.remove_unused"),
-        description=t("MMDTools.remove_unused_desc"), 
-        default=True
-    )
-
-    mmd_merge_distance: FloatProperty(
-        name=t("MMDTools.merge_distance"),
-        description=t("MMDTools.merge_distance_desc"),
-        default=0.001,
-        min=0.0001,
-        max=0.1
-    )
-
-    mmd_cleanup_shapekeys: BoolProperty(
-        name=t("MMDTools.cleanup_shapekeys"),
-        description=t("MMDTools.cleanup_shapekeys_desc"),
-        default=True
+    save_backup_state: BoolProperty(
+        name="Save Backup State",
+        description="Save the initial state of the armature before standardizing bones",
+        default=False
     )
 
 def register() -> None:

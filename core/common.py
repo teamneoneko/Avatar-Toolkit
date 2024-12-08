@@ -1,6 +1,6 @@
 import bpy
 import numpy as np
-from bpy.types import Context, Object, Modifier, EditBone
+from bpy.types import Context, Object, Modifier, EditBone, Operator
 from typing import Optional, Tuple, List, Set, Dict, Any, Generator, Callable
 from ..core.logging_setup import logger
 from ..core.translations import t
@@ -485,3 +485,61 @@ def remove_unused_shapekeys(mesh_obj: Object, tolerance: float = 0.001) -> int:
         removed_count += 1
         
     return removed_count
+
+def save_armature_state(armature: Object) -> Dict[str, Any]:
+    """Save current armature state for recovery"""
+    state = {
+        'bones': {},
+        'pose': {},
+        'settings': {}
+    }
+    
+    # Save bone data
+    for bone in armature.data.bones:
+        state['bones'][bone.name] = {
+            'head': bone.head_local.copy(),
+            'tail': bone.tail_local.copy(),
+            'roll': bone.roll,
+            'parent': bone.parent.name if bone.parent else None
+        }
+        
+    # Save pose data if exists
+    if armature.pose:
+        for bone in armature.pose.bones:
+            state['pose'][bone.name] = {
+                'location': bone.location.copy(),
+                'rotation': bone.rotation_quaternion.copy(),
+                'scale': bone.scale.copy()
+            }
+            
+    return state
+
+def restore_armature_state(armature: Object, state: Dict[str, Any]) -> None:
+    """Restore armature from saved state"""
+    bpy.ops.object.mode_set(mode='EDIT')
+    
+    # Restore bones
+    for name, data in state['bones'].items():
+        if name in armature.data.edit_bones:
+            bone = armature.data.edit_bones[name]
+            bone.head = data['head']
+            bone.tail = data['tail']
+            bone.roll = data['roll']
+            
+    # Restore parenting
+    for name, data in state['bones'].items():
+        if data['parent'] and name in armature.data.edit_bones:
+            bone = armature.data.edit_bones[name]
+            if data['parent'] in armature.data.edit_bones:
+                bone.parent = armature.data.edit_bones[data['parent']]
+                
+    bpy.ops.object.mode_set(mode='POSE')
+    
+    # Restore pose if exists
+    if 'pose' in state:
+        for name, data in state['pose'].items():
+            if name in armature.pose.bones:
+                bone = armature.pose.bones[name]
+                bone.location = data['location']
+                bone.rotation_quaternion = data['rotation']
+                bone.scale = data['scale']
