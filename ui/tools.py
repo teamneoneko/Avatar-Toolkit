@@ -3,7 +3,7 @@ from ..core.register import register_wrap
 from .panel import AvatarToolKit_PT_AvatarToolkitPanel, CATEGORY_NAME
 from bpy.types import Context
 from ..functions.digitigrade_legs import AvatarToolKit_OT_CreateDigitigradeLegs
-from ..functions.resonite_functions import AvatarToolKit_OT_ConvertToResonite
+from ..core.resonite_utils import AvatarToolKit_OT_ConvertToResonite
 from ..functions.translations import t
 from ..core.common import get_selected_armature
 from ..functions.mesh_tools import AvatarToolkit_OT_RemoveUnusedShapekeys

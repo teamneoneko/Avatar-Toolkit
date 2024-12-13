@@ -1,7 +1,7 @@
 import bpy
 from ..core.register import register_wrap
 from .panel import AvatarToolKit_PT_AvatarToolkitPanel, CATEGORY_NAME
-from ..core.export_resonite import AvatarToolKit_OT_ExportResonite
+from ..core.resonite_utils import AvatarToolKit_OT_ExportResonite
 from bpy.types import Context, Mesh, Panel, Operator
 from ..functions.translations import t
 
