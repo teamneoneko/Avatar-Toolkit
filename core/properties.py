@@ -87,51 +87,29 @@ class AvatarToolkitSceneProperties(PropertyGroup):
     )
 
     merge_twist_bones: BoolProperty(
-        name=t("Tools.merge_twist_bones"),
-        description=t("Tools.merge_twist_bones_desc"),
+        name=t("MMD.merge_twist_bones"),
+        description=t("MMD.merge_twist_bones_desc"),
         default=True
     )
 
-    clean_weights_threshold: FloatProperty(
-        name=t("Tools.clean_weights_threshold"),
-        description=t("Tools.clean_weights_threshold_desc"),
-        default=0.01,
-        min=0.0000001,
-        max=0.9999999
+    keep_twist_bones: BoolProperty(
+        name=t("MMD.keep_twist_bones"),
+        description=t("MMD.keep_twist_bones_desc"),
+        default=False
     )
 
-    connect_bones_min_distance: FloatProperty(
-        name=t("Tools.connect_bones_min_distance"),
-        description=t("Tools.connect_bones_min_distance_desc"),
-        default=0.005,
-        min=0.001,
-        max=0.1
+    keep_upper_chest: BoolProperty(
+        name=t("MMD.keep_upper_chest"),
+        description=t("MMD.keep_upper_chest_desc"),
+        default=True
     )
 
     merge_weights_threshold: FloatProperty(
-        name=t("Tools.merge_weights_threshold"),
-        description=t("Tools.merge_weights_threshold_desc"),
+        name=t("MMD.merge_weights_threshold"),
+        description=t("MMD.merge_weights_threshold_desc"),
         default=0.01,
-        min=0.0001,
+        min=0.0,
         max=1.0
-    )
-
-    mmd_process_twist_bones: BoolProperty(
-        name=t("MMD.process_twist_bones"),
-        description=t("MMD.process_twist_bones_desc"),
-        default=True
-    )
-    
-    mmd_connect_bones: BoolProperty(
-        name=t("MMD.connect_bones"),
-        description=t("MMD.connect_bones_desc"),
-        default=True
-    )
-
-    save_backup_state: BoolProperty(
-        name="Save Backup State",
-        description="Save the initial state of the armature before standardizing bones",
-        default=False
     )
 
 def register() -> None:
