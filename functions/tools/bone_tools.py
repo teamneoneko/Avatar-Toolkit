@@ -186,7 +186,7 @@ class AvatarToolKit_OT_RemoveZeroWeightBones(Operator):
             mesh_data: Mesh = mesh.data
             for vertex in mesh_data.vertices:
                 for group in vertex.groups:
-                    if group.weight > context.scene.avatar_toolkit.clean_weights_threshold:
+                    if group.weight > context.scene.avatar_toolkit.merge_weights_threshold:
                         weighted_bones.append(mesh.vertex_groups[group.group].name)
 
         # Process bone removal

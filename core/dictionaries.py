@@ -5,72 +5,252 @@
 # Note from @989onan: Please make sure to make your names are lowercase in this array. I banged my head metaphorically till I figured that out...
 # Taken from Tuxedo/Cats
 bone_names = {
-    "right_shoulder": ["rightshoulder", "shoulderr", "rshoulder", "valvebipedbip01rclavicle", "右肩"],
-    "right_arm": ["rightarm", "armr", "rarm", "upperarmr", "rupperarm", "rightupperarm", "uparmr", "ruparm", "valvebipedbip01rupperarm", "右腕"],
-    "right_elbow": ["rightelbow", "elbowr", "relbow", "lowerarmr", "rightlowerarm", "lowerarmr", "rlowerarm", "lowarmr", "rlowarm", "forearmr", "rforearm", "valvebipedbip01rforearm", "右ひじ"],
-    "right_wrist": ["rightwrist", "wristr", "rwrist", "handr", "righthand", "rhand", "valvebipedbip01rhand", "右手首"],
-    "pinkie_0_r": ["littlefinger0r", "pinkie0r", "rpinkie0", "pinkiemetacarpalr", "右小指０"],
-    "pinkie_1_r": ["littlefinger1r", "pinkie1r", "rpinkie1", "pinkieproximalr", "valvebipedbip01rfinger4", "右小指１"],
-    "pinkie_2_r": ["littlefinger2r", "pinkie2r", "rpinkie2", "pinkieintermediater", "valvebipedbip01rfinger41", "右小指２"],
-    "pinkie_3_r": ["littlefinger3r", "pinkie3r", "rpinkie3", "pinkiedistalr", "valvebipedbip01rfinger42", "右小指３"],
-    "ring_0_r": ["ringfinger0r", "ring0r", "rring0", "ringmetacarpalr", "右薬指０"],
-    "ring_1_r": ["ringfinger1r", "ring1r", "rring1", "ringproximalr", "valvebipedbip01rfinger3", "右薬指１"],
-    "ring_2_r": ["ringfinger2r", "ring2r", "rring2", "ringintermediater", "valvebipedbip01rfinger31", "右薬指２"],
-    "ring_3_r": ["ringfinger3r", "ring3r", "rring3", "ringdistalr", "valvebipedbip01rfinger32", "右薬指３"],
-    "middle_0_r": ["middlefinger0r", "middle0r", "rmiddle0", "middlemetacarpalr", "右中指０"],
-    "middle_1_r": ["middlefinger1r", "middle1r", "rmiddle1", "middleproximalr", "valvebipedbip01rfinger2", "右中指１"],
-    "middle_2_r": ["middlefinger2r", "middle2r", "rmiddle2", "middleintermediater", "valvebipedbip01rfinger21", "右中指２"],
-    "middle_3_r": ["middlefinger3r", "middle3r", "rmiddle3", "middledistalr", "valvebipedbip01rfinger22", "右中指３"],
-    "index_0_r": ["indexfinger0r", "index0r", "rindex0", "indexmetacarpalr", "右人差指０"],
-    "index_1_r": ["indexfinger1r", "index1r", "rindex1", "indexproximalr", "valvebipedbip01rfinger1", "右人差指１"],
-    "index_2_r": ["indexfinger2r", "index2r", "rindex2", "indexintermediater", "valvebipedbip01rfinger11", "右人差指２"],
-    "index_3_r": ["indexfinger3r", "index3r", "rindex3", "indexdistalr", "valvebipedbip01rfinger12", "右人差指３"],
-    "thumb_0_r": ["thumb0r", "rthumb0", "thumbmetacarpalr", "右親指０"],
-    "thumb_1_r": ["thumb1r", "rthumb1", "thumbproximalr", "valvebipedbip01rfinger0", "右親指１"],
-    "thumb_2_r": ["thumb2r", "rthumb2", "thumbintermediater", "valvebipedbip01rfinger01", "右親指２"],
-    "thumb_3_r": ["thumb3r", "rthumb3", "thumbdistalr", "valvebipedbip01rfinger02", "右親指３"],
-    "right_leg": ["rightleg", "legr", "rleg", "upperlegr", "rupperleg", "thighr", "rightupperleg", "uplegr", "rupleg", "valvebipedbip01rthigh", "右足"],
-    "right_knee": ["rightknee", "kneer", "rknee", "lowerlegr", "calfr", "rlowerleg", "rcalf", "rightlowerleg", "lowlegr", "rlowleg", "valvebipedbip01rcalf", "右ひざ"],
-    "right_ankle": ["rightankle", "ankler", "rankle", "rightfoot", "footr", "rfoot", "rightfoot", "rightfeet", "feetright", "rfeet", "feetr", "valvebipedbip01rfoot", "右足首"],
-    "right_toe": ["righttoe", "toeright", "toer", "rtoe", "toesr", "rtoes", "valvebipedbip01rtoe0", "右つま先"],
-    "left_shoulder": ["leftshoulder", "shoulderl", "lshoulder", "valvebipedbip01lclavicle", "左肩"],
-    "left_arm": ["leftarm", "arml", "larm", "upperarml", "lupperarm", "leftupperarm", "uparml", "luparm", "valvebipedbip01lupperarm", "左腕"],
-    "left_elbow": ["leftelbow", "elbowl", "lelbow", "lowerarml", "leftlowerarm", "lowerarml", "llowerarm", "lowarml", "llowarm", "forearml", "lforearm", "valvebipedbip01lforearm", "左ひじ"],
-    "left_wrist": ["leftwrist", "wristl", "lwrist", "handl", "lefthand", "lhand", "valvebipedbip01lhand", "左手首"],
-    "pinkie_0_l": ["pinkiefinger0l", "pinkie0l", "lpinkie0", "pinkiemetacarpall", "左小指０"],
-    "pinkie_1_l": ["littlefinger1l", "pinkie1l", "lpinkie1", "pinkieproximall", "valvebipedbip01lfinger4", "左小指１"],
-    "pinkie_2_l": ["littlefinger2l", "pinkie2l", "lpinkie2", "pinkieintermediatel", "valvebipedbip01lfinger41", "左小指２"],
-    "pinkie_3_l": ["littlefinger3l", "pinkie3l", "lpinkie3", "pinkiedistall", "valvebipedbip01lfinger42", "左小指３"],
-    "ring_0_l": ["ringfinger0l", "ring0l", "lring0", "ringmetacarpall", "左薬指０"],
-    "ring_1_l": ["ringfinger1l", "ring1l", "lring1", "ringproximall", "valvebipedbip01lfinger3", "左薬指１"],
-    "ring_2_l": ["ringfinger2l", "ring2l", "lring2", "ringintermediatel", "valvebipedbip01lfinger31", "左薬指２"],
-    "ring_3_l": ["ringfinger3l", "ring3l", "lring3", "ringdistall", "valvebipedbip01lfinger32", "左薬指３"],
-    "middle_0_l": ["middlefinger0l", "middle_0l", "lmiddle0", "middlemetacarpall", "左中指０"],
-    "middle_1_l": ["middlefinger1l", "middle_1l", "lmiddle1", "middleproximall", "valvebipedbip01lfinger2", "左中指１"],
-    "middle_2_l": ["middlefinger2l", "middle_2l", "lmiddle2", "middleintermediatel", "valvebipedbip01lfinger21", "左中指２"],
-    "middle_3_l": ["middlefinger3l", "middle_3l", "lmiddle3", "middledistall", "valvebipedbip01lfinger22", "左中指３"],
-    "index_0_l": ["indexfinger0l", "index0l", "lindex0", "indexmetacarpall", "左人差指０"],
-    "index_1_l": ["indexfinger1l", "index1l", "lindex1", "indexproximall", "valvebipedbip01lfinger1", "左人差指１"],
-    "index_2_l": ["indexfinger2l", "index2l", "lindex2", "indexintermediatel", "valvebipedbip01lfinger11", "左人差指２"],
-    "index_3_l": ["indexfinger3l", "index3l", "lindex3", "indexdistall", "valvebipedbip01lfinger12", "左人差指３"],
-    "thumb_0_l": ["thumb0l", "lthumb0", "thumbmetacarpall", "左親指０"],
-    "thumb_1_l": ["thumb1l", "lthumb1", "thumbproximall", "valvebipedbip01lfinger0", "左親指１"],
-    "thumb_2_l": ["thumb2l", "lthumb2", "thumbintermediatel", "valvebipedbip01lfinger01", "左親指２"],
-    "thumb_3_l": ["thumb3l", "lthumb3", "thumbdistall", "valvebipedbip01lfinger02", "左親指３"],
-    "left_leg": ["leftleg", "legl", "lleg", "upperlegl", "lupperleg", "thighl", "leftupperleg", "uplegl", "lupleg", "valvebipedbip01lthigh", "左足"],
-    "left_knee": ["leftknee", "kneel", "lknee", "lowerlegl", "llowerleg", "calfl", "lcalf", "leftlowerleg", "lowlegl", "llowleg", "valvebipedbip01lcalf", "左ひざ"],
-    "left_ankle": ["leftankle", "anklel", "lankle", "leftfoot", "footl", "lfoot", "leftfoot", "leftfeet", "feetleft", "lfeet", "feetl", "valvebipedbip01lfoot", "左足首"],
-    "left_toe": ["lefttoe", "toeleft", "toel", "ltoe", "toesl", "ltoes", "valvebipedbip01ltoe0", "左つま先"],
-    "hips": ["pelvis", "hips", "hip", "valvebipedbip01pelvis", "腰"],
-    "spine": ["torso", "spine", "valvebipedbip01spine", "脊椎"],
-    "chest": ["chest", "valvebipedbip01spine1", "胸"],
-    "upper_chest": ["upperchest", "valvebipedbip01spine4", "上胸"],
-    "neck": ["neck", "valvebipedbip01neck1", "首"],
-    "head": ["head", "valvebipedbip01head1", "頭"],
-    "left_eye": ["eyeleft", "lefteye", "eyel", "leye", "左目"],
-    "right_eye": ["eyeright", "righteye", "eyer", "reye", "右目"],
-}
+    # Right side bones
+    "right_shoulder": [
+        "rightshoulder", "shoulderr", "rshoulder", "valvebipedbip01rclavicle",
+        "右肩", "肩.r", "肩+.r", "右肩+", "右肩", "右肩＋", "肩+r", "肩+右", "ik_肩.r"
+    ],
+    "right_arm": [
+        "rightarm", "armr", "rarm", "upperarmr", "rupperarm", "rightupperarm",
+        "uparmr", "ruparm", "valvebipedbip01rupperarm", "右腕", "腕.r", "右腕", "ik_腕.r"
+    ],
+    "right_elbow": [
+        "rightelbow", "elbowr", "relbow", "lowerarmr", "rightlowerarm",
+        "rlowerarm", "lowarmr", "rlowarm", "forearmr", "rforearm",
+        "valvebipedbip01rforearm", "右ひじ", "ひじ.r", "ik_ひじ.r"
+    ],
+    "right_wrist": [
+        "rightwrist", "wristr", "rwrist", "handr", "righthand", "rhand",
+        "valvebipedbip01rhand", "右手首", "手首.r", "ik_手首.r"
+    ],
+    "pinkie_0_r": [
+        "littlefinger0r", "pinkie0r", "rpinkie0", "pinkiemetacarpalr", "右小指０"
+    ],
+    "pinkie_1_r": [
+        "littlefinger1r", "pinkie1r", "rpinkie1", "pinkieproximalr",
+        "valvebipedbip01rfinger4", "右小指１"
+    ],
+    "pinkie_2_r": [
+        "littlefinger2r", "pinkie2r", "rpinkie2", "pinkieintermediater",
+        "valvebipedbip01rfinger41", "右小指２"
+    ],
+    "pinkie_3_r": [
+        "littlefinger3r", "pinkie3r", "rpinkie3", "pinkiedistalr",
+        "valvebipedbip01rfinger42", "右小指３"
+    ],
+    "ring_0_r": [
+        "ringfinger0r", "ring0r", "rring0", "ringmetacarpalr", "右薬指０"
+    ],
+    "ring_1_r": [
+        "ringfinger1r", "ring1r", "rring1", "ringproximalr",
+        "valvebipedbip01rfinger3", "右薬指１"
+    ],
+    "ring_2_r": [
+        "ringfinger2r", "ring2r", "rring2", "ringintermediater",
+        "valvebipedbip01rfinger31", "右薬指２"
+    ],
+    "ring_3_r": [
+        "ringfinger3r", "ring3r", "rring3", "ringdistalr",
+        "valvebipedbip01rfinger32", "右薬指３"
+    ],
+    "middle_0_r": [
+        "middlefinger0r", "middle0r", "rmiddle0", "middlemetacarpalr", "右中指０"
+    ],
+    "middle_1_r": [
+        "middlefinger1r", "middle1r", "rmiddle1", "middleproximalr",
+        "valvebipedbip01rfinger2", "右中指１"
+    ],
+    "middle_2_r": [
+        "middlefinger2r", "middle2r", "rmiddle2", "middleintermediater",
+        "valvebipedbip01rfinger21", "右中指２"
+    ],
+    "middle_3_r": [
+        "middlefinger3r", "middle3r", "rmiddle3", "middledistalr",
+        "valvebipedbip01rfinger22", "右中指３"
+    ],
+    "index_0_r": [
+        "indexfinger0r", "index0r", "rindex0", "indexmetacarpalr", "右人差指０"
+    ],
+    "index_1_r": [
+        "indexfinger1r", "index1r", "rindex1", "indexproximalr",
+        "valvebipedbip01rfinger1", "右人差指１"
+    ],
+    "index_2_r": [
+        "indexfinger2r", "index2r", "rindex2", "indexintermediater",
+        "valvebipedbip01rfinger11", "右人差指２"
+    ],
+    "index_3_r": [
+        "indexfinger3r", "index3r", "rindex3", "indexdistalr",
+        "valvebipedbip01rfinger12", "右人差指３"
+    ],
+    "thumb_0_r": [
+        "thumb0r", "rthumb0", "thumbmetacarpalr", "右親指０"
+    ],
+    "thumb_1_r": [
+        "thumb1r", "rthumb1", "thumbproximalr", "valvebipedbip01rfinger0", "右親指１"
+    ],
+    "thumb_2_r": [
+        "thumb2r", "rthumb2", "thumbintermediater", "valvebipedbip01rfinger01", "右親指２"
+    ],
+    "thumb_3_r": [
+        "thumb3r", "rthumb3", "thumbdistalr", "valvebipedbip01rfinger02", "右親指３"
+    ],
+    "right_leg": [
+        "rightleg", "legr", "rleg", "upperlegr", "rupperleg", "thighr",
+        "rightupperleg", "uplegr", "rupleg", "valvebipedbip01rthigh",
+        "右足", "足.r", "ik_足.r"
+    ],
+    "right_knee": [
+        "rightknee", "kneer", "rknee", "lowerlegr", "rightlowerleg",
+        "rlowerleg", "lowlegr", "rlowleg", "calfr", "rcalf",
+        "valvebipedbip01rcalf", "右ひざ", "ひざ.r", "すね.r", "ik_ひざ.r"
+    ],
+    "right_ankle": [
+        "rightankle", "ankler", "rankle", "rightfoot", "footr", "rfoot",
+        "rightfeet", "feetright", "rfeet", "feetr", "valvebipedbip01rfoot",
+        "右足首", "足首.r", "ik_足首.r"
+    ],
+    "right_toe": [
+        "righttoe", "toeright", "toer", "rtoe", "toesr", "rtoes",
+        "valvebipedbip01rtoe0", "右つま先", "つま先.r", "ik_つま先.r"
+    ],
 
+    # Left side bones
+    "left_shoulder": [
+        "leftshoulder", "shoulderl", "lshoulder", "valvebipedbip01lclavicle",
+        "左肩", "肩.l", "肩+.l", "左肩+", "左肩", "左肩＋", "肩+l", "肩+左", "ik_肩.l"
+    ],
+    "left_arm": [
+        "leftarm", "arml", "larm", "upperarml", "lupperarm", "leftupperarm",
+        "uparml", "luparm", "valvebipedbip01lupperarm", "左腕", "腕.l", "左腕", "ik_腕.l"
+    ],
+    "left_elbow": [
+        "leftelbow", "elbowl", "lelbow", "lowerarml", "leftlowerarm",
+        "llowerarm", "lowarml", "llowarm", "forearml", "lforearm",
+        "valvebipedbip01lforearm", "左ひじ", "ひじ.l", "すね.l", "ik_ひじ.l"
+    ],
+    "left_wrist": [
+        "leftwrist", "wristl", "lwrist", "handl", "lefthand", "lhand",
+        "valvebipedbip01lhand", "左手首", "手首.l", "ik_手首.l"
+    ],
+    "pinkie_0_l": [
+        "pinkiefinger0l", "pinkie0l", "lpinkie0", "pinkiemetacarpall", "左小指０"
+    ],
+    "pinkie_1_l": [
+        "littlefinger1l", "pinkie1l", "lpinkie1", "pinkieproximall",
+        "valvebipedbip01lfinger4", "左小指１"
+    ],
+    "pinkie_2_l": [
+        "littlefinger2l", "pinkie2l", "lpinkie2", "pinkieintermediatel",
+        "valvebipedbip01lfinger41", "左小指２"
+    ],
+    "pinkie_3_l": [
+        "littlefinger3l", "pinkie3l", "lpinkie3", "pinkiedistall",
+        "valvebipedbip01lfinger42", "左小指３"
+    ],
+    "ring_0_l": [
+        "ringfinger0l", "ring0l", "lring0", "ringmetacarpall", "左薬指０"
+    ],
+    "ring_1_l": [
+        "ringfinger1l", "ring1l", "lring1", "ringproximall",
+        "valvebipedbip01lfinger3", "左薬指１"
+    ],
+    "ring_2_l": [
+        "ringfinger2l", "ring2l", "lring2", "ringintermediatel",
+        "valvebipedbip01lfinger31", "左薬指２"
+    ],
+    "ring_3_l": [
+        "ringfinger3l", "ring3l", "lring3", "ringdistall",
+        "valvebipedbip01lfinger32", "左薬指３"
+    ],
+    "middle_0_l": [
+        "middlefinger0l", "middle_0l", "lmiddle0", "middlemetacarpall", "左中指０"
+    ],
+    "middle_1_l": [
+        "middlefinger1l", "middle_1l", "lmiddle1", "middleproximall",
+        "valvebipedbip01lfinger2", "左中指１"
+    ],
+    "middle_2_l": [
+        "middlefinger2l", "middle_2l", "lmiddle2", "middleintermediatel",
+        "valvebipedbip01lfinger21", "左中指２"
+    ],
+    "middle_3_l": [
+        "middlefinger3l", "middle_3l", "lmiddle3", "middledistall",
+        "valvebipedbip01lfinger22", "左中指３"
+    ],
+    "index_0_l": [
+        "indexfinger0l", "index0l", "lindex0", "indexmetacarpall", "左人差指０"
+    ],
+    "index_1_l": [
+        "indexfinger1l", "index1l", "lindex1", "indexproximall",
+        "valvebipedbip01lfinger1", "左人差指１"
+    ],
+    "index_2_l": [
+        "indexfinger2l", "index2l", "lindex2", "indexintermediatel",
+        "valvebipedbip01lfinger11", "左人差指２"
+    ],
+    "index_3_l": [
+        "indexfinger3l", "index3l", "lindex3", "indexdistall",
+        "valvebipedbip01lfinger12", "左人差指３"
+    ],
+    "thumb_0_l": [
+        "thumb0l", "lthumb0", "thumbmetacarpall", "左親指０"
+    ],
+    "thumb_1_l": [
+        "thumb1l", "lthumb1", "thumbproximall", "valvebipedbip01lfinger0", "左親指１"
+    ],
+    "thumb_2_l": [
+        "thumb2l", "lthumb2", "thumbintermediatel", "valvebipedbip01lfinger01", "左親指２"
+    ],
+    "thumb_3_l": [
+        "thumb3l", "lthumb3", "thumbdistall", "valvebipedbip01lfinger02", "左親指３"
+    ],
+    "left_leg": [
+        "leftleg", "legl", "lleg", "upperlegl", "lupperleg", "thighl",
+        "leftupperleg", "uplegl", "lupleg", "valvebipedbip01lthigh",
+        "左足", "足.l", "ik_足.l"
+    ],
+    "left_knee": [
+        "leftknee", "kneel", "lknee", "lowerlegl", "leftlowerleg",
+        "llowerleg", "lowlegl", "llowleg", "calfl", "lcalf",
+        "valvebipedbip01lcalf", "左ひざ", "ひざ.l", "すね.l", "ik_ひざ.l"
+    ],
+    "left_ankle": [
+        "leftankle", "anklel", "lankle", "leftfoot", "footl", "lfoot",
+        "leftfeet", "feetleft", "lfeet", "feetl", "valvebipedbip01lfoot",
+        "左足首", "足首.l", "ik_足首.l"
+    ],
+    "left_toe": [
+        "lefttoe", "toeleft", "toel", "ltoe", "toesl", "ltoes",
+        "valvebipedbip01ltoe0", "左つま先", "つま先.l", "ik_つま先.l"
+    ],
+
+    # Central bones
+    "hips": [
+        "pelvis", "hips", "hip", "valvebipedbip01pelvis", "腰", "ik_腰"
+    ],
+    "spine": [
+        "torso", "spine", "valvebipedbip01spine", "脊椎", "ik_脊椎"
+    ],
+    "chest": [
+        "chest", "valvebipedbip01spine1", "胸", "ik_胸"
+    ],
+    "upper_chest": [
+        "upperchest", "valvebipedbip01spine4", "上胸", "ik_上胸"
+    ],
+    "neck": [
+        "neck", "valvebipedbip01neck1", "首", "ik_首"
+    ],
+    "head": [
+        "head", "valvebipedbip01head1", "頭", "ik_頭"
+    ],
+    "left_eye": [
+        "eyeleft", "lefteye", "eyel", "leye", "左目", "ik_左目"
+    ],
+    "right_eye": [
+        "eyeright", "righteye", "eyer", "reye", "右目", "ik_右目"
+    ],
+}
 
 # Add VRM bone name variations
 bone_names.update({
