@@ -1,11 +1,17 @@
 import bpy
+import bpy_extras
 
-from typing import List, Optional
-from .common import get_armature
+from .common import get_armature, get_selected_armature, simplify_bonename, is_valid_armature
 from bpy.types import Object, ShapeKey, Mesh, Context, Operator
 from functools import lru_cache
 from ..core.register import register_wrap
 from ..functions.translations import t
+from ..core.dictionaries import bone_names
+
+import re
+from .resonite_loader import resonite_animx, resonite_types
+import os
+
 
 
 @register_wrap
@@ -34,16 +40,6 @@ class AvatarToolKit_OT_ExportResonite(Operator):
             export_nla_strips_merged_animation_name = 'Animation',
             export_nla_strips = True)
         return {'FINISHED'}
-    
-
-import bpy
-from ..core.register import register_wrap
-from typing import List, Optional
-import re
-from bpy.types import Operator, Context, Object
-from ..core.dictionaries import bone_names
-from ..core.common import get_selected_armature, simplify_bonename, is_valid_armature
-from ..functions.translations import t
 
 @register_wrap
 class AvatarToolKit_OT_ConvertToResonite(Operator):
@@ -151,3 +147,97 @@ class AvatarToolKit_OT_ConvertToResonite(Operator):
             self.report({'INFO'}, t("Tools.bones_translated_success"))
 
         return {'FINISHED'}
+
+
+@register_wrap
+class AvatarToolKit_OT_AnimX_Importer(Operator,bpy_extras.io_utils.ImportHelper):
+    bl_idname = 'avatar_toolkit.animx_importer'
+    bl_label = t('Tools.animx_importer.label')
+    bl_description = t('Tools.animx_importer.desc')
+    bl_options = {'REGISTER', 'UNDO'}
+
+    #fps = bpy.props.FloatProperty(default=25) #25 fps
+    
+    filter_glob: bpy.props.StringProperty(
+        default="*.animx",
+        options={'HIDDEN'}
+    )
+    files: bpy.props.CollectionProperty(type=bpy.types.OperatorFileListElement, options={'HIDDEN', 'SKIP_SAVE'})
+    filepath: bpy.props.StringProperty()
+
+    directory:bpy.props.StringProperty(subtype='DIR_PATH')
+
+    @classmethod
+    def poll(cls, context: Context) -> bool:
+        return True
+        
+    def execute(self, context: Context) -> set:
+        
+        Froox_animations: list[resonite_animx.AnimX] = []
+
+        #decoding using self contained library:
+        files = [file.name for file in self.files]
+        files.append(self.filepath)
+        for file in files:
+            froox_animation: resonite_animx.AnimX = resonite_animx.AnimX()
+            froox_animation.interval.x = 1/25
+            froox_animation.read(file = os.path.join(self.directory,file))
+            Froox_animations.append(froox_animation)
+
+        #Load data into Blender Animations.
+        for froox_animation in Froox_animations:
+            action: bpy.types.Action = bpy.data.actions.new(froox_animation.name.x)
+            action.use_fake_user = True
+            for track in froox_animation.tracks:
+                print("hit here1")
+                print(track.FrameType)
+                if(track.FrameType != type(resonite_types.float) and track.FrameType != type(resonite_types.double)):
+                    continue
+
+                data_path: str = track._node.x+"."+track._property.x
+                fcurve_reso = action.fcurves.new(data_path,None,track._node.x)
+                
+                print("hit here2")
+                match(type(track)):
+                    case (type(resonite_animx.RawTrack)):
+                        rawtrack: resonite_animx.RawTrack = track
+
+                        
+                        
+                        for frame in rawtrack.keyframes:
+                            key: bpy.types.Keyframe = fcurve_reso.keyframe_points.insert(frame.time, float(frame.value))
+                            
+
+                    case (type(resonite_animx.DiscreteTrack)):
+                        discretetrack: resonite_animx.RawTrack = track
+                        for frame in rawtrack.keyframes:
+                            key: bpy.types.Keyframe = fcurve_reso.keyframe_points.insert(frame.time, float(frame.value))
+
+
+                    case(type(resonite_animx.CurveTrack)):
+                        curvetrack: resonite_animx.RawTrack = track
+                        for frame in curvetrack.keyframes:
+                            key: bpy.types.Keyframe = fcurve_reso.keyframe_points.insert(frame.time, float(frame.value))
+                            key.handle_left = float(frame.left_tan)
+                            key.handle_left = float(frame.right_tan)
+
+
+                    case(type(resonite_animx.BezierTrack)):
+                        beziertrack: resonite_animx.RawTrack = track
+                        # Bezier is not supported rn, ignore.
+
+
+
+        
+
+
+
+        return {'FINISHED'}
+    
+
+    
+
+
+
+    
+

@@ -287,6 +287,9 @@ class AvatarToolkit_OT_AlignUVEdgesToTarget(Operator):
                         uv_lay.uv[corner].vector = lerped_point #put the vertcies at the point we calculated. 
                 except:
                     print("This is probably fine? - @989onan") #TODO: What happened here? The magic of making code so complex you forget if this is even an issue. - @989onan
+                    #Note: The above print statement may require reading what this entire operator does before understanding if the above print statment means anything
+                    #so if you value your time, just do a bunch of tests until the above print stament is ran or something
+                    #if in doubt and you cannot get it to run, just spend some time trying to understand the operator - @989onan
             
             print("Finished mesh \""+source+"\" for UV's")
                     

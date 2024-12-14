@@ -43,6 +43,7 @@ import_types: dict[str, typing.Callable[[str, list[dict[str,str]], str], None]] 
     "vrm": (lambda directory, files, filepath: bpy.ops.import_scene.vrm(filepath=filepath)),
     "pmx": (lambda directory, files, filepath : import_pmx(filepath)),
     "pmd": (lambda directory, files, filepath : import_pmd(filepath)),
+    "animx": (lambda directory, files, filepath : bpy.ops.avatar_toolkit.animx_importer(directory=directory,files=files,filepath=filepath)),
 }
 
 def concat_imports_filter(imports):
