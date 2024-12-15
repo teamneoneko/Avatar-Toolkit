@@ -177,7 +177,19 @@ class AvatarToolkitSceneProperties(PropertyGroup):
         ('vrc.v_th', 'TH', 'Th as in "think"')
     ],
     update=lambda s, c: VisemePreview.update_preview(c)
+    
 )
+    
+    eye_tracking_type: EnumProperty(
+    name=t("EyeTracking.type"),
+    description=t("EyeTracking.type_desc"),
+    items=[
+        ('AV3', t("EyeTracking.type.av3"), t("EyeTracking.type.av3_desc")),
+        ('SDK2', t("EyeTracking.type.sdk2"), t("EyeTracking.type.sdk2_desc"))
+    ],
+    default='AV3'
+)
+
     eye_mode: EnumProperty(
         name=t("EyeTracking.mode"),
         items=[

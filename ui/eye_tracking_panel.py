@@ -5,7 +5,8 @@ from .main_panel import AvatarToolKit_PT_AvatarToolkitPanel, CATEGORY_NAME
 from ..core.translations import t
 from ..core.common import get_active_armature, get_all_meshes
 from ..functions.eye_tracking import (
-    CreateEyesButton,
+    CreateEyesAV3Button,
+    CreateEyesSDK2Button,
     StartTestingButton,
     StopTestingButton,
     ResetRotationButton,
@@ -33,110 +34,153 @@ class AvatarToolKit_PT_EyeTrackingPanel(Panel):
         layout = self.layout
         toolkit = context.scene.avatar_toolkit
 
-        # Mode Selection Box
-        mode_box = layout.box()
-        col = mode_box.column(align=True)
-        col.label(text=t("EyeTracking.mode_select"), icon='TOOL_SETTINGS')
+        # SDK Version Selection Box
+        sdk_box = layout.box()
+        col = sdk_box.column(align=True)
+        col.label(text=t("EyeTracking.sdk_version"), icon='PRESET')
         col.separator(factor=0.5)
-        col.prop(toolkit, "eye_mode", expand=True)
+        row = col.row(align=True)
+        row.prop(toolkit, "eye_tracking_type", expand=True)
 
-        if toolkit.eye_mode == 'CREATION':
-            # Mesh Setup Box
-            mesh_box = layout.box()
-            col = mesh_box.column(align=True)
-            col.label(text=t("EyeTracking.mesh_setup"), icon='MESH_DATA')
+        if toolkit.eye_tracking_type == 'SDK2':
+            # Mode Selection Box
+            mode_box = layout.box()
+            col = mode_box.column(align=True)
+            col.label(text=t("EyeTracking.setup"), icon='TOOL_SETTINGS')
             col.separator(factor=0.5)
-            col.prop(toolkit, "mesh_name_eye", text="")
+            col.prop(toolkit, "eye_mode", expand=True)
 
-            # Bone Setup Box
-            bone_box = layout.box()
-            col = bone_box.column(align=True)
-            col.label(text=t("EyeTracking.bone_setup"), icon='BONE_DATA')
-            col.separator(factor=0.5)
-
-            armature = get_active_armature(context)
-            if armature:
-                col.prop_search(toolkit, "head", armature.data, "bones", text=t("EyeTracking.head_bone"))
-                col.prop_search(toolkit, "eye_left", armature.data, "bones", text=t("EyeTracking.eye_left"))
-                col.prop_search(toolkit, "eye_right", armature.data, "bones", text=t("EyeTracking.eye_right"))
+            if toolkit.eye_mode == 'CREATION':
+                self.draw_creation_mode(context, layout)
             else:
-                col.label(text=t("EyeTracking.no_armature"), icon='ERROR')
+                self.draw_testing_mode(context, layout)
+        else:
+            # AV3 bone setup only
+            self.draw_av3_setup(context, layout)
 
-            # Shapekey Setup Box
-            shape_box = layout.box()
-            col = shape_box.column(align=True)
-            col.label(text=t("EyeTracking.shapekey_setup"), icon='SHAPEKEY_DATA')
+    def draw_av3_setup(self, context: Context, layout: UILayout) -> None:
+        toolkit = context.scene.avatar_toolkit
+
+        # Bone Setup Box
+        bone_box = layout.box()
+        col = bone_box.column(align=True)
+        col.label(text=t("EyeTracking.bone_setup"), icon='BONE_DATA')
+        col.separator(factor=0.5)
+
+        armature = get_active_armature(context)
+        if armature:
+            col.prop_search(toolkit, "head", armature.data, "bones", text=t("EyeTracking.head_bone"))
+            col.prop_search(toolkit, "eye_left", armature.data, "bones", text=t("EyeTracking.eye_left"))
+            col.prop_search(toolkit, "eye_right", armature.data, "bones", text=t("EyeTracking.eye_right"))
+        else:
+            col.label(text=t("EyeTracking.no_armature"), icon='ERROR')
+
+        # Create Button
+        row = layout.row(align=True)
+        row.scale_y = 1.5
+        row.operator(CreateEyesAV3Button.bl_idname, icon='PLAY')
+
+    def draw_creation_mode(self, context: Context, layout: UILayout) -> None:
+        toolkit = context.scene.avatar_toolkit
+
+        # Bone Setup Box
+        bone_box = layout.box()
+        col = bone_box.column(align=True)
+        col.label(text=t("EyeTracking.bone_setup"), icon='BONE_DATA')
+        col.separator(factor=0.5)
+
+        armature = get_active_armature(context)
+        if armature:
+            col.prop_search(toolkit, "head", armature.data, "bones", text=t("EyeTracking.head_bone"))
+            col.prop_search(toolkit, "eye_left", armature.data, "bones", text=t("EyeTracking.eye_left"))
+            col.prop_search(toolkit, "eye_right", armature.data, "bones", text=t("EyeTracking.eye_right"))
+        else:
+            col.label(text=t("EyeTracking.no_armature"), icon='ERROR')
+
+        # Mesh Setup Box
+        mesh_box = layout.box()
+        col = mesh_box.column(align=True)
+        col.label(text=t("EyeTracking.mesh_setup"), icon='MESH_DATA')
+        col.separator(factor=0.5)
+        col.prop_search(toolkit, "mesh_name_eye", bpy.data, "objects", text="")
+
+        # Shape Key Setup Box
+        shape_box = layout.box()
+        col = shape_box.column(align=True)
+        col.label(text=t("EyeTracking.shapekey_setup"), icon='SHAPEKEY_DATA')
+        col.separator(factor=0.5)
+
+        mesh = bpy.data.objects.get(toolkit.mesh_name_eye)
+        if mesh and mesh.data.shape_keys:
+            col.prop_search(toolkit, "wink_left", mesh.data.shape_keys, "key_blocks", text=t("EyeTracking.wink_left"))
+            col.prop_search(toolkit, "wink_right", mesh.data.shape_keys, "key_blocks", text=t("EyeTracking.wink_right"))
+            col.prop_search(toolkit, "lowerlid_left", mesh.data.shape_keys, "key_blocks", text=t("EyeTracking.lowerlid_left"))
+            col.prop_search(toolkit, "lowerlid_right", mesh.data.shape_keys, "key_blocks", text=t("EyeTracking.lowerlid_right"))
+        else:
+            col.label(text=t("EyeTracking.no_shapekeys"), icon='ERROR')
+
+        # Options Box
+        options_box = layout.box()
+        col = options_box.column(align=True)
+        col.label(text=t("EyeTracking.options"), icon='SETTINGS')
+        col.separator(factor=0.5)
+        col.prop(toolkit, "disable_eye_blinking")
+        col.prop(toolkit, "disable_eye_movement")
+        if not toolkit.disable_eye_movement:
+            col.prop(toolkit, "eye_distance")
+
+        # Create Button
+        row = layout.row(align=True)
+        row.scale_y = 1.5
+        row.operator(CreateEyesSDK2Button.bl_idname, icon='PLAY')
+
+    def draw_testing_mode(self, context: Context, layout: UILayout) -> None:
+        toolkit = context.scene.avatar_toolkit
+
+        if context.mode != 'POSE':
+            # Testing Start Box
+            test_box = layout.box()
+            col = test_box.column(align=True)
+            col.label(text=t("EyeTracking.testing"), icon='PLAY')
             col.separator(factor=0.5)
-
-            mesh = bpy.data.objects.get(toolkit.mesh_name_eye)
-            if mesh and mesh.data.shape_keys:
-                col.prop_search(toolkit, "wink_left", mesh.data.shape_keys, "key_blocks", text=t("EyeTracking.wink_left"))
-                col.prop_search(toolkit, "wink_right", mesh.data.shape_keys, "key_blocks", text=t("EyeTracking.wink_right"))
-                col.prop_search(toolkit, "lowerlid_left", mesh.data.shape_keys, "key_blocks", text=t("EyeTracking.lowerlid_left"))
-                col.prop_search(toolkit, "lowerlid_right", mesh.data.shape_keys, "key_blocks", text=t("EyeTracking.lowerlid_right"))
-            else:
-                col.label(text=t("EyeTracking.no_shapekeys"), icon='ERROR')
-
-            # Options Box
-            options_box = layout.box()
-            col = options_box.column(align=True)
-            col.label(text=t("EyeTracking.options"), icon='SETTINGS')
+            row = col.row(align=True)
+            row.scale_y = 1.5
+            row.operator(StartTestingButton.bl_idname, icon='PLAY')
+        else:
+            # Eye Rotation Box
+            rotation_box = layout.box()
+            col = rotation_box.column(align=True)
+            col.label(text=t("EyeTracking.rotation_controls"), icon='DRIVER_ROTATIONAL_DIFFERENCE')
             col.separator(factor=0.5)
-            col.prop(toolkit, "disable_eye_blinking")
-            col.prop(toolkit, "disable_eye_movement")
-            if not toolkit.disable_eye_movement:
-                col.prop(toolkit, "eye_distance")
+            col.prop(toolkit, "eye_rotation_x", text=t("EyeTracking.rotation.x"))
+            col.prop(toolkit, "eye_rotation_y", text=t("EyeTracking.rotation.y"))
+            col.operator(ResetRotationButton.bl_idname, icon='LOOP_BACK')
 
-            # Create Button
+            # Eye Adjustment Box
+            adjust_box = layout.box()
+            col = adjust_box.column(align=True)
+            col.label(text=t("EyeTracking.adjustments"), icon='MODIFIER')
+            col.separator(factor=0.5)
+            col.prop(toolkit, "eye_distance")
+            col.operator(AdjustEyesButton.bl_idname, icon='CON_TRACKTO')
+
+            # Blinking Test Box
+            blink_box = layout.box()
+            col = blink_box.column(align=True)
+            col.label(text=t("EyeTracking.blink_testing"), icon='HIDE_OFF')
+            col.separator(factor=0.5)
+            row = col.row(align=True)
+            row.prop(toolkit, "eye_blink_shape")
+            row.operator(TestBlinking.bl_idname, icon='RESTRICT_VIEW_OFF')
+            row = col.row(align=True)
+            row.prop(toolkit, "eye_lowerlid_shape")
+            row.operator(TestLowerlid.bl_idname, icon='RESTRICT_VIEW_OFF')
+            col.operator(ResetBlinkTest.bl_idname, icon='LOOP_BACK')
+
+            # Stop Testing Button
             row = layout.row(align=True)
             row.scale_y = 1.5
-            row.operator(CreateEyesButton.bl_idname, icon='PLAY')
-
-        else:
-            if context.mode != 'POSE':
-                # Testing Start Box
-                test_box = layout.box()
-                col = test_box.column(align=True)
-                col.label(text=t("EyeTracking.testing"), icon='PLAY')
-                col.separator(factor=0.5)
-                row = col.row(align=True)
-                row.scale_y = 1.5
-                row.operator(StartTestingButton.bl_idname, icon='PLAY')
-            else:
-                # Eye Rotation Box
-                rotation_box = layout.box()
-                col = rotation_box.column(align=True)
-                col.label(text=t("EyeTracking.rotation_controls"), icon='DRIVER_ROTATIONAL_DIFFERENCE')
-                col.separator(factor=0.5)
-                col.prop(toolkit, "eye_rotation_x", text=t("EyeTracking.rotation.x"))
-                col.prop(toolkit, "eye_rotation_y", text=t("EyeTracking.rotation.y"))
-                col.operator(ResetRotationButton.bl_idname, icon='LOOP_BACK')
-
-                # Eye Adjustment Box
-                adjust_box = layout.box()
-                col = adjust_box.column(align=True)
-                col.label(text=t("EyeTracking.adjustments"), icon='MODIFIER')
-                col.separator(factor=0.5)
-                col.prop(toolkit, "eye_distance")
-                col.operator(AdjustEyesButton.bl_idname, icon='CON_TRACKTO')
-
-                # Blinking Test Box
-                blink_box = layout.box()
-                col = blink_box.column(align=True)
-                col.label(text=t("EyeTracking.blink_testing"), icon='HIDE_OFF')
-                col.separator(factor=0.5)
-                row = col.row(align=True)
-                row.prop(toolkit, "eye_blink_shape")
-                row.operator(TestBlinking.bl_idname, icon='RESTRICT_VIEW_OFF')
-                row = col.row(align=True)
-                row.prop(toolkit, "eye_lowerlid_shape")
-                row.operator(TestLowerlid.bl_idname, icon='RESTRICT_VIEW_OFF')
-                col.operator(ResetBlinkTest.bl_idname, icon='LOOP_BACK')
-
-                # Stop Testing Button
-                row = layout.row(align=True)
-                row.scale_y = 1.5
-                row.operator(StopTestingButton.bl_idname, icon='PAUSE')
+            row.operator(StopTestingButton.bl_idname, icon='PAUSE')
 
         # Reset Button
         row = layout.row(align=True)

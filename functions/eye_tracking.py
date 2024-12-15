@@ -29,6 +29,177 @@ VALID_EYE_NAMES = {
     'right': ['RightEye', 'Eye_R', 'eye_R', 'eye.R', 'EyeRight', 'right_eye', 'r_eye']
 }
 
+class CreateEyesAV3Button(bpy.types.Operator):
+    """Create eye tracking setup for VRChat Avatar 3.0"""
+    bl_idname = 'avatar_toolkit.create_eye_tracking_av3'
+    bl_label = t('EyeTracking.create.av3.label')
+    bl_description = t('EyeTracking.create.av3.desc')
+    bl_options = {'REGISTER', 'UNDO'}
+
+    mesh = None
+
+    @classmethod
+    def poll(cls, context):
+        toolkit = context.scene.avatar_toolkit
+        if not toolkit.head or not toolkit.eye_left or not toolkit.eye_right:
+            return False
+        return True
+
+    def execute(self, context):
+        toolkit = context.scene.avatar_toolkit
+        armature = get_active_armature(context)
+        
+        with ProgressTracker(context, 100, "Creating AV3 Eye Tracking") as progress:
+            try:
+                context.view_layer.objects.active = armature
+                bpy.ops.object.mode_set(mode='EDIT')
+                progress.step("Setting up bones")
+
+                # Set up bones
+                head = armature.data.edit_bones.get(toolkit.head)
+                old_eye_left = armature.data.edit_bones.get(toolkit.eye_left)
+                old_eye_right = armature.data.edit_bones.get(toolkit.eye_right)
+
+                # Store original names and transformations
+                left_name = old_eye_left.name
+                right_name = old_eye_right.name
+                left_matrix = old_eye_left.matrix.copy()
+                right_matrix = old_eye_right.matrix.copy()
+                left_length = old_eye_left.length
+                right_length = old_eye_right.length
+
+                # Unparent and remove original bones
+                old_eye_left.parent = None
+                old_eye_right.parent = None
+                armature.data.edit_bones.remove(old_eye_left)
+                armature.data.edit_bones.remove(old_eye_right)
+
+                # Create new eye bones with original names
+                new_left_eye = armature.data.edit_bones.new(left_name)
+                new_right_eye = armature.data.edit_bones.new(right_name)
+                
+                # Parent them
+                new_left_eye.parent = head
+                new_right_eye.parent = head
+
+                # Calculate straight up orientation matrix
+                straight_up_matrix = mathutils.Matrix.Rotation(math.pi/2, 3, 'X')
+
+                # Apply rotation while preserving position
+                for eye_data in [(new_left_eye, left_matrix, left_length), 
+                               (new_right_eye, right_matrix, right_length)]:
+                    new_eye, orig_matrix, length = eye_data
+                    new_matrix = straight_up_matrix.to_4x4()
+                    new_matrix.translation = orig_matrix.translation
+                    new_eye.matrix = new_matrix
+                    new_eye.length = length
+
+                # Disable mirroring to prevent unwanted behavior
+                armature.data.use_mirror_x = False
+
+
+                progress.step("Finalizing setup")
+                bpy.ops.object.mode_set(mode='OBJECT')
+                
+                self.report({'INFO'}, t('EyeTracking.success'))
+                return {'FINISHED'}
+
+            except Exception as e:
+                logger.error(f"Eye tracking setup failed: {str(e)}")
+                return {'CANCELLED'}
+
+class CreateEyesSDK2Button(bpy.types.Operator):
+    """Create eye tracking setup for VRChat SDK2"""
+    bl_idname = 'avatar_toolkit.create_eye_tracking_sdk2'
+    bl_label = t('EyeTracking.create.sdk2.label')
+    bl_description = t('EyeTracking.create.sdk2.desc')
+    bl_options = {'REGISTER', 'UNDO'}
+
+    mesh = None
+
+    @classmethod
+    def poll(cls, context):
+        if not get_all_meshes(context):
+            return False
+
+        toolkit = context.scene.avatar_toolkit
+        if not toolkit.head or not toolkit.eye_left or not toolkit.eye_right:
+            return False
+
+        if toolkit.disable_eye_blinking and toolkit.disable_eye_movement:
+            return False
+
+        return True
+
+    def execute(self, context):
+        toolkit = context.scene.avatar_toolkit
+        armature = get_active_armature(context)
+        
+        with ProgressTracker(context, 100, "Creating SDK2 Eye Tracking") as progress:
+            # Validate setup
+            validator = EyeTrackingValidator()
+            is_valid, message = validator.validate_setup(context, toolkit.mesh_name_eye)
+            if not is_valid:
+                self.report({'ERROR'}, message)
+                return {'CANCELLED'}
+
+            try:
+                context.view_layer.objects.active = armature
+                bpy.ops.object.mode_set(mode='EDIT')
+                progress.step("Setting up bones")
+
+                self.mesh = bpy.data.objects.get(toolkit.mesh_name_eye)
+
+                # Set up bones
+                head = armature.data.edit_bones.get(toolkit.head)
+                old_eye_left = armature.data.edit_bones.get(toolkit.eye_left)
+                old_eye_right = armature.data.edit_bones.get(toolkit.eye_right)
+
+                # Create new eye bones
+                new_left_eye = armature.data.edit_bones.new('LeftEye')
+                new_right_eye = armature.data.edit_bones.new('RightEye')
+                
+                # Parent them
+                new_left_eye.parent = head
+                new_right_eye.parent = head
+
+                # Calculate positions for SDK2 style
+                fix_eye_position(context, old_eye_left, new_left_eye, head, False)
+                fix_eye_position(context, old_eye_right, new_right_eye, head, True)
+
+                progress.step("Processing vertex groups")
+                if not toolkit.disable_eye_movement:
+                    # Switch to object mode for vertex group operations
+                    bpy.ops.object.mode_set(mode='OBJECT')
+                    bpy.ops.object.select_all(action='DESELECT')
+                    self.mesh.select_set(True)
+                    context.view_layer.objects.active = self.mesh
+                    
+                    copy_vertex_group(self, old_eye_left.name, 'LeftEye')
+                    copy_vertex_group(self, old_eye_right.name, 'RightEye')
+                    
+                    # Return to armature edit mode
+                    context.view_layer.objects.active = armature
+                    bpy.ops.object.mode_set(mode='EDIT')
+
+                progress.step("Processing shape keys")
+                if not toolkit.disable_eye_blinking:
+                    shapes = [toolkit.wink_left, toolkit.wink_right,
+                             toolkit.lowerlid_left, toolkit.lowerlid_right]
+                    new_shapes = ['vrc.blink_left', 'vrc.blink_right',
+                                'vrc.lowerlid_left', 'vrc.lowerlid_right']
+
+                progress.step("Finalizing setup")
+                bpy.ops.object.mode_set(mode='OBJECT')
+                toolkit.eye_mode = 'TESTING'
+                
+                self.report({'INFO'}, t('EyeTracking.success'))
+                return {'FINISHED'}
+
+            except Exception as e:
+                logger.error(f"Eye tracking setup failed: {str(e)}")
+                return {'CANCELLED'}
+
 class EyeTrackingBackup:
     def __init__(self):
         self.backup_path = os.path.join(bpy.app.tempdir, "eye_tracking_backup.json")
@@ -126,108 +297,6 @@ class EyeTrackingValidator:
             return False, t('EyeTracking.validation.missingBones', bones=', '.join(missing_bones))
             
         return True, t('EyeTracking.validation.success')
-
-class CreateEyesButton(bpy.types.Operator):
-    bl_idname = 'avatar_toolkit.create_eye_tracking'
-    bl_label = t('EyeTracking.create.label')
-    bl_description = t('EyeTracking.create.desc')
-    bl_options = {'REGISTER', 'UNDO'}
-
-    mesh = None
-
-    @classmethod
-    def poll(cls, context):
-        if not get_all_meshes(context):
-            return False
-
-        toolkit = context.scene.avatar_toolkit
-        if not toolkit.head or not toolkit.eye_left or not toolkit.eye_right:
-            return False
-
-        if toolkit.disable_eye_blinking and toolkit.disable_eye_movement:
-            return False
-
-        return True
-
-    def execute(self, context):
-        toolkit = context.scene.avatar_toolkit
-        armature = get_active_armature(context)
-        
-        with ProgressTracker(context, 100, "Creating Eye Tracking") as progress:
-            # Validate setup
-            validator = EyeTrackingValidator()
-            is_valid, message = validator.validate_setup(context, toolkit.mesh_name_eye)
-            if not is_valid:
-                self.report({'ERROR'}, message)
-                return {'CANCELLED'}
-
-            # Create backup
-            backup = EyeTrackingBackup()
-            if not backup.store_bone_positions(armature):
-                logger.warning("Failed to create backup")
-
-            try:
-                # Set active object and mode
-                context.view_layer.objects.active = armature
-                bpy.ops.object.mode_set(mode='EDIT')
-                progress.step("Setting up bones")
-
-                self.mesh = bpy.data.objects.get(toolkit.mesh_name_eye)
-
-                # Set up bones
-                head = armature.data.edit_bones.get(toolkit.head)
-                old_eye_left = armature.data.edit_bones.get(toolkit.eye_left)
-                old_eye_right = armature.data.edit_bones.get(toolkit.eye_right)
-
-                if not toolkit.disable_eye_blinking:
-                    if not all([toolkit.wink_left, toolkit.wink_right, 
-                              toolkit.lowerlid_left, toolkit.lowerlid_right]):
-                        self.report({'ERROR'}, t('EyeTracking.error.noShapeSelected'))
-                        return {'CANCELLED'}
-
-                progress.step("Processing vertex groups")
-                
-                # Create new eye bones
-                new_left_eye = armature.data.edit_bones.new('LeftEye')
-                new_right_eye = armature.data.edit_bones.new('RightEye')
-                
-                # Parent them
-                new_left_eye.parent = head
-                new_right_eye.parent = head
-
-                # Calculate positions
-                fix_eye_position(context, old_eye_left, new_left_eye, head, False)
-                fix_eye_position(context, old_eye_right, new_right_eye, head, True)
-
-                progress.step("Processing shape keys")
-
-                # Process shape keys
-                if not toolkit.disable_eye_movement:
-                    self.copy_vertex_group(old_eye_left.name, 'LeftEye')
-                    self.copy_vertex_group(old_eye_right.name, 'RightEye')
-
-                # Handle shape keys
-                shapes = [toolkit.wink_left, toolkit.wink_right,
-                         toolkit.lowerlid_left, toolkit.lowerlid_right]
-                new_shapes = ['vrc.blink_left', 'vrc.blink_right',
-                            'vrc.lowerlid_left', 'vrc.lowerlid_right']
-
-                progress.step("Finalizing setup")
-
-                # Reset modes and cleanup
-                bpy.ops.object.mode_set(mode='OBJECT')
-                
-                # Update scene properties
-                toolkit.eye_mode = 'TESTING'
-                
-                self.report({'INFO'}, t('EyeTracking.success'))
-                return {'FINISHED'}
-
-            except Exception as e:
-                logger.error(f"Eye tracking setup failed: {str(e)}")
-                if backup.restore_bone_positions(get_active_armature(context)):
-                    logger.info("Restored from backup")
-                return {'CANCELLED'}
             
 class StartTestingButton(bpy.types.Operator):
     bl_idname = 'avatar_toolkit.start_eye_testing'
@@ -317,6 +386,8 @@ class StopTestingButton(bpy.types.Operator):
         eye_right_data = None
         eye_left_rot = []
         eye_right_rot = []
+
+        bpy.ops.object.mode_set(mode='OBJECT')
 
         return {'FINISHED'}
 
@@ -695,6 +766,12 @@ def vertex_group_exists(mesh_obj, group_name):
 def copy_vertex_group(self, vertex_group, rename_to):
     """Copy vertex group with new name"""
     vertex_group_index = 0
+    # Select and make mesh active
+    bpy.ops.object.mode_set(mode='OBJECT')
+    bpy.ops.object.select_all(action='DESELECT')
+    self.mesh.select_set(True)
+    bpy.context.view_layer.objects.active = self.mesh
+    
     for group in self.mesh.vertex_groups:
         if group.name == vertex_group:
             self.mesh.vertex_groups.active_index = vertex_group_index
@@ -702,6 +779,7 @@ def copy_vertex_group(self, vertex_group, rename_to):
             self.mesh.vertex_groups[vertex_group + '_copy'].name = rename_to
             break
         vertex_group_index += 1
+
 
 def copy_shape_key(self, context, from_shape, new_names, new_index):
     """Copy shape key with new name"""
