@@ -13,6 +13,7 @@ class AvatarToolKit_PT_OptimizationPanel(Panel):
     bl_category: str = CATEGORY_NAME
     bl_parent_id: str = AvatarToolKit_PT_AvatarToolkitPanel.bl_idname
     bl_order: int = 1
+    bl_options = {'DEFAULT_CLOSED'}
 
     def draw(self, context: Context) -> None:
         """Draws the optimization panel interface with material, mesh cleanup and join mesh tools"""

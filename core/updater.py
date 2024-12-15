@@ -77,6 +77,7 @@ class AvatarToolkit_PT_UpdaterPanel(bpy.types.Panel):
     bl_category = CATEGORY_NAME
     bl_parent_id = AvatarToolKit_PT_AvatarToolkitPanel.bl_idname
     bl_order = 4
+    bl_options = {'DEFAULT_CLOSED'}
 
     def draw(self, context: bpy.types.Context) -> None:
         layout = self.layout

@@ -485,3 +485,94 @@ def remove_unused_shapekeys(mesh_obj: Object, tolerance: float = 0.001) -> int:
         removed_count += 1
         
     return removed_count
+
+def has_shapekeys(mesh_obj: Object) -> bool:
+    return mesh_obj.data.shape_keys is not None
+
+# Identifier to indicate that an EnumProperty is empty
+# This is the default identifier used when a wrapped items function returns an empty list
+# This identifier needs to be something that should never normally be used, so as to avoid the possibility of
+# conflicting with an enum value that exists.
+_empty_enum_identifier = 'Cats_empty_enum_identifier'
+
+# names - The first object will be the first one in the list. So the first one has to be the one that exists in the most models
+# no_basis - If this is true the Basis will not be available in the list
+def get_shapekeys(context, names, is_mouth, no_basis, return_list):
+    choices = []
+    choices_simple = []
+    meshes_list = get_meshes_objects(check=False)
+
+    if meshes_list:
+        if is_mouth:
+            meshes = [get_objects().get(context.scene.mesh_name_viseme)]
+        else:
+            meshes = [get_objects().get(context.scene.mesh_name_eye)]
+    else:
+        return choices
+
+    for mesh in meshes:
+        if not mesh or not has_shapekeys(mesh):
+            return choices
+
+        for shapekey in mesh.data.shape_keys.key_blocks:
+            name = shapekey.name
+            if name in choices_simple:
+                continue
+            if no_basis and name == 'Basis':
+                continue
+            # 1. Will be returned by context.scene
+            # 2. Will be shown in lists
+            # 3. will be shown in the hover description (below description)
+            choices.append((name, name, name))
+            choices_simple.append(name)
+
+    _sort_enum_choices_by_identifier_lower(choices)
+
+    choices2 = []
+    for name in names:
+        if name in choices_simple and len(choices) > 1 and choices[0][0] != name:
+            continue
+        choices2.append((name, name, name))
+
+    choices2.extend(choices)
+
+    if return_list:
+        shape_list = []
+        for choice in choices2:
+            shape_list.append(choice[0])
+        return shape_list
+
+    return choices2
+
+# Default sorting for dynamic EnumProperty items
+def _sort_enum_choices_by_identifier_lower(choices, in_place=True):
+    """Sort a list of enum choices (items) by the lowercase of their identifier.
+
+    Sorting is performed in-place by default, but can be changed by setting in_place=False.
+
+    Returns the sorted list of enum choices."""
+
+    def identifier_lower(choice):
+        return choice[0].lower()
+
+    if in_place:
+        choices.sort(key=identifier_lower)
+    else:
+        choices = sorted(choices, key=identifier_lower)
+    return choices
+
+def is_enum_empty(string):
+    """Returns True only if the tested string is the string that signifies that an EnumProperty is empty.
+
+    Returns False in all other cases."""
+    return _empty_enum_identifier == string
+
+
+# This function isn't needed since you can 'not is_enum_empty(string)', but is included for code clarity and readability
+def is_enum_non_empty(string):
+    """Returns False only if the tested string is not the string that signifies that an EnumProperty is empty.
+
+    Returns True in all other cases."""
+    return _empty_enum_identifier != string
+
+

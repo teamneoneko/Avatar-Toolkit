@@ -15,6 +15,8 @@ from .translations import t, get_languages_list, update_language
 from .addon_preferences import get_preference, save_preference
 from .updater import get_version_list
 from .common import get_armature_list, get_active_armature, get_all_meshes
+from ..functions.visemes import VisemePreview
+from ..functions.eye_tracking import set_rotation
 
 def update_validation_mode(self, context):
     logger.info(f"Updating validation mode to: {self.validation_mode}")
@@ -25,6 +27,11 @@ def update_logging_state(self, context):
     save_preference("enable_logging", self.enable_logging)
     from .logging_setup import configure_logging
     configure_logging(self.enable_logging)
+
+def update_shape_intensity(self, context):
+    if self.viseme_preview_mode:
+        from ..functions.visemes import VisemePreview
+        VisemePreview.update_preview(context)
 
 class AvatarToolkitSceneProperties(PropertyGroup):
     """Property group containing Avatar Toolkit scene-level settings and properties"""
@@ -110,6 +117,168 @@ class AvatarToolkitSceneProperties(PropertyGroup):
         default=0.01,
         min=0.0,
         max=1.0
+    )
+
+    viseme_preview_mode: BoolProperty(
+        name=t("Visemes.preview_mode"),
+        description=t("Visemes.preview_mode_desc"),
+        default=False
+    )
+    
+    viseme_preview_selection: StringProperty(
+        name=t("Visemes.preview_selection"),
+        description=t("Visemes.preview_selection_desc"),
+        default="vrc.v_aa"
+    )
+    
+    mouth_a: StringProperty(
+        name=t("Visemes.mouth_a"),
+        description=t("Visemes.mouth_a_desc")
+    )
+    
+    mouth_o: StringProperty(
+        name=t("Visemes.mouth_o"), 
+        description=t("Visemes.mouth_o_desc")
+    )
+    
+    mouth_ch: StringProperty(
+        name=t("Visemes.mouth_ch"),
+        description=t("Visemes.mouth_ch_desc")
+    )
+
+    shape_intensity: FloatProperty(
+        name=t("Visemes.shape_intensity"),
+        description=t("Visemes.shape_intensity_desc"),
+        default=1.0,
+        min=0.0,
+        max=2.0,
+        precision=3,
+        update=update_shape_intensity
+    )
+
+    viseme_preview_selection: EnumProperty(
+    name=t("Visemes.preview_selection"),
+    description=t("Visemes.preview_selection_desc"),
+    items=[
+        ('vrc.v_aa', 'AA', 'A as in "bat"'),
+        ('vrc.v_ch', 'CH', 'Ch as in "choose"'),
+        ('vrc.v_dd', 'DD', 'D as in "dog"'),
+        ('vrc.v_ih', 'IH', 'I as in "bit"'),
+        ('vrc.v_ff', 'FF', 'F as in "fox"'),
+        ('vrc.v_e', 'E', 'E as in "bet"'),
+        ('vrc.v_kk', 'KK', 'K as in "cat"'),
+        ('vrc.v_nn', 'NN', 'N as in "net"'),
+        ('vrc.v_oh', 'OH', 'O as in "hot"'),
+        ('vrc.v_ou', 'OU', 'O as in "go"'),
+        ('vrc.v_pp', 'PP', 'P as in "pat"'),
+        ('vrc.v_rr', 'RR', 'R as in "red"'),
+        ('vrc.v_sil', 'SIL', 'Silence'),
+        ('vrc.v_ss', 'SS', 'S as in "sit"'),
+        ('vrc.v_th', 'TH', 'Th as in "think"')
+    ],
+    update=lambda s, c: VisemePreview.update_preview(c)
+)
+    eye_mode: EnumProperty(
+        name=t("EyeTracking.mode"),
+        items=[
+            ('CREATION', t("EyeTracking.mode.creation"), ""),
+            ('TESTING', t("EyeTracking.mode.testing"), "")
+        ],
+        default='CREATION'
+    )
+
+    eye_rotation_x: FloatProperty(
+        name=t("EyeTracking.rotation.x"),
+        update=set_rotation
+    )
+
+    eye_rotation_y: FloatProperty(
+        name=t("EyeTracking.rotation.y"), 
+        update=set_rotation
+    )
+
+    mesh_name_eye: StringProperty(
+        name=t("EyeTracking.mesh_name"),
+        description=t("EyeTracking.mesh_name_desc")
+    )
+
+    head: StringProperty(
+        name=t("EyeTracking.head_bone"),
+        description=t("EyeTracking.head_bone_desc")
+    )
+
+    eye_left: StringProperty(
+        name=t("EyeTracking.eye_left"),
+        description=t("EyeTracking.eye_left_desc")
+    )
+
+    eye_right: StringProperty(
+        name=t("EyeTracking.eye_right"), 
+        description=t("EyeTracking.eye_right_desc")
+    )
+
+    disable_eye_movement: BoolProperty(
+        name=t("EyeTracking.disable_movement"),
+        description=t("EyeTracking.disable_movement_desc"),
+        default=False
+    )
+
+    disable_eye_blinking: BoolProperty(
+        name=t("EyeTracking.disable_blinking"),
+        description=t("EyeTracking.disable_blinking_desc"),
+        default=False
+    )
+
+    eye_distance: FloatProperty(
+        name=t("EyeTracking.distance"),
+        description=t("EyeTracking.distance_desc"),
+        default=0.0,
+        min=-1.0,
+        max=1.0
+    )
+
+    iris_height: FloatProperty(
+        name=t("EyeTracking.iris_height"),
+        description=t("EyeTracking.iris_height_desc"),
+        default=0.0,
+        min=-1.0,
+        max=1.0
+    )
+
+    eye_blink_shape: FloatProperty(
+        name=t("EyeTracking.blink_shape"),
+        description=t("EyeTracking.blink_shape_desc"),
+        default=1.0,
+        min=0.0,
+        max=1.0
+    )
+
+    eye_lowerlid_shape: FloatProperty(
+        name=t("EyeTracking.lowerlid_shape"),
+        description=t("EyeTracking.lowerlid_shape_desc"),
+        default=1.0,
+        min=0.0,
+        max=1.0
+    )
+
+    wink_left: StringProperty(
+        name=t("EyeTracking.wink_left"),
+        description=t("EyeTracking.wink_left_desc")
+    )
+
+    wink_right: StringProperty(
+        name=t("EyeTracking.wink_right"),
+        description=t("EyeTracking.wink_right_desc")
+    )
+
+    lowerlid_left: StringProperty(
+        name=t("EyeTracking.lowerlid_left"),
+        description=t("EyeTracking.lowerlid_left_desc")
+    )
+
+    lowerlid_right: StringProperty(
+        name=t("EyeTracking.lowerlid_right"),
+        description=t("EyeTracking.lowerlid_right_desc")
     )
 
 def register() -> None:
