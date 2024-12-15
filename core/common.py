@@ -502,56 +502,7 @@ def transfer_vertex_weights(context: Context, obj: bpy.types.Object, source_grou
 
 #Binary tools
 
-import ctypes
-def ReadCSharp_str(data: BytesIO) -> str:
-    return data.read(read7bitEncoded_int(data)).decode('utf-16-le')
 
-def WriteCSharp_str(data: BytesIO, string: str) -> str:
-    write7bitEncoded_int(len(string)*2)
-    return data.write(string.encode("utf-16-le"))
-
-def read7bitEncoded_ulong(data: BytesIO) -> np.int64:
-        num: ctypes.c_uint = ctypes.c_uint(0)
-        num2: int = 0
-        flag: bool = True
-        
-        while (flag):
-            b: ctypes.c_ubyte = ctypes.c_ubyte(struct.unpack('<B', data.read(1))[0])
-            flag = ((b & 128) > 0)
-            num |= ((b & 127) << num2)
-            num2 += 7
-            if not flag:
-                break
-
-        return num
-
-def read7bitEncoded_int(data: BytesIO) -> ctypes.c_int:
-        num: ctypes.c_int = ctypes.c_int(0)
-        num2:ctypes.c_int = ctypes.c_int(0)
-        while (num2 != 35):
-            b: ctypes.c_ubyte = ctypes.c_ubyte(struct.unpack('<B', data.read(1))[0])
-            num |= int(b & 127) << num2
-            num2 += 7
-            if ((b & 128) == 0):
-                return num
-        return -1
-
-def write7bitEncoded_ulong(data: BytesIO, integer: ctypes.c_ulong) -> None:
-    while integer > ctypes.c_ulong(0):
-        b: ctypes.c_ubyte = ctypes.c_ubyte(integer & ctypes.c_ulong(127))
-        integer >>= 7
-        if integer > ctypes.c_ulong(0):
-            b |= 128
-        data.write(b)
-        if integer <= ctypes.c_ulong(0):
-            return
-
-def write7bitEncoded_int(data: BytesIO, value: ctypes.c_int) -> None:
-    num: ctypes.c_uint = ctypes.c_uint(value)
-    while(num >= ctypes.c_ubyte(128)):
-        data.write(ctypes.c_ubyte(num | ctypes.c_ubyte(128)))
-        num >>= 7
-    data.Write(ctypes.c_ubyte(num))
 
 
 #encoding FrooxEngine/C# types in binary:

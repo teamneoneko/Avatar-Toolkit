@@ -1,5 +1,7 @@
+from types import FrameType
 import bpy
 import bpy_extras
+from numpy import double
 
 from .common import get_armature, get_selected_armature, simplify_bonename, is_valid_armature
 from bpy.types import Object, ShapeKey, Mesh, Context, Operator
@@ -149,6 +151,14 @@ class AvatarToolKit_OT_ConvertToResonite(Operator):
         return {'FINISHED'}
 
 
+def makeorexistingfcurve(action: bpy.types.Action,data_path: str,action_group: str, index=0) -> bpy.types.FCurve:
+    fcurve = action.fcurves.find(data_path=data_path,index=index)
+    if fcurve == None:
+        return action.fcurves.new(data_path,action_group=action_group,index=index)
+    else:
+        print("fcurve with data \""+data_path+"\" already exists")
+        return fcurve
+
 @register_wrap
 class AvatarToolKit_OT_AnimX_Importer(Operator,bpy_extras.io_utils.ImportHelper):
     bl_idname = 'avatar_toolkit.animx_importer'
@@ -169,7 +179,7 @@ class AvatarToolKit_OT_AnimX_Importer(Operator,bpy_extras.io_utils.ImportHelper)
 
     @classmethod
     def poll(cls, context: Context) -> bool:
-        return True
+        return context.active_object != None
         
     def execute(self, context: Context) -> set:
         
@@ -177,62 +187,112 @@ class AvatarToolKit_OT_AnimX_Importer(Operator,bpy_extras.io_utils.ImportHelper)
 
         #decoding using self contained library:
         files = [file.name for file in self.files]
-        files.append(self.filepath)
+        #files.append(self.filepath)
         for file in files:
             froox_animation: resonite_animx.AnimX = resonite_animx.AnimX()
-            froox_animation.interval.x = 1/25
+            froox_animation.interval.x = 30 #should be default fps
             froox_animation.read(file = os.path.join(self.directory,file))
             Froox_animations.append(froox_animation)
+
+        #TODO: Allow multiple targets and setting animations to each one somehow with an interface.
+        target: bpy.types.Object = context.active_object
+        if target.animation_data == None:
+            target.animation_data_create()
 
         #Load data into Blender Animations.
         for froox_animation in Froox_animations:
             action: bpy.types.Action = bpy.data.actions.new(froox_animation.name.x)
+            target.animation_data.action = action
             action.use_fake_user = True
             for track in froox_animation.tracks:
-                print("hit here1")
-                print(track.FrameType)
-                if(track.FrameType != type(resonite_types.float) and track.FrameType != type(resonite_types.double)):
+                data_path: str
+                actualproperty: str = track.property.x
+
+                match(actualproperty):
+                    case("Position"):
+                        actualproperty = "location"
+                    case("Rotation"):
+                        actualproperty = "rotation_quaternion"
+                    case("Scale"):
+                        actualproperty = "scale"
+                data_path = actualproperty
+
+                if target.type == "ARMATURE":
+                    data_path = "pose.bones[\""+track.node.x+"\"]."+data_path
+
+                    for posebone in target.pose.bones:
+                        posebone.rotation_mode = "QUATERNION"
+
+                print("reading frames for "+data_path)
+                if(track.FrameType == "resonite_types.double" or track.FrameType == "resonite_types.double"):
+                    self.readTrackData(track,makeorexistingfcurve(action=action,data_path=data_path,action_group=track.node.x,index=0),".x")
+                elif (track.FrameType == "resonite_types.float3" or track.FrameType == "resonite_types.double3"):
+                    self.readTrackData(track,makeorexistingfcurve(action=action,data_path=data_path,action_group=track.node.x,index=0),".x")
+                    self.readTrackData(track,makeorexistingfcurve(action=action,data_path=data_path,action_group=track.node.x,index=2),".y")
+                    self.readTrackData(track,makeorexistingfcurve(action=action,data_path=data_path,action_group=track.node.x,index=1),".z")
+                elif (track.FrameType == "resonite_types.float4" or track.FrameType == "resonite_types.double4"):
+                    self.readTrackData(track,makeorexistingfcurve(action=action,data_path=data_path,action_group=track.node.x,index=0),".x")
+                    self.readTrackData(track,makeorexistingfcurve(action=action,data_path=data_path,action_group=track.node.x,index=1),".y")
+                    self.readTrackData(track,makeorexistingfcurve(action=action,data_path=data_path,action_group=track.node.x,index=2),".z")
+                    self.readTrackData(track,makeorexistingfcurve(action=action,data_path=data_path,action_group=track.node.x,index=3),".w")
+                elif (track.FrameType == "resonite_types.doubleQ" or track.FrameType == "resonite_types.floatQ"):
+                    self.readTrackData(track,makeorexistingfcurve(action=action,data_path=data_path,action_group=track.node.x,index=3),".w")
+                    self.readTrackData(track,makeorexistingfcurve(action=action,data_path=data_path,action_group=track.node.x,index=0),".x")
+                    self.readTrackData(track,makeorexistingfcurve(action=action,data_path=data_path,action_group=track.node.x,index=2),".y")
+                    self.readTrackData(track,makeorexistingfcurve(action=action,data_path=data_path,action_group=track.node.x,index=1),".z")
+                else:
                     continue
+        return {'FINISHED'}
 
-                data_path: str = track._node.x+"."+track._property.x
-                fcurve_reso = action.fcurves.new(data_path,None,track._node.x)
+    def readTrackData(self,track: resonite_animx.ResoTrack, fcurve_reso: bpy.types.FCurve, valuetype: str = ""):
+        tracktype = type(track)
+        match(tracktype):
+            case (resonite_animx.RawTrack):
+                rawtrack: resonite_animx.RawTrack = track
+
                 
-                print("hit here2")
-                match(type(track)):
-                    case (type(resonite_animx.RawTrack)):
-                        rawtrack: resonite_animx.RawTrack = track
+                
+                fcurve_reso.keyframe_points.add(count=len(rawtrack.keyframes))
+                # populate points
+                fcurve_reso.keyframe_points.foreach_set("co", [x for co in zip([frame.time.x*track.Owner.interval.x for frame in rawtrack.keyframes], [eval("frame.value"+valuetype) for frame in rawtrack.keyframes]) for x in co])
+                fcurve_reso.update()
 
-                        
-                        
-                        for frame in rawtrack.keyframes:
-                            key: bpy.types.Keyframe = fcurve_reso.keyframe_points.insert(frame.time, float(frame.value))
-                            
+            case (resonite_animx.DiscreteTrack):
+                discretetrack: resonite_animx.DiscreteTrack = track
 
-                    case (type(resonite_animx.DiscreteTrack)):
-                        discretetrack: resonite_animx.RawTrack = track
-                        for frame in rawtrack.keyframes:
-                            key: bpy.types.Keyframe = fcurve_reso.keyframe_points.insert(frame.time, float(frame.value))
+                fcurve_reso.keyframe_points.add(count=len(discretetrack.keyframes))
+                # populate points
+                fcurve_reso.keyframe_points.foreach_set("co", [x for co in zip([frame.time.x*track.Owner.interval.x for frame in discretetrack.keyframes], [eval("frame.value"+valuetype) for frame in discretetrack.keyframes]) for x in co])
+                fcurve_reso.update()
 
+            case(resonite_animx.CurveTrack):
+                curvetrack: resonite_animx.CurveTrack = track
 
-                    case(type(resonite_animx.CurveTrack)):
-                        curvetrack: resonite_animx.RawTrack = track
-                        for frame in curvetrack.keyframes:
-                            key: bpy.types.Keyframe = fcurve_reso.keyframe_points.insert(frame.time, float(frame.value))
-                            key.handle_left = float(frame.left_tan)
-                            key.handle_left = float(frame.right_tan)
+                fcurve_reso.keyframe_points.add(count=len(curvetrack.keyframes))
+                # populate points
+                fcurve_reso.keyframe_points.foreach_set("co", [x for co in zip([frame.time.x*track.Owner.interval.x for frame in curvetrack.keyframes], [eval("frame.value"+valuetype) for frame in curvetrack.keyframes]) for x in co])
+                interp: bool = curvetrack.tangents
+                #print("has tangents? "+str(interp))
 
+                for idx,frame in enumerate(curvetrack.keyframes):
+                    
+                    if interp:
+                        fcurve_reso.keyframe_points[idx].handle_left = float(eval("frame.left_tan"+valuetype))
+                        fcurve_reso.keyframe_points[idx].handle_right = float(eval("frame.right_tan"+valuetype))
+                    fcurve_reso.keyframe_points[idx].interpolation = "BEZIER"
+                    fcurve_reso.keyframe_points[idx].easing = "EASE_IN"
+                fcurve_reso.update()
 
-                    case(type(resonite_animx.BezierTrack)):
-                        beziertrack: resonite_animx.RawTrack = track
-                        # Bezier is not supported rn, ignore.
+            case(resonite_animx.BezierTrack):
+                beziertrack: resonite_animx.BezierTrack = track
+                # Bezier is not supported rn, ignore.
+            case _:
+                print("invalid track type, ignoring")
+                print(track)
 
 
 
         
-
-
-
-        return {'FINISHED'}
     
 
     

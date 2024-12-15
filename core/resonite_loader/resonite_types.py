@@ -17,6 +17,19 @@ class ResoType():
     def read(cls, data: BytesIO):
         pass
 
+def writeNullable(data: BytesIO, value: ResoType = None):
+
+    data.write(struct.pack("?", value == None))
+    if(value == None):
+        return
+    value.write(data)
+
+def readNullable(data: BytesIO, value: ResoType = None):
+
+    hasval: bool = struct.unpack("?", data.read(1))
+    if not hasval:
+        return
+    value.read(data)
 #These below are collection of the basic resonite typing made from C#. This is in order to store data in a sane way and decode/encode it.
 
 class color(ResoType):
@@ -75,8 +88,8 @@ class byte(ResoType):
     def __int__(self):
         return self.x
 
-    def __init__(self):
-        pass
+    def __init__(self,value=0):
+        self.x = value
     
     def write(self, data: BytesIO):
         data.write(struct.pack("<B", self.x))
@@ -120,8 +133,8 @@ class short(ResoType):
     def __int__(self):
         return self.x
 
-    def __init__(self):
-        pass
+    def __init__(self,value=0):
+        self.x = value
     
     def write(self, data: BytesIO):
         data.write(struct.pack("<h", self.x))
@@ -264,7 +277,7 @@ class int4(int3):
         pass
 
     def read(self,data: BytesIO):
-        super().write(data)
+        super().read(data)
         self.w = struct.unpack("<i", data.read(4))[0]
     
     def write(self, data: BytesIO):
@@ -298,7 +311,7 @@ class uint2(uint):
         pass
 
     def read(self,data: BytesIO):
-        super().write(data)
+        super().read(data)
         self.y = struct.unpack("<I", data.read(4))[0]
     
     def write(self, data: BytesIO):
@@ -312,7 +325,7 @@ class uint3(uint2):
         pass
 
     def read(self,data: BytesIO):
-        super().write(data)
+        super().read(data)
         self.z = struct.unpack("<I", data.read(4))[0]
     
     def write(self, data: BytesIO):
@@ -326,7 +339,7 @@ class uint4(uint3):
         pass
 
     def read(self,data: BytesIO):
-        super().write(data)
+        super().read(data)
         self.w = struct.unpack("<I", data.read(4))[0]
     
     def write(self, data: BytesIO):
@@ -529,8 +542,7 @@ class doubleQ(double4):
     def write(self, data: BytesIO):
         super().write(data)
     
-    @classmethod
-    def read(cls, data: BytesIO):
+    def read(self, data: BytesIO):
         super().read(data)
 
 
@@ -587,7 +599,7 @@ class float4(float3):
     def __init__(self):
         pass
 
-    def read(self,data: BytesIO):
+    def read(self, data: BytesIO):
         super().read(data)
         self.w = struct.unpack("<f", data.read(4))[0]
     
@@ -649,6 +661,5 @@ class floatQ(float4):
     def write(self, data: BytesIO):
         super().write(data)
     
-    @classmethod
-    def read(cls, data: BytesIO):
+    def read(self, data: BytesIO):
         super().read(data)

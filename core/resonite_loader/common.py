@@ -1,12 +1,21 @@
 import ctypes
 import typing
-import struct 
+import struct
 from io import BytesIO
+
+def writeNullable(data: BytesIO, value:  = None):
+
+    data.write(struct.pack("?", value == None))
+    if(value == None):
+        return
+    data.write()
+         
+
 
 def ReadCSharp_str(data: BytesIO) -> str:
     charamount = read7bitEncoded_int(data)
     string: str = data.read(charamount).decode('utf-8', errors="replace")
-    print("read string: "+string)
+    #print("read string: "+string)
     return string
 
 def WriteCSharp_str(data: BytesIO, string: str) -> str:
@@ -29,7 +38,7 @@ def read7bitEncoded_ulong(data: BytesIO) -> int:
         return num
 
 def read7bitEncoded_int(data: BytesIO) -> int:
-        num: int= int(0)
+        num: int = int(0)
         num2:int = int(0)
         while (num2 != 35):
             b: int = int(struct.unpack('<B', data.read(1))[0])
@@ -41,7 +50,7 @@ def read7bitEncoded_int(data: BytesIO) -> int:
 
 def write7bitEncoded_ulong(data: BytesIO, integer: int) -> None:
     while integer > int(0):
-        b: int = ctypes.c_ubyte(integer & int(127))
+        b: int = int(integer & int(127))
         integer >>= 7
         if integer > int(0):
             b |= 128

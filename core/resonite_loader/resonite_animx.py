@@ -1,5 +1,6 @@
 from __future__ import annotations
 from os import replace
+from re import S
 from types import FrameType
 
 import lz4.block
@@ -10,6 +11,7 @@ import typing
 import struct 
 from io import BytesIO
 
+
 KeyframeInterpolation: dict[str, int] = {
     "Hold": 1,
     "Linear": 2,
@@ -18,28 +20,17 @@ KeyframeInterpolation: dict[str, int] = {
 }
 
 class KeyFrame():
-    time: resonite_types.float = resonite_types.float(0)
-    interpolation: resonite_types.int = resonite_types.int(0)
+    time: resonite_types.float
+    interpolation: resonite_types.byte
     value: resonite_types.ResoType
     left_tan: resonite_types.ResoType
     right_tan: resonite_types.ResoType
-
-
-    def __getattr__(self, name: str):
-        if name == "interpolation":
-            interp: int = 0
-            if (self["left_tan"] != None and self["right_tan"] != None):
-                interp = 3
-            
-
-            return resonite_types.int(interp)
-        return super().__getattribute__(name)
-
     
     
 
     def __init__(self):
-        pass
+        self.time = resonite_types.float(0)
+        self.interpolation = resonite_types.byte(0)
     
 
     def RequiresTangents(self) -> bool:
@@ -48,14 +39,17 @@ class KeyFrame():
         return False
 
 class ResoTrack(resonite_types.ResoType):
-    node: resonite_types.string = resonite_types.string("")
-    property: resonite_types.string = resonite_types.string("")
+    node: resonite_types.string
+    property: resonite_types.string
     Owner: AnimX
-    FrameType: type[resonite_types.ResoType]
-    keyframes: list[KeyFrame] = []
+    FrameType: str
+    keyframes: list[KeyFrame]
 
     def __init__(self,FrameType):
         self.FrameType = FrameType
+        self.keyframes = []
+        self.node = resonite_types.string("")
+        self.property = resonite_types.string("")
 
     def write(self, data: BytesIO):
         self.node.write(data)
@@ -65,10 +59,12 @@ class ResoTrack(resonite_types.ResoType):
     def read(self, data:BytesIO):
         self.node.read(data)
         self.property.read(data)
+
         track_amount: int = int(common.read7bitEncoded_ulong(data))
+        #print(track_amount)
         for i in range(0, track_amount):
             key: KeyFrame = KeyFrame()
-            key.value = self.FrameType()
+            key.value = eval(self.FrameType+"()")
             self.keyframes.append(key)
 
     def removeKeyframe(self, time: float | int) -> bool:
@@ -143,28 +139,35 @@ class ResoTrack(resonite_types.ResoType):
 
 
 class RawTrack(ResoTrack):
-    interval: resonite_types.float = resonite_types.float(0)
+    interval: resonite_types.float
 
     def __getattr__(self, name: str):
         if name == "interval":
-            return self.Owner.interval.x
+            return self.Owner.interval
         return super().__getattribute__(name)
 
     def __init__(self, FrameType):
         super().__init__(FrameType)
+        self.interval = resonite_types.float(0)
 
     def write(self, data: BytesIO):
         super().write(data)
         self.interval.write(data)
         for key in self.keyframes:
-            key.value.write(data)
+            if self.FrameType == "resonite_types.string":
+                resonite_types.writeNullable(data, key.value)
+            else:
+                key.value.write(data)
 
 
     def read(self, data:BytesIO):
         super().read(data)
         self.interval.read(data)
         for key in self.keyframes:
-            key.value.read(data)
+            if self.FrameType == "resonite_types.string":
+                resonite_types.readNullable(data, key.value)
+            else:
+                key.value.read(data)
 
     def addKeyframe(self, keyframe: KeyFrame) -> int:
         num: int = super().addKeyframe(keyframe)
@@ -187,10 +190,28 @@ class DiscreteTrack(ResoTrack):
 
     def write(self, data: BytesIO):
         super().write(data)
+        self.interval.write(data)
+        for key in self.keyframes:
+            if key.value == None:
+                key.value = eval(self.FrameType+"()")
+            if self.FrameType == "resonite_types.string":
+                    resonite_types.writeNullable(data, key.value)
+            else:
+                key.value.write(data)
+            key.time.write(data)
 
 
     def read(self, data:BytesIO):
         super().read(data)
+        self.interval.read(data)
+        for key in self.keyframes:
+            if key.value == None:
+                key.value = eval(self.FrameType+"()")
+            if self.FrameType == "resonite_types.string":
+                    resonite_types.readNullable(data, key.value)
+            else:
+                key.value.read(data)
+            key.time.read(data)
 
     def addKeyframe(self, keyframe: KeyFrame) -> int:
         num: int = super().addKeyframe(keyframe)
@@ -203,23 +224,27 @@ class DiscreteTrack(ResoTrack):
 
 
 class CurveTrack(ResoTrack):
-    interpolations: bool = False
-    tangents: bool = False
-    sharedinterpolation: resonite_types.int = resonite_types.int(-1)
+    interpolations: bool 
+    tangents: bool
+    sharedinterpolation: resonite_types.byte 
 
     def __getattr__(self, name: str):
         if name == "interpolations":
+            integerframe: int = self.keyframes[0].interpolation.x
             for key in self.keyframes:
-                if key.interpolation.x  != self.sharedinterpolation.x:
+                if key.interpolation.x  != integerframe:
                     return True 
         elif name == "tangents":
             for key in self.keyframes:
-                if key.interpolation.x == 3 or key.interpolation.x == 4:
+                if key.RequiresTangents():
                     return True 
         return super().__getattribute__(name)
 
     def __init__(self, FrameType):
         super().__init__(FrameType)
+        self.sharedinterpolation = resonite_types.byte(-1)
+        self.interpolations = False
+        self.tangents = False
 
     def write(self, data: BytesIO):
         super().write(data)
@@ -234,45 +259,57 @@ class CurveTrack(ResoTrack):
 
         for key in self.keyframes:
             if key.value == None:
-                key.value = self.FrameType()
-            key.value.write(data)
+                key.value = eval(self.FrameType+"()")
+            if self.FrameType == "resonite_types.string":
+                    resonite_types.writeNullable(data, key.value)
+            else:
+                key.value.write(data)
             key.time.write(data)
         
         if(self.tangents):
             for key in self.keyframes:
-                key.left_tan.write(data)
-                key.right_tan.write(data)
+                if self.FrameType == "resonite_types.string":
+                    resonite_types.writeNullable(data, key.left_tan)
+                    resonite_types.writeNullable(data, key.right_tan)
+                else:
+                    key.left_tan.write(data)
+                    key.right_tan.write(data)
 
     def read(self, data:BytesIO):
         super().read(data)
         flags: int = struct.unpack("<B",data.read(1))[0]
-        self.interpolations = (flags & 1) > 0
-        self.tangents = (flags & 2) > 0
+        interp: bool = (flags & 1) > 0
+        tan: bool = (flags & 2) > 0
 
-        print(str(self.interpolations))
-        print(str(self.tangents))
+        #print(str(interp))
+        #print(str(tan))
+        #print(flags)
+        #print(len(self.keyframes))
 
-        if(self.interpolations):
+        if(interp):
             for key in self.keyframes:
+                #print("reading interp")
                 key.interpolation.read(data)
         else:
             self.sharedinterpolation.read(data)
-
+        
         for key in self.keyframes:
-            print("key read!")
             if key.value == None:
-                key.value = self.FrameType()
-            key.value.read(data)
+                key.value = eval(self.FrameType+"()")
+            if self.FrameType == "resonite_types.string":
+                resonite_types.readNullable(data, key.value)
+            else:
+                key.value.read(data)
             key.time.read(data)
         
-        if(self.tangents):
+        if(tan):
             for key in self.keyframes:
-                if key.left_tan == None:
-                    key.left_tan = self.FrameType()
-                if key.right_tan == None:
-                    key.right_tan = self.FrameType()
-                key.left_tan.read(data)
-                key.right_tan.read(data)
+                if self.FrameType == "resonite_types.string":
+                    resonite_types.readNullable(data, key.left_tan)
+                    resonite_types.readNullable(data, key.right_tan)
+                else:
+                    key.left_tan.read(data)
+                    key.right_tan.read(data)
         
 
 
@@ -313,56 +350,56 @@ class BezierTrack(ResoTrack):
         """PLACE HOLDER METHOD, DO NOT USE"""
         raise Exception("BezierTrack track type is unsupported in resonite's code")
 #This is weird, but thank you python - @989onan
-TrackTypes: list[type] = [
-    RawTrack,
-    DiscreteTrack,
-    CurveTrack,
-    BezierTrack
+TrackTypes: list[str] = [
+    "RawTrack",
+    "DiscreteTrack",
+    "CurveTrack",
+    "BezierTrack"
 ]
     
 #TODO: add all types here
 #wooooo - @989onan
-elementTypes: list[type[resonite_types.ResoType]] = [
-    resonite_types.bool,
-    resonite_types.bool2,
-    resonite_types.bool3,
-    resonite_types.bool4,
-    resonite_types.byte,
-    resonite_types.ushort,
-    resonite_types.uint,
-    resonite_types.ulong,
-    resonite_types.sbyte,
-    resonite_types.short,
-    resonite_types.int,
-    resonite_types.long,
-    resonite_types.int2,
-    resonite_types.int3,
-    resonite_types.int4,
-    resonite_types.uint2,
-    resonite_types.uint3,
-    resonite_types.uint4,
-    resonite_types.long2,
-    resonite_types.long3,
-    resonite_types.long4,
-    resonite_types.float,
-    resonite_types.float2,
-    resonite_types.float3,
-    resonite_types.float4,
-    resonite_types.floatQ,
-    resonite_types.float2x2,
-    resonite_types.float3x3,
-    resonite_types.float4x4,
-    resonite_types.double,
-    resonite_types.double2,
-    resonite_types.double3,
-    resonite_types.double4,
-    resonite_types.doubleQ,
-    resonite_types.double2x2,
-    resonite_types.double3x3,
-    resonite_types.double4x4,
-    resonite_types.color,
-    resonite_types.color32,
-    resonite_types.string
+elementTypes: list[str] = [
+    "resonite_types.bool",
+    "resonite_types.bool2",
+    "resonite_types.bool3",
+    "resonite_types.bool4",
+    "resonite_types.byte",
+    "resonite_types.ushort",
+    "resonite_types.uint",
+    "resonite_types.ulong",
+    "resonite_types.sbyte",
+    "resonite_types.short",
+    "resonite_types.int",
+    "resonite_types.long",
+    "resonite_types.int2",
+    "resonite_types.int3",
+    "resonite_types.int4",
+    "resonite_types.uint2",
+    "resonite_types.uint3",
+    "resonite_types.uint4",
+    "resonite_types.long2",
+    "resonite_types.long3",
+    "resonite_types.long4",
+    "resonite_types.float",
+    "resonite_types.float2",
+    "resonite_types.float3",
+    "resonite_types.float4",
+    "resonite_types.floatQ",
+    "resonite_types.float2x2",
+    "resonite_types.float3x3",
+    "resonite_types.float4x4",
+    "resonite_types.double",
+    "resonite_types.double2",
+    "resonite_types.double3",
+    "resonite_types.double4",
+    "resonite_types.doubleQ",
+    "resonite_types.double2x2",
+    "resonite_types.double3x3",
+    "resonite_types.double4x4",
+    "resonite_types.color",
+    "resonite_types.color32",
+    "resonite_types.string"
     ]
 
 
@@ -372,20 +409,27 @@ class AnimX():
 
 
     """
-    To use Raw Track properly, please set interval (seconds between frames) after reading/creating.\n
-    Represents data to be written to or read from an AnimX file. 
+    To use Raw Track properly, please set interval (seconds between frames) after creating.\n
+    Represents data to be written to or read from an AnimX file.\n
+    default interval to use would be 30.
     """
 
-    file_version: resonite_types.int = resonite_types.int()
-    track_amount: resonite_types.int = resonite_types.int()
-    global_duration: resonite_types.float = resonite_types.float()
-    name: resonite_types.string = resonite_types.string()
+    file_version: resonite_types.int 
+    track_amount: resonite_types.int 
+    global_duration: resonite_types.float 
+    name: resonite_types.string 
 
-    tracks: list[ResoTrack] = []
+    tracks: list[ResoTrack]
 
-    interval: resonite_types.float = resonite_types.float(1/25) #default value
+    interval: resonite_types.float
 
     def __init__(self):
+        self.tracks = []
+        self.file_version = resonite_types.int()
+        self.track_amount = resonite_types.int()
+        self.global_duration = resonite_types.float()
+        self.name = resonite_types.string()
+        self.interval = resonite_types.float(1/25) #default value
         pass
 
     @classmethod
@@ -424,7 +468,7 @@ class AnimX():
             
             self.track_amount.x = common.read7bitEncoded_ulong(data)
             self.global_duration.read(data)
-            print("track amont: "+str(self.track_amount.x))
+            print("track amount: "+str(self.track_amount.x))
             print("file vers: "+str(self.file_version.x))
 
             self.name.read(data)
@@ -453,8 +497,8 @@ class AnimX():
                     data.read(8) #fuck off stream headers - @989onan
                     data.read(8) #fuck off stream headers - @989onan
                     filelmza: bytes = bytes(AnimX.decompress_lzma(data.read(), lzma.FORMAT_RAW, filters))
-                    
-                    print(f"decompressed bytes: {filelmza[:100]}")
+                    #print("binary below:")
+                    #print("b'{}'".format(''.join('\\x{:02x}'.format(b) for b in filelmza[:100])))
                     data = BytesIO(filelmza)
                 case _:
                     raise Exception("Invalid encoding")
@@ -515,10 +559,10 @@ class AnimX():
         return True
 
     @classmethod
-    def GetTrackType(cls, trackType2: int, value_type: type[resonite_types.ResoType], data: BytesIO) -> ResoTrack:
-        Track = TrackTypes[trackType2](value_type)
-        print(type(Track))
-        print(value_type)
+    def GetTrackType(cls, trackType2: int, value_type: str, data: BytesIO) -> ResoTrack:
+        Track: ResoTrack = eval(TrackTypes[trackType2]+"(value_type)")
+        #print(value_type)
+        #print(type(Track))
         Track.read(data)
         return Track
     
