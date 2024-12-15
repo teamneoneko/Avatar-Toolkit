@@ -5,8 +5,9 @@ from io import BytesIO
 
 def ReadCSharp_str(data: BytesIO) -> str:
     charamount = read7bitEncoded_int(data)
-    print(charamount)
-    return data.read(charamount).decode('utf-8', errors="replace")
+    string: str = data.read(charamount).decode('utf-8', errors="replace")
+    print("read string: "+string)
+    return string
 
 def WriteCSharp_str(data: BytesIO, string: str) -> str:
     write7bitEncoded_int(len(string))

@@ -1,4 +1,3 @@
-import ctypes
 import typing
 from io import BytesIO
 import struct
@@ -152,12 +151,12 @@ class bool2(bool):
         pass
 
     def read(self,data: BytesIO):
-        byte: ctypes.c_ubyte = ctypes.c_ubyte(struct.unpack("<B",data.read(1))[0])
+        byte: int = int(struct.unpack("<B",data.read(1))[0])
         self.x = (byte & 1) > 0
         self.y = (byte & 2) > 0
 
-    def createflags(self) -> ctypes.c_byte:
-        flags: ctypes.c_ubyte = ctypes.c_ubyte(0)
+    def createflags(self) -> int:
+        flags: int = int(0)
         flags |= (1 if self.x else 0)
         flags |= (2 if self.y else 0)
         return flags
@@ -173,13 +172,13 @@ class bool3(bool2):
         pass
 
     def read(self,data):
-        byte: ctypes.c_ubyte = ctypes.c_ubyte(struct.unpack("<B",data.read(1))[0])
+        byte: int = int(struct.unpack("<B",data.read(1))[0])
         self.x = (byte & 1) > 0
         self.y = (byte & 2) > 0
         self.z = (byte & 4) > 0
 
-    def createflags(self) -> ctypes.c_byte:
-        flags: ctypes.c_ubyte = ctypes.c_ubyte(0)
+    def createflags(self) -> int:
+        flags: int = int(0)
         flags |= (1 if self.x else 0)
         flags |= (2 if self.y else 0)
         flags |= (3 if self.z else 0)
@@ -196,14 +195,14 @@ class bool4(bool3):
         pass
 
     def read(self,data: BytesIO):
-        byte: ctypes.c_ubyte = ctypes.c_ubyte(struct.unpack("<B",data.read(1))[0])
+        byte: int = int(struct.unpack("<B",data.read(1))[0])
         self.x = (byte & 1) > 0
         self.y = (byte & 2) > 0
         self.z = (byte & 4) > 0
         self.w = (byte & 8) > 0
 
-    def createflags(self) -> ctypes.c_ubyte:
-        flags: ctypes.c_ubyte = ctypes.c_ubyte(0)
+    def createflags(self) -> int:
+        flags: int = int(0)
         flags |= (1 if self.x else 0)
         flags |= (2 if self.y else 0)
         flags |= (4 if self.z else 0)

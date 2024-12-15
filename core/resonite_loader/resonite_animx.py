@@ -1,10 +1,11 @@
 from __future__ import annotations
+from os import replace
+from types import FrameType
 
 import lz4.block
 from . import resonite_types
 from . import common
 
-import ctypes
 import typing
 import struct 
 from io import BytesIO
@@ -17,8 +18,8 @@ KeyframeInterpolation: dict[str, int] = {
 }
 
 class KeyFrame():
-    time: resonite_types.float = 0
-    interpolation: resonite_types.int = 0
+    time: resonite_types.float = resonite_types.float(0)
+    interpolation: resonite_types.int = resonite_types.int(0)
     value: resonite_types.ResoType
     left_tan: resonite_types.ResoType
     right_tan: resonite_types.ResoType
@@ -27,14 +28,12 @@ class KeyFrame():
     def __getattr__(self, name: str):
         if name == "interpolation":
             interp: int = 0
-            if (self.__dict__["left_tan"] != None and self.__dict__["right_tan"] != None):
+            if (self["left_tan"] != None and self["right_tan"] != None):
                 interp = 3
             
 
             return resonite_types.int(interp)
-        return self.__dict__[name]
-    def __setattr__(self, name, value):
-        self.__dict__[name] = value
+        return super().__getattribute__(name)
 
     
     
@@ -49,8 +48,8 @@ class KeyFrame():
         return False
 
 class ResoTrack(resonite_types.ResoType):
-    _node: resonite_types.string
-    _property: resonite_types.string
+    node: resonite_types.string = resonite_types.string("")
+    property: resonite_types.string = resonite_types.string("")
     Owner: AnimX
     FrameType: type[resonite_types.ResoType]
     keyframes: list[KeyFrame] = []
@@ -59,16 +58,18 @@ class ResoTrack(resonite_types.ResoType):
         self.FrameType = FrameType
 
     def write(self, data: BytesIO):
-        self._node.write(data)
-        self._property.write(data)
+        self.node.write(data)
+        self.property.write(data)
         common.write7bitEncoded_ulong(data, len(self.keyframes))
 
     def read(self, data:BytesIO):
-        self._node.read(data)
-        self._property.read(data)
+        self.node.read(data)
+        self.property.read(data)
         track_amount: int = int(common.read7bitEncoded_ulong(data))
         for i in range(0, track_amount):
-            self.keyframes.append(KeyFrame())
+            key: KeyFrame = KeyFrame()
+            key.value = self.FrameType()
+            self.keyframes.append(key)
 
     def removeKeyframe(self, time: float | int) -> bool:
         """Takes a time and removes one with the same time"""
@@ -142,12 +143,12 @@ class ResoTrack(resonite_types.ResoType):
 
 
 class RawTrack(ResoTrack):
-    interval: resonite_types.float = 0
+    interval: resonite_types.float = resonite_types.float(0)
 
     def __getattr__(self, name: str):
         if name == "interval":
             return self.Owner.interval.x
-        return self.__dict__[name]
+        return super().__getattribute__(name)
 
     def __init__(self, FrameType):
         super().__init__(FrameType)
@@ -204,7 +205,7 @@ class DiscreteTrack(ResoTrack):
 class CurveTrack(ResoTrack):
     interpolations: bool = False
     tangents: bool = False
-    sharedinterpolation: resonite_types.int = -1
+    sharedinterpolation: resonite_types.int = resonite_types.int(-1)
 
     def __getattr__(self, name: str):
         if name == "interpolations":
@@ -215,7 +216,7 @@ class CurveTrack(ResoTrack):
             for key in self.keyframes:
                 if key.interpolation.x == 3 or key.interpolation.x == 4:
                     return True 
-        return self.__dict__[name]
+        return super().__getattribute__(name)
 
     def __init__(self, FrameType):
         super().__init__(FrameType)
@@ -232,6 +233,8 @@ class CurveTrack(ResoTrack):
             self.sharedinterpolation.write(data)
 
         for key in self.keyframes:
+            if key.value == None:
+                key.value = self.FrameType()
             key.value.write(data)
             key.time.write(data)
         
@@ -242,9 +245,12 @@ class CurveTrack(ResoTrack):
 
     def read(self, data:BytesIO):
         super().read(data)
-        flags: int = struct.unpack("<B",data.read(1))
-        self.interpolations = flags & 1
-        self.tangents = flags & 2
+        flags: int = struct.unpack("<B",data.read(1))[0]
+        self.interpolations = (flags & 1) > 0
+        self.tangents = (flags & 2) > 0
+
+        print(str(self.interpolations))
+        print(str(self.tangents))
 
         if(self.interpolations):
             for key in self.keyframes:
@@ -253,11 +259,18 @@ class CurveTrack(ResoTrack):
             self.sharedinterpolation.read(data)
 
         for key in self.keyframes:
+            print("key read!")
+            if key.value == None:
+                key.value = self.FrameType()
             key.value.read(data)
             key.time.read(data)
         
         if(self.tangents):
             for key in self.keyframes:
+                if key.left_tan == None:
+                    key.left_tan = self.FrameType()
+                if key.right_tan == None:
+                    key.right_tan = self.FrameType()
                 key.left_tan.read(data)
                 key.right_tan.read(data)
         
@@ -300,7 +313,7 @@ class BezierTrack(ResoTrack):
         """PLACE HOLDER METHOD, DO NOT USE"""
         raise Exception("BezierTrack track type is unsupported in resonite's code")
 #This is weird, but thank you python - @989onan
-TrackTypes: list[type[ResoTrack]] = [
+TrackTypes: list[type] = [
     RawTrack,
     DiscreteTrack,
     CurveTrack,
@@ -354,7 +367,7 @@ elementTypes: list[type[resonite_types.ResoType]] = [
 
 
 most_recent_AnimX_vers: int = 1
-
+import lzma#HALLLOOOYAH HALLOYAH!! - @989onan
 class AnimX():
 
 
@@ -375,7 +388,25 @@ class AnimX():
     def __init__(self):
         pass
 
-
+    @classmethod
+    def decompress_lzma(cls,data, format, filters) -> list:
+        results = []
+        while True:
+            decomp = lzma.LZMADecompressor(format, None, filters)
+            try:
+                res = decomp.decompress(data)
+            except lzma.LZMAError:
+                if results:
+                    break  # Leftover data is not a valid LZMA/XZ stream; ignore it.
+                else:
+                    raise  # Error on the first iteration; bail out.
+            results.append(res)
+            data = decomp.unused_data
+            if not data:
+                break
+            if not decomp.eof:
+                raise lzma.LZMAError("Compressed data ended before the end-of-stream marker was reached")
+        return b"".join(results)
     
     def read(self, file: str) -> bool:
         """
@@ -393,10 +424,11 @@ class AnimX():
             
             self.track_amount.x = common.read7bitEncoded_ulong(data)
             self.global_duration.read(data)
-            print(self.track_amount.x)
+            print("track amont: "+str(self.track_amount.x))
+            print("file vers: "+str(self.file_version.x))
 
             self.name.read(data)
-            
+            print("name: "+self.name.x)
             
             match (struct.unpack('<B', data.read(1))[0]):
                 case 0:
@@ -405,9 +437,25 @@ class AnimX():
                     from lz4.frame import decompress #why do you have to be a wheel? - @989onan
                     data =  BytesIO(decompress(data.read()))
                 case 2:
-                    import lzma#HALLLOOOYAH HALLOYAH!! - @989onan
-                    filters = [{"id": "", "preset": lzma.PRESET_DEFAULT}]
-                    data =  BytesIO(lzma.decompress(data.read(), filters=filters))
+                    
+                    filters = [
+                        {"id" : lzma.FILTER_LZMA1, #idfk man - @989onan
+                            "dict_size" : 2097152,
+                            "lc" : 3,
+                            "lp" : 0,
+                            "pb" : 2, # private static int posStateBits = 2; //<-froox engine derived.
+                            "mode" : lzma.MODE_NORMAL,
+                            "nice_len" : 32, # private static int numFastBytes = 32; //<-froox engine derived.
+                            "mf" : lzma.MF_BT4,
+                        },
+                    ]
+                    data.read(5) #fuck off headers - @989onan
+                    data.read(8) #fuck off stream headers - @989onan
+                    data.read(8) #fuck off stream headers - @989onan
+                    filelmza: bytes = bytes(AnimX.decompress_lzma(data.read(), lzma.FORMAT_RAW, filters))
+                    
+                    print(f"decompressed bytes: {filelmza[:100]}")
+                    data = BytesIO(filelmza)
                 case _:
                     raise Exception("Invalid encoding")
             
@@ -415,7 +463,7 @@ class AnimX():
                 trackType2: int = 0
                 num4: int = 0
                 if (self.file_version == 0):
-                    b: ctypes.c_ubyte = ctypes.c_ubyte(struct.unpack('<B', data.read(1))[0])
+                    b: int = int(struct.unpack('<B', data.read(1))[0])
                     num3: int = int(b & 1)
                     trackType: int = 0
                     if (num3 != 0):
@@ -429,9 +477,12 @@ class AnimX():
                 else:
                     trackType2 = int(struct.unpack('<B', data.read(1))[0])
                     num4 = int(struct.unpack('<B', data.read(1))[0])
-                animationTrack: ResoTrack = AnimX.GetTrackType(trackType2, elementTypes[num4], data)
-                animationTrack.Owner = self
-                self.tracks.append(animationTrack)
+                try:
+                    animationTrack = AnimX.GetTrackType(trackType2, elementTypes[num4], data)
+                    animationTrack.Owner = self
+                    self.tracks.append(animationTrack)
+                except:
+                    raise Exception("[InvalidDataException]: element type exception, beyond range: "+str(num4))
 
         return True
 
@@ -457,16 +508,17 @@ class AnimX():
             
             for i in range(0,self.track_amount.x):
 
-                data.write(struct.pack('<B', TrackTypes.index(type(self.tracks[i])))[0])
+                data.write(struct.pack('<B', TrackTypes.index(type(self.tracks[i]))))
                 data.write(struct.pack('<B', elementTypes.index(self.tracks[i].FrameType)))
                 self.tracks[i].write(data)
 
         return True
 
     @classmethod
-    def GetTrackType(cls, trackType2: int, value_type: int, data: BytesIO) -> ResoTrack:
-        TrackType: type[ResoTrack] = TrackTypes[trackType2] 
-        Track: ResoTrack = TrackType[elementTypes[value_type]](elementTypes[value_type])
+    def GetTrackType(cls, trackType2: int, value_type: type[resonite_types.ResoType], data: BytesIO) -> ResoTrack:
+        Track = TrackTypes[trackType2](value_type)
+        print(type(Track))
+        print(value_type)
         Track.read(data)
         return Track
     
