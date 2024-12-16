@@ -2,15 +2,13 @@ import ctypes
 import typing
 import struct
 from io import BytesIO
+from typing import Any
 
-def writeNullable(data: BytesIO, value:  = None):
-
+def writeNullable(data: BytesIO, value: Any = None):
     data.write(struct.pack("?", value == None))
     if(value == None):
         return
     data.write()
-         
-
 
 def ReadCSharp_str(data: BytesIO) -> str:
     charamount = read7bitEncoded_int(data)
