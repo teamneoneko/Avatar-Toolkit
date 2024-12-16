@@ -59,12 +59,15 @@ class AvatarToolKit_OT_ExportMenu(Operator):
     """Open the export menu"""
     bl_idname: str = "avatar_toolkit.export"
     bl_label: str = t("QuickAccess.export")
+
+    @classmethod
+    def poll(cls, context: Context) -> bool:
+        return get_active_armature(context) is not None
     
     def execute(self, context: Context) -> Set[str]:
-        wm: WindowManager = context.window_manager
-        wm.call_menu(name=AvatarToolKit_MT_ExportMenu.bl_idname)
+        bpy.context.window_manager.popup_menu(AvatarToolKit_MT_ExportMenu.draw)
         return {'FINISHED'}
-
+    
 class AvatarToolKit_PT_QuickAccessPanel(Panel):
     """Quick access panel for common Avatar Toolkit operations"""
     bl_label: str = t("QuickAccess.label")
