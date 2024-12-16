@@ -75,11 +75,6 @@ class AvatarToolKit_PT_QuickAccessPanel(Panel):
     bl_parent_id: str = AvatarToolKit_PT_AvatarToolkitPanel.bl_idname
     bl_order: int = 0
 
-    @classmethod
-    def poll(cls, context: Context) -> bool:
-        """Only show panel in Object or Pose mode"""
-        return context.mode in {'OBJECT', 'POSE'}
-
     def draw(self, context: Context) -> None:
         """Draw the panel layout"""
         layout: UILayout = self.layout

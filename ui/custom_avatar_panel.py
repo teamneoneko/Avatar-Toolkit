@@ -106,7 +106,7 @@ class AvatarToolKit_PT_CustomPanel(Panel):
     bl_region_type = 'UI'
     bl_category = CATEGORY_NAME
     bl_parent_id = AvatarToolKit_PT_AvatarToolkitPanel.bl_idname
-    bl_order = 3
+    bl_order = 4
     bl_options = {'DEFAULT_CLOSED'}
 
     def draw(self, context: Context) -> None:

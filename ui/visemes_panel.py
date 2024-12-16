@@ -10,7 +10,7 @@ class AvatarToolKit_PT_VisemesPanel(Panel):
     bl_region_type: str = 'UI'
     bl_category: str = CATEGORY_NAME
     bl_parent_id: str = AvatarToolKit_PT_AvatarToolkitPanel.bl_idname
-    bl_order: int = 4
+    bl_order: int = 5
     bl_options = {'DEFAULT_CLOSED'}
 
     def draw(self, context: Context) -> None:

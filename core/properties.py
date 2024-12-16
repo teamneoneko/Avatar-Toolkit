@@ -93,6 +93,15 @@ class AvatarToolkitSceneProperties(PropertyGroup):
         default=False
     )
 
+    connect_bones_min_distance: FloatProperty(
+        name=t("Tools.connect_bones_min_distance"),
+        description=t("Tools.connect_bones_min_distance_desc"),
+        default=0.001,
+        min=0.0001,
+        max=0.1,
+        precision=4
+    )
+
     merge_twist_bones: BoolProperty(
         name=t("MMD.merge_twist_bones"),
         description=t("MMD.merge_twist_bones_desc"),

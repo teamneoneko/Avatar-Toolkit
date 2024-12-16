@@ -135,6 +135,12 @@ class AvatarToolKit_OT_DeleteBoneConstraints(Operator):
     def execute(self, context: Context) -> set[str]:
         """Execute the constraint removal operation"""
         armature = get_active_armature(context)
+        
+        # Select armature and make it active before changing mode
+        bpy.ops.object.select_all(action='DESELECT')
+        armature.select_set(True)
+        context.view_layer.objects.active = armature
+        
         bpy.ops.object.mode_set(mode='POSE')
         
         constraints_removed = 0
@@ -146,6 +152,7 @@ class AvatarToolKit_OT_DeleteBoneConstraints(Operator):
         bpy.ops.object.mode_set(mode='OBJECT')
         self.report({'INFO'}, t("Tools.clean_constraints_success", count=constraints_removed))
         return {'FINISHED'}
+
 
 class AvatarToolKit_OT_RemoveZeroWeightBones(Operator):
     """Operator to remove bones with no vertex weights"""
