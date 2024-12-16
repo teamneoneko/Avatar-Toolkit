@@ -1,19 +1,15 @@
 import bpy
 import numpy as np
 from typing import List, Optional, Dict, Set
-from mathutils import Vector
 from bpy.types import Context, Object, Operator
 
 from ...core.logging_setup import logger
 from ...core.translations import t
 from ...core.common import (
-    get_active_armature,
     get_all_meshes,
     fix_zero_length_bones,
     clear_unused_data_blocks,
-    validate_armature,
     join_mesh_objects,
-    fix_uv_coordinates,
     remove_unused_shapekeys
 )
 
@@ -40,7 +36,7 @@ class AvatarToolkit_OT_MergeArmature(Operator):
             
             if not base_armature or not merge_armature:
                 logger.error(f"Armature not found: {merge_armature_name}")
-                self.report({'ERROR'}, t('MergeArmature.error.notFound', name=merge_armature_name))
+                self.report({'ERROR'}, t('MergeArmature.error.not_found', name=merge_armature_name))
                 return {'CANCELLED'}
 
             # Remove Rigid Bodies and Joints
@@ -79,21 +75,6 @@ class AvatarToolkit_OT_MergeArmature(Operator):
             logger.error(f"Error merging armatures: {str(e)}")
             self.report({'ERROR'}, str(e))
             return {'CANCELLED'}
-
-def calculate_bone_orientation(mesh, vertices):
-    """Calculate optimal bone orientation based on mesh geometry."""
-    
-    if not vertices:
-        return Vector((0, 0, 0.1)), 0.0
-        
-    coords = [mesh.data.vertices[v.index].co for v in vertices]
-    min_co = Vector(map(min, zip(*coords)))
-    max_co = Vector(map(max, zip(*coords)))
-    dimensions = max_co - min_co
-    
-    roll_angle = 0.0
-    
-    return dimensions, roll_angle
 
 def delete_rigidbodies_and_joints(armature: Object):
     """Delete rigid bodies and joints associated with the armature."""
@@ -397,15 +378,6 @@ def mix_vertex_groups(mesh: Object, vg_from_name: str, vg_to_name: str):
     weights_combined = np.clip(weights_from + weights_to, 0.0, 1.0)
     vg_to.add(range(num_vertices), weights_combined.tolist(), 'REPLACE')
     mesh.vertex_groups.remove(vg_from)
-
-def add_armature_modifier(mesh: Object, armature: Object):
-    """Add armature modifier to mesh."""
-    for mod in mesh.modifiers:
-        if mod.type == 'ARMATURE':
-            mesh.modifiers.remove(mod)
-
-    modifier = mesh.modifiers.new('Armature', 'ARMATURE')
-    modifier.object = armature
 
 def remove_unused_vertex_groups(mesh: Object):
     """Remove vertex groups with no weights."""

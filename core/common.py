@@ -1,5 +1,6 @@
 import bpy
 import numpy as np
+from mathutils import Vector
 from bpy.types import Context, Object, Modifier, EditBone, Operator
 from typing import Optional, Tuple, List, Set, Dict, Any, Generator, Callable
 from ..core.logging_setup import logger
@@ -592,3 +593,26 @@ def fix_zero_length_bones(armature: Object) -> None:
     bpy.ops.object.mode_set(mode='OBJECT')
 
 
+def calculate_bone_orientation(mesh, vertices):
+    """Calculate optimal bone orientation based on mesh geometry."""
+    
+    if not vertices:
+        return Vector((0, 0, 0.1)), 0.0
+        
+    coords = [mesh.data.vertices[v.index].co for v in vertices]
+    min_co = Vector(map(min, zip(*coords)))
+    max_co = Vector(map(max, zip(*coords)))
+    dimensions = max_co - min_co
+    
+    roll_angle = 0.0
+    
+    return dimensions, roll_angle
+
+def add_armature_modifier(mesh: Object, armature: Object):
+    """Add armature modifier to mesh."""
+    for mod in mesh.modifiers:
+        if mod.type == 'ARMATURE':
+            mesh.modifiers.remove(mod)
+
+    modifier = mesh.modifiers.new('Armature', 'ARMATURE')
+    modifier.object = armature

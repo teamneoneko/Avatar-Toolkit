@@ -304,57 +304,67 @@ class AvatarToolkitSceneProperties(PropertyGroup):
     )
 
     merge_armature_into: StringProperty(
-        name=t('CustomPanel.merge_into'),
-        description=t('CustomPanel.merge_into_desc'),
+        name=t('MergeArmature.into'),
+        description=t('MergeArmature.into_desc'),
         default=""
     )
 
     merge_armature: StringProperty(
-        name=t('CustomPanel.merge_from'),
-        description=t('CustomPanel.merge_from_desc'),
+        name=t('MergeArmature.from'),
+        description=t('MergeArmature.from_desc'),
         default=""
     )
 
     attach_mesh: StringProperty(
-        name=t('CustomPanel.attach_mesh'),
-        description=t('CustomPanel.attach_mesh_desc'),
+        name=t('AttachMesh.select'),
+        description=t('AttachMesh.select_desc'),
         default=""
     )
 
     attach_bone: StringProperty(
-        name=t('CustomPanel.attach_bone'),
-        description=t('CustomPanel.attach_bone_desc'),
+        name=t('AttachBone.select'),
+        description=t('AttachBone.select_desc'),
         default=""
     )
 
     merge_all_bones: BoolProperty(
-        name=t('CustomPanel.merge_all_bones'),
-        description=t('CustomPanel.merge_all_bones_desc'),
+        name=t('MergeArmature.merge_all'),
+        description=t('MergeArmature.merge_all_desc'),
         default=True
     )
 
     apply_transforms: BoolProperty(
-        name=t('CustomPanel.apply_transforms'),
-        description=t('CustomPanel.apply_transforms_desc'),
+        name=t('MergeArmature.apply_transforms'),
+        description=t('MergeArmature.apply_transforms_desc'),
         default=True
     )
 
     join_meshes: BoolProperty(
-        name=t('CustomPanel.join_meshes'),
-        description=t('CustomPanel.join_meshes_desc'),
+        name=t('MergeArmature.join_meshes'),
+        description=t('MergeArmature.join_meshes_desc'),
         default=True
     )
 
     remove_zero_weights: BoolProperty(
-        name=t('CustomPanel.remove_zero_weights'),
-        description=t('CustomPanel.remove_zero_weights_desc'),
+        name=t('MergeArmature.remove_zero_weights'),
+        description=t('MergeArmature.remove_zero_weights_desc'),
         default=True
     )
 
     cleanup_shape_keys: BoolProperty(
-        name=t('CustomPanel.cleanup_shape_keys'),
-        description=t('CustomPanel.cleanup_shape_keys_desc'),
+        name=t('MergeArmature.cleanup_shape_keys'),
+        description=t('MergeArmature.cleanup_shape_keys_desc'),
         default=True
+    )
+
+    attach_mesh: StringProperty(
+        name=t("Tools.attach_mesh_select"),
+        description=t("Tools.attach_mesh_select_desc")
+    )
+
+    attach_bone: StringProperty(
+        name=t("Tools.attach_bone_select"),
+        description=t("Tools.attach_bone_select_desc")
     )
 
 def register() -> None:

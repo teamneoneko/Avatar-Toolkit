@@ -13,13 +13,12 @@ from ..core.common import (
 class AvatarToolkit_OT_SearchMergeArmatureInto(Operator):
     bl_idname = "avatar_toolkit.search_merge_armature_into"
     bl_label = ""
-    bl_description = t('CustomPanel.search_merge_into_desc')
+    bl_description = t('MergeArmature.into_search_desc')
     bl_property = "search_merge_armature_into_enum"
 
-    # Define the enum property within the operator class
     search_merge_armature_into_enum: bpy.props.EnumProperty(
-        name=t('CustomPanel.merge_into'),
-        description=t('CustomPanel.merge_into_desc'),
+        name=t('MergeArmature.into'),
+        description=t('MergeArmature.into_desc'),
         items=get_armature_list
     )
 
@@ -34,12 +33,12 @@ class AvatarToolkit_OT_SearchMergeArmatureInto(Operator):
 class AvatarToolkit_OT_SearchMergeArmature(Operator):
     bl_idname = "avatar_toolkit.search_merge_armature"
     bl_label = ""
-    bl_description = t('CustomPanel.search_merge_desc')
+    bl_description = t('MergeArmature.from_search_desc')
     bl_property = "search_merge_armature_enum"
 
     search_merge_armature_enum: bpy.props.EnumProperty(
-        name=t('CustomPanel.merge_from'),
-        description=t('CustomPanel.merge_from_desc'),
+        name=t('MergeArmature.from'),
+        description=t('MergeArmature.from_desc'),
         items=get_armature_list
     )
 
@@ -54,15 +53,17 @@ class AvatarToolkit_OT_SearchMergeArmature(Operator):
 class AvatarToolkit_OT_SearchAttachMesh(Operator):
     bl_idname = "avatar_toolkit.search_attach_mesh"
     bl_label = ""
-    bl_description = t('CustomPanel.search_mesh_desc')
+    bl_description = t('AttachMesh.search_desc')
     bl_property = "search_attach_mesh_enum"
 
     search_attach_mesh_enum: bpy.props.EnumProperty(
-        name=t('CustomPanel.attach_mesh'),
-        description=t('CustomPanel.attach_mesh_desc'),
+        name=t('AttachMesh.select'),
+        description=t('AttachMesh.select_desc'),
         items=lambda self, context: [
             (obj.name, obj.name, "")
-            for obj in get_all_meshes(context)
+            for obj in bpy.data.objects 
+            if obj.type == 'MESH' 
+            and not any(mod.type == 'ARMATURE' for mod in obj.modifiers)
         ]
     )
 
@@ -77,12 +78,12 @@ class AvatarToolkit_OT_SearchAttachMesh(Operator):
 class AvatarToolkit_OT_SearchAttachBone(Operator):
     bl_idname = "avatar_toolkit.search_attach_bone"
     bl_label = ""
-    bl_description = t('CustomPanel.search_bone_desc')
+    bl_description = t('AttachBone.search_desc')
     bl_property = "search_attach_bone_enum"
 
     search_attach_bone_enum: bpy.props.EnumProperty(
-        name=t('CustomPanel.attach_bone'),
-        description=t('CustomPanel.attach_bone_desc'),
+        name=t('AttachBone.select'),
+        description=t('AttachBone.select_desc'),
         items=lambda self, context: [
             (bone.name, bone.name, "")
             for bone in get_active_armature(context).data.bones
@@ -109,7 +110,6 @@ class AvatarToolKit_PT_CustomPanel(Panel):
     bl_options = {'DEFAULT_CLOSED'}
 
     def draw(self, context: Context) -> None:
-        """Draw the custom avatar tools panel interface"""
         layout: UILayout = self.layout
         toolkit = context.scene.avatar_toolkit
 
@@ -119,113 +119,109 @@ class AvatarToolKit_PT_CustomPanel(Panel):
         col.label(text=t('CustomPanel.merge_mode'), icon='TOOL_SETTINGS')
         col.separator(factor=0.5)
 
-        # Create a row for the mode buttons with increased scale
         row: UILayout = col.row(align=True)
         row.scale_y = 1.5
         row.prop(toolkit, "merge_mode", expand=True)
         
-        # Armature Merging Tools
         if toolkit.merge_mode == 'ARMATURE':
             self.draw_armature_tools(layout, context)
-        # Mesh Attachment Tools    
         else:
             self.draw_mesh_tools(layout, context)
 
     def draw_armature_tools(self, layout: UILayout, context: Context) -> None:
-        """Draw the armature merging tools section"""
         toolkit = context.scene.avatar_toolkit
         
         # Merge Settings Box
         settings_box: UILayout = layout.box()
         col: UILayout = settings_box.column(align=True)
-        col.label(text=t('CustomPanel.mergeArmatures'), icon='ARMATURE_DATA')
+        col.label(text=t('MergeArmature.label'), icon='ARMATURE_DATA')
         col.separator(factor=0.5)
         
         if len(get_armature_list(context)) <= 1:
-            col.label(text=t('CustomPanel.warn.twoArmatures'), icon='INFO')
+            col.label(text=t('MergeArmature.warn_two'), icon='INFO')
             return
 
-        # Merge Options
+        # Options Box with better spacing
         options_box: UILayout = layout.box()
         col: UILayout = options_box.column(align=True)
-        col.label(text=t('Tools.merge_title'), icon='SETTINGS')
-        col.separator(factor=0.5)
-        col.prop(toolkit, "merge_all_bones")
-        col.prop(toolkit, "apply_transforms")
-        col.prop(toolkit, "join_meshes")
-        col.prop(toolkit, "remove_zero_weights")
-        col.prop(toolkit, "cleanup_shape_keys")
-
-        # Armature Selection Box
-        selection_box: UILayout = layout.box()
-        col: UILayout = selection_box.column(align=True)
-        col.label(text=t('QuickAccess.select_armature'), icon='BONE_DATA')
+        col.label(text=t('MergeArmature.options'), icon='SETTINGS')
         col.separator(factor=0.5)
         
+        # Group related options together
+        transform_col = col.column(align=True)
+        transform_col.prop(toolkit, "merge_all_bones")
+        transform_col.prop(toolkit, "apply_transforms")
+        
+        col.separator(factor=0.5)
+        
+        cleanup_col = col.column(align=True)
+        cleanup_col.prop(toolkit, "join_meshes")
+        cleanup_col.prop(toolkit, "remove_zero_weights")
+        cleanup_col.prop(toolkit, "cleanup_shape_keys")
+
+        # Selection Box with consistent styling
+        selection_box: UILayout = layout.box()
+        col: UILayout = selection_box.column(align=True)
+        col.label(text=t('CustomPanel.select_armature'), icon='BONE_DATA')
+        col.separator(factor=0.5)
+        
+        # Armature selection with better alignment
         row: UILayout = col.row(align=True)
-        row.label(text=t('CustomPanel.mergeInto'))
+        row.label(text=t('MergeArmature.into'), icon='ARMATURE_DATA')
         row.operator("avatar_toolkit.search_merge_armature_into",
-                    text=toolkit.merge_armature_into,
-                    icon='ARMATURE_DATA')
+                    text=toolkit.merge_armature_into)
 
         row: UILayout = col.row(align=True)
-        row.label(text=t('CustomPanel.toMerge'))
+        row.label(text=t('MergeArmature.from'), icon='ARMATURE_DATA')
         row.operator("avatar_toolkit.search_merge_armature",
-                    text=toolkit.merge_armature,
-                    icon='ARMATURE_DATA')
+                    text=toolkit.merge_armature)
 
-        # Merge Button
-        merge_col: UILayout = layout.column(align=True)
-        merge_col.scale_y = 1.2
-        merge_col.operator("avatar_toolkit.merge_armatures", icon='ARMATURE_DATA')
+        # Merge button with emphasis
+        merge_box: UILayout = layout.box()
+        col = merge_box.column(align=True)
+        row = col.row(align=True)
+        row.scale_y = 1.5
+        row.operator("avatar_toolkit.merge_armatures", icon='ARMATURE_DATA')
 
     def draw_mesh_tools(self, layout: UILayout, context: Context) -> None:
-        """Draw the mesh attachment tools section"""
         toolkit = context.scene.avatar_toolkit
         
         # Mesh Tools Box
         tools_box: UILayout = layout.box()
         col: UILayout = tools_box.column(align=True)
-        col.label(text=t('CustomPanel.attachMesh1'), icon='MESH_DATA')
+        col.label(text=t('AttachMesh.label'), icon='MESH_DATA')
         col.separator(factor=0.5)
 
         if not get_active_armature(context) or not get_all_meshes(context):
-            col.label(text=t('CustomPanel.warn.noArmOrMesh1'), icon='INFO')
-            col.label(text=t('CustomPanel.warn.noArmOrMesh2'))
+            col.label(text=t('AttachMesh.warn_no_armature'), icon='INFO')
             return
 
-        # Mesh Options Box
-        options_box: UILayout = layout.box()
-        col: UILayout = options_box.column(align=True)
-        col.label(text=t('Tools.merge_title'), icon='SETTINGS')
-        col.separator(factor=0.5)
-        col.prop(toolkit, "join_meshes")
-
-        # Selection Box
+        # Selection Box with consistent styling
         selection_box: UILayout = layout.box()
         col: UILayout = selection_box.column(align=True)
-        col.label(text=t('Tools.merge_title'), icon='OBJECT_DATA')
+        col.label(text=t('CustomPanel.mesh_selection'), icon='OBJECT_DATA')
         col.separator(factor=0.5)
 
+        # Selection rows with icons and better alignment
         row: UILayout = col.row(align=True)
-        row.label(text=t('CustomPanel.mergeInto'))
+        row.label(text=t('CustomPanel.select_armature'), icon='ARMATURE_DATA')
         row.operator("avatar_toolkit.search_merge_armature_into",
-                    text=toolkit.merge_armature_into,
-                    icon='ARMATURE_DATA')
+                    text=toolkit.merge_armature_into)
 
         row: UILayout = col.row(align=True)
-        row.label(text=t('CustomPanel.attachMesh2'))
+        row.label(text=t('CustomPanel.select_mesh'), icon='MESH_DATA')
         row.operator("avatar_toolkit.search_attach_mesh",
-                    text=toolkit.attach_mesh,
-                    icon='MESH_DATA')
+                    text=toolkit.attach_mesh)
 
         row: UILayout = col.row(align=True)
-        row.label(text=t('CustomPanel.attachToBone'))
+        row.label(text=t('CustomPanel.select_bone'), icon='BONE_DATA')
         row.operator("avatar_toolkit.search_attach_bone",
-                    text=toolkit.attach_bone,
-                    icon='BONE_DATA')
+                    text=toolkit.attach_bone)
 
-        # Attach Button
-        attach_col: UILayout = layout.column(align=True)
-        attach_col.scale_y = 1.2
-        attach_col.operator("avatar_toolkit.attach_mesh", icon='ARMATURE_DATA')
+        # Attach button with emphasis
+        attach_box: UILayout = layout.box()
+        col = attach_box.column(align=True)
+        row = col.row(align=True)
+        row.scale_y = 1.5
+        row.operator("avatar_toolkit.attach_mesh", icon='ARMATURE_DATA')
+
