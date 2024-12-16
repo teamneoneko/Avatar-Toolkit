@@ -1,289 +1,250 @@
 import bpy
 import numpy as np
-from .dictionaries import bone_names
-import threading
-import time
-import webbrowser
-import typing
+from mathutils import Vector
+from bpy.types import Context, Object, Modifier, EditBone, Operator
+from typing import Optional, Tuple, List, Set, Dict, Any, Generator, Callable
+from ..core.logging_setup import logger
+from ..core.translations import t
+from ..core.dictionaries import bone_names
 
-from ..core.register import register_wrap
-from typing import List, Optional, Tuple
-from bpy.types import Object, ShapeKey, Mesh, Context, Material, PropertyGroup
-from functools import lru_cache
-from bpy.props import PointerProperty, IntProperty, StringProperty
-from bpy.utils import register_class
-
-
-
-
-class SceneMatClass(PropertyGroup):
-    mat: PointerProperty(type=Material)
-
-register_class(SceneMatClass)
-
-class MaterialListBool:
-    #For the love that is holy do not ever touch these. If this was java I would make these private
-    #They should only be accessed via context.scene.texture_atlas_Has_Mat_List_Shown
-    #This is so we know if the materials are up to date. messing with these variables directly will make the thing blow up.
+class ProgressTracker:
+    """Universal progress tracking for Avatar Toolkit operations"""
     
-    #The only exception to this is the ExpandSection_Materials operator which populates this with new data once the materials have changed and need reloading.
-    old_list: dict[str,list[Material]] = {}
-    bool_material_list_expand: dict[str,bool] = {}
+    def __init__(self, context: Context, total_steps: int, operation_name: str = "Operation"):
+        self.context = context
+        self.total = total_steps
+        self.current = 0
+        self.operation_name = operation_name
+        self.wm = context.window_manager
+        
+    def step(self, message: str = "") -> None:
+        """Update progress by one step"""
+        self.current += 1
+        progress = self.current / self.total
+        self.wm.progress_begin(0, 100)
+        self.wm.progress_update(progress * 100)
+        logger.debug(f"{self.operation_name} - {progress:.1%}: {message}")
+        
+    def __enter__(self):
+        logger.info(f"Starting {self.operation_name}")
+        return self
+        
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.wm.progress_end()
+        logger.info(f"Completed {self.operation_name}")
 
-    def set_bool(self, value: bool) -> None:
-        MaterialListBool.bool_material_list_expand[bpy.context.scene.name] = value
-        if value == False:
-            MaterialListBool.old_list[bpy.context.scene.name] = []
-
-    def get_bool(self) -> bool:
-            newlist: list[Material] = []
-            for obj in bpy.context.scene.objects:
-                if len(obj.material_slots)>0:
-                    for mat_slot in obj.material_slots:
-                        if mat_slot.material:
-                            if mat_slot.material not in newlist:
-                                newlist.append(mat_slot.material)
-            
-            still_the_same: bool = True
-            if bpy.context.scene.name in MaterialListBool.old_list:
-                for item in newlist:
-                    if item not in MaterialListBool.old_list[bpy.context.scene.name]:
-                        still_the_same = False
-                        break
-                for item in MaterialListBool.old_list[bpy.context.scene.name]:
-                    if item not in newlist:
-                        still_the_same = False
-                        break
-            else:
-                still_the_same = False
-            MaterialListBool.bool_material_list_expand[bpy.context.scene.name] = still_the_same
-            
-            return MaterialListBool.bool_material_list_expand[bpy.context.scene.name]
-
-
-### Clean up material names in the given mesh by removing the '.001' suffix.
-def clean_material_names(mesh: Mesh) -> None:
-    for j, mat in enumerate(mesh.material_slots):
-        if mat.name.endswith(('.0+', ' 0+')):
-            mesh.active_material_index = j
-            mesh.active_material.name = mat.name[:-len(mat.name.rstrip('0')) - 1]
-
-# This will fix faulty uv coordinates, cats did this a other way which can have unintended consequences, 
-# this is the best way i could of think of doing this for the time being, however may need improvements.
-
-def fix_uv_coordinates(context: Context) -> None:
-    obj = context.object
-
-    # Store current mode and selection
-    current_mode = context.mode
-    current_active = context.view_layer.objects.active
-    current_selected = context.selected_objects.copy()
-
-    # Ensure we're in object mode and select the object
-    bpy.ops.object.mode_set(mode='OBJECT')
-    obj.select_set(True)
-    context.view_layer.objects.active = obj
-
-    # Check if the object has any mesh data
-    if obj.type == 'MESH' and obj.data:
-
-        # Switch to Edit Mode
-        bpy.ops.object.mode_set(mode='EDIT')
-
-        # Select all UVs
-        bpy.ops.mesh.select_all(action='SELECT')
-
-        # Try to find UV Editor area, fall back to 3D View if not found
-        area = next((area for area in context.screen.areas if area.type == 'UV_EDITOR'), None)
-        if not area:
-            area = next((area for area in context.screen.areas if area.type == 'VIEW_3D'), None)
-
-        # Get the region and space data
-        region = next((region for region in area.regions if region.type == 'WINDOW'), None)
-        space_data = area.spaces.active
-
-        # Create a context override
-        override = {
-            'area': area,
-            'region': region,
-            'space_data': space_data,
-            'edit_object': obj,
-            'active_object': obj,
-            'selected_objects': [obj],
-            'mode': 'EDIT_MESH',
-        }
-
-        try:
-            # Ensure UVs are selected
-            bpy.ops.uv.select_all(override, action='SELECT')
-            # Average UV island scales
-            bpy.ops.uv.average_islands_scale(override)
-        except Exception as e:
-            print(f"UV Fix - Error during UV scaling: {str(e)}")
-
-        # Switch back to Object Mode
-        bpy.ops.object.mode_set(mode='OBJECT')
-        print("UV Fix - Switched back to Object Mode")
-
-        # Restore previous selection and active object
-        for sel_obj in current_selected:
-            sel_obj.select_set(True)
-        context.view_layer.objects.active = current_active
-    else:
-        print("UV Fix - Object is not a valid mesh with UV data")
-
-def has_shapekeys(mesh_obj: Object) -> bool:
-    return mesh_obj.data.shape_keys is not None
-
-@lru_cache(maxsize=None)
-def _get_shape_key_co(shape_key: ShapeKey) -> np.ndarray:
-    return np.array([v.co for v in shape_key.data])
-    
-def simplify_bonename(n: str) -> str:
-    return n.lower().translate(dict.fromkeys(map(ord, u" _.")))
-    
-def get_armature(context: Context, armature_name: Optional[str] = None) -> Optional[Object]:
-    if armature_name:
-        obj = bpy.data.objects[armature_name]
-        if obj.type == "ARMATURE":
-            return obj
-        else:
-            return None
-    if context.view_layer.objects.active:
-        obj = context.view_layer.objects.active
-        if obj.type == "ARMATURE":
-            return obj
-    return next((obj for obj in context.view_layer.objects if obj.type == 'ARMATURE'), None)
-    
-def get_armatures(self, context: Context) -> List[Tuple[str, str, str]]:
-    armatures = [(obj.name, obj.name, "") for obj in bpy.data.objects if obj.type == 'ARMATURE']
-    if not armatures:
-        return [('NONE', 'No Armature', '')]
-    return armatures
-
-def get_armatures_that_are_not_selected(self, context: Context) -> List[Tuple[str, str, str]]:
-    armatures = [(obj.name, obj.name, "") for obj in bpy.data.objects if ((obj.type == 'ARMATURE') and (obj.name != context.scene.selected_armature))]
-    if not armatures:
-        return [('NONE', 'No Other Armature', '')]
-    return armatures
-
-def get_selected_armature(context: Context) -> Optional[Object]:
-    try:
-        if hasattr(context.scene, 'selected_armature'):
-            armature_name = context.scene.selected_armature
-            if isinstance(armature_name, bytes):
-                try:
-                    armature_name = armature_name.decode('utf-8')
-                except UnicodeDecodeError:
-                    try:
-                        armature_name = armature_name.decode('gbk')  # For Chinese characters
-                    except UnicodeDecodeError:
-                        try:
-                            armature_name = armature_name.decode('shift-jis')
-                        except UnicodeDecodeError:
-                            armature_name = armature_name.decode('latin1')
-            
-            if armature_name:
-                armature = bpy.data.objects.get(str(armature_name))
-                if is_valid_armature(armature):
-                    return armature
-    except Exception:
-        pass
+def get_active_armature(context: bpy.types.Context) -> Optional[bpy.types.Object]:
+    """Get the currently selected armature from Avatar Toolkit properties"""
+    armature_name = context.scene.avatar_toolkit.active_armature
+    if armature_name and armature_name != 'NONE':
+        return bpy.data.objects.get(armature_name)
     return None
 
-def get_merge_armature_source(context: Context) -> Optional[Object]:
-    try:
-        if hasattr(context.scene, 'merge_armature_source'):
-            source_name = context.scene.merge_armature_source
-            if isinstance(source_name, bytes):
-                try:
-                    source_name = source_name.decode('utf-8')
-                except UnicodeDecodeError:
-                    try:
-                        source_name = source_name.decode('shift-jis')
-                    except UnicodeDecodeError:
-                        source_name = source_name.decode('latin1', errors='ignore')
+def set_active_armature(context: bpy.types.Context, armature: bpy.types.Object) -> None:
+    """Set the active armature for Avatar Toolkit operations"""
+    context.scene.avatar_toolkit.active_armature = armature
+
+def get_armature_list(self=None, context: bpy.types.Context = None) -> List[Tuple[str, str, str]]:
+    """Get list of all armature objects in the scene"""
+    if context is None:
+        context = bpy.context
+    armatures = [(obj.name, obj.name, "") for obj in context.scene.objects if obj.type == 'ARMATURE']
+    if not armatures:
+        return [('NONE', t("Armature.validation.no_armature"), '')]
+    return armatures
+
+def validate_armature(armature: bpy.types.Object) -> Tuple[bool, List[str]]:
+    """Enhanced armature validation with multiple validation modes"""
+    validation_mode = bpy.context.scene.avatar_toolkit.validation_mode
+    
+    # Skip validation if mode is NONE
+    if validation_mode == 'NONE':
+        return True, []
+        
+    messages = []
+    
+    # Basic checks always run if not NONE
+    if not armature or armature.type != 'ARMATURE' or not armature.data.bones:
+        return False, [t("Armature.validation.basic_check_failed")]
+        
+    found_bones = {bone.name.lower(): bone for bone in armature.data.bones}
+    
+    # Essential bones check (BASIC and STRICT)
+    essential_bones = {'hips', 'spine', 'chest', 'neck', 'head'}
+    missing_bones = []
+    for bone in essential_bones:
+        if not any(alt_name in found_bones for alt_name in bone_names[bone]):
+            missing_bones.append(bone)
+    
+    if missing_bones:
+        messages.append(t("Armature.validation.missing_bones", bones=", ".join(missing_bones)))
+    
+    # Additional checks for STRICT mode only
+    if validation_mode == 'STRICT':
+        # Hierarchy validation
+        hierarchy = [('hips', 'spine'), ('spine', 'chest'), ('chest', 'neck'), ('neck', 'head')]
+        for parent, child in hierarchy:
+            if not validate_bone_hierarchy(found_bones, parent, child):
+                messages.append(t("Armature.validation.invalid_hierarchy", parent=parent, child=child))
+        
+        # Symmetry validation
+        symmetry_pairs = [('arm', 'l', 'r'), ('leg', 'l', 'r')]
+        for base, left, right in symmetry_pairs:
+            if not validate_symmetry(found_bones, base, left, right):
+                messages.append(t("Armature.validation.asymmetric_bones", bone=base))
+                
+        # Special handling for hand/wrist symmetry
+        if (not validate_symmetry(found_bones, 'hand', 'l', 'r') and 
+            not validate_symmetry(found_bones, 'wrist', 'l', 'r')):
+            messages.append(t("Armature.validation.asymmetric_hand_wrist"))
+    
+    is_valid = len(messages) == 0
+    return is_valid, messages
+
+def validate_bone_hierarchy(bones: Dict[str, bpy.types.Bone], parent_name: str, child_name: str) -> bool:
+    """Validate if there is a valid parent-child relationship between bones"""
+    # Find matching parent and child bones using bone_names dictionary
+    parent_bone = None
+    child_bone = None
+    
+    # Check for parent bone matches
+    for alt_name in bone_names[parent_name]:
+        if alt_name in bones:
+            parent_bone = bones[alt_name]
+            break
             
-            if source_name:
-                return bpy.data.objects.get(str(source_name))
-    except Exception:
-        pass
-    return None
-
-
-def set_selected_armature(context: Context, armature: Optional[Object]) -> None:
-    context.scene.selected_armature = armature.name if armature else ""
-
-def is_valid_armature(armature: Object) -> bool:
-    if not armature or armature.type != 'ARMATURE':
+    # Check for child bone matches
+    for alt_name in bone_names[child_name]:
+        if alt_name in bones:
+            child_bone = bones[alt_name]
+            break
+    
+    if not parent_bone or not child_bone:
         return False
-    if not armature.data or not armature.data.bones:
-        return False
-    return True
+        
+    # Check if child's parent matches parent bone
+    return child_bone.parent == parent_bone
 
-def select_current_armature(context: Context) -> bool:
-    armature = get_selected_armature(context)
+def validate_symmetry(bones: Dict[str, bpy.types.Bone], base: str, left: str, right: str) -> bool:
+    """
+    Validate if matching left and right bones exist for a given base bone name
+    """
+    # Define common naming patterns
+    left_patterns = [
+        f"{base}.{left}",
+        f"{base}_{left}",
+        f"{left}_{base}"
+    ]
+    
+    right_patterns = [
+        f"{base}.{right}",
+        f"{base}_{right}", 
+        f"{right}_{base}"
+    ]
+    
+    # Check if any of the patterns exist in the bones dictionary
+    left_exists = any(pattern in bones for pattern in left_patterns)
+    right_exists = any(pattern in bones for pattern in right_patterns)
+    
+    return left_exists and right_exists
+  
+def auto_select_single_armature(context: bpy.types.Context) -> None:
+    """Automatically select armature if only one exists in scene"""
+    armatures = get_armature_list(context)
+    if len(armatures) == 1 and armatures[0][0] != 'NONE':
+        toolkit = context.scene.avatar_toolkit
+        set_active_armature(context, armatures[0])
+
+def clear_default_objects() -> None:
+    """Removes default Blender objects (cube, light, camera)"""
+    default_names: Set[str] = {'Cube', 'Light', 'Camera'}
+    for obj in bpy.data.objects:
+        if obj.name.split('.')[0] in default_names:
+            bpy.data.objects.remove(obj, do_unlink=True)
+
+def get_armature_stats(armature: bpy.types.Object) -> dict:
+    """Get statistics about the armature"""
+    return {
+        'bone_count': len(armature.data.bones),
+        'has_pose': bool(armature.pose),
+        'visible': not armature.hide_viewport,
+        'name': armature.name
+    }
+
+def get_all_meshes(context: Context) -> List[Object]:
+    """Get all mesh objects parented to the active armature"""
+    armature = get_active_armature(context)
     if armature:
-        bpy.ops.object.select_all(action='DESELECT')
-        armature.select_set(True)
-        context.view_layer.objects.active = armature
-        return True
-    return False
+        return [obj for obj in bpy.data.objects if obj.type == 'MESH' and obj.parent == armature]
+    return []
 
-def apply_shapekey_to_basis(context: bpy.types.Context, obj: bpy.types.Object, shape_key_name: str, delete_old: bool = False) -> bool:
-    if shape_key_name not in obj.data.shape_keys.key_blocks:
-       return False
-    shapekeynum = obj.data.shape_keys.key_blocks.find(shape_key_name)
-
-    bpy.ops.object.mode_set(mode="EDIT")
-
-    bpy.ops.mesh.select_all(action='SELECT')
-
-
-    obj.active_shape_key_index = 0
-    bpy.ops.mesh.blend_from_shape(shape = shape_key_name, add=True, blend=1)
-    obj.active_shape_key_index = shapekeynum
-    bpy.ops.mesh.select_all(action='SELECT')
-    bpy.ops.mesh.blend_from_shape(shape = shape_key_name, add=True, blend=-2)
-
-
-    bpy.ops.mesh.select_all(action='DESELECT')
-
-    bpy.ops.object.mode_set(mode="OBJECT")
-    print("blended!")
-
-    if delete_old:
-        obj.active_shape_key_index = shapekeynum
-        bpy.ops.object.shape_key_remove(all=False)
-    else:
-        mesh: bpy.types.Mesh = obj.data
-        mesh.shape_keys.key_blocks[shape_key_name].name = shape_key_name + "_reversed"
-    return True
-
-def apply_pose_as_rest(context: Context, armature_obj: Object, meshes: list[Object]) -> bool:
-    for mesh_obj in meshes:
-        if not mesh_obj.data:
-            continue
-
-        if mesh_obj.data.shape_keys and mesh_obj.data.shape_keys.key_blocks:
-            if len(mesh_obj.data.shape_keys.key_blocks) == 1:
-                basis = mesh_obj.data.shape_keys.key_blocks[0]
-                basis_name = basis.name
-                mesh_obj.shape_key_remove(basis)
-                apply_armature_to_mesh(armature_obj, mesh_obj)
-                mesh_obj.shape_key_add(name=basis_name)
-            else:
-                apply_armature_to_mesh_with_shapekeys(armature_obj, mesh_obj, context)
-        else:
-            apply_armature_to_mesh(armature_obj, mesh_obj)
-
-    bpy.ops.object.mode_set(mode='POSE')
-    bpy.ops.pose.armature_apply(selected=False)
-    bpy.ops.object.mode_set(mode='OBJECT')
+def validate_mesh_for_pose(mesh_obj: Object) -> Tuple[bool, str]:
+    """Validate mesh object for pose operations"""
+    if not mesh_obj.data:
+        return False, t("Mesh.validation.no_data")
+        
+    if not mesh_obj.vertex_groups:
+        return False, t("Mesh.validation.no_vertex_groups")
+        
+    armature_mods = [mod for mod in mesh_obj.modifiers if mod.type == 'ARMATURE']
+    if not armature_mods:
+        return False, t("Mesh.validation.no_armature_modifier")
     
-    return True
+    return True, t("Mesh.validation.valid")
+
+def cache_vertex_positions(mesh_obj: Object) -> np.ndarray:
+    """Cache vertex positions for a mesh object"""
+    vertices = mesh_obj.data.vertices
+    positions = np.empty(len(vertices) * 3, dtype=np.float32)
+    vertices.foreach_get('co', positions)
+    return positions.reshape(-1, 3)
+
+def apply_vertex_positions(vertices: Object, positions: np.ndarray) -> None:
+    """Apply cached vertex positions to mesh in batch"""
+    vertices.foreach_set('co', positions.flatten())
+
+def process_armature_modifiers(mesh_obj: Object) -> List[Dict[str, Any]]:
+    """Process and store armature modifier states"""
+    modifier_states = []
+    for mod in mesh_obj.modifiers:
+        if mod.type == 'ARMATURE':
+            modifier_states.append({
+                'name': mod.name,
+                'object': mod.object,
+                'vertex_group': mod.vertex_group,
+                'show_viewport': mod.show_viewport
+            })
+    return modifier_states
+
+def apply_pose_as_rest(context: Context, armature_obj: Object, meshes: List[Object]) -> Tuple[bool, str]:
+    """Apply current pose as rest pose for armature and update meshes"""
+    try:
+        logger.info(f"Starting pose application for {len(meshes)} meshes")
+        
+        with ProgressTracker(context, len(meshes), "Applying Pose") as progress:
+            for mesh_obj in meshes:
+                if not mesh_obj.data:
+                    continue
+                    
+                if mesh_obj.data.shape_keys and mesh_obj.data.shape_keys.key_blocks:
+                    apply_armature_to_mesh_with_shapekeys(armature_obj, mesh_obj, context)
+                else:
+                    apply_armature_to_mesh(armature_obj, mesh_obj)
+                
+                progress.step(f"Processed {mesh_obj.name}")
+            
+            bpy.ops.object.mode_set(mode='POSE')
+            bpy.ops.pose.armature_apply(selected=False)
+            bpy.ops.object.mode_set(mode='OBJECT')
+            
+            return True, t("Operation.pose_applied")
+            
+    except Exception as e:
+        logger.error(f"Error applying pose as rest: {str(e)}")
+        return False, str(e)
 
 def apply_armature_to_mesh(armature_obj: Object, mesh_obj: Object) -> None:
+    """Apply armature deformation to mesh"""
     armature_mod = mesh_obj.modifiers.new('PoseToRest', 'ARMATURE')
     armature_mod.object = armature_obj
     
@@ -292,18 +253,20 @@ def apply_armature_to_mesh(armature_obj: Object, mesh_obj: Object) -> None:
     else:
         for _ in range(len(mesh_obj.modifiers) - 1):
             bpy.ops.object.modifier_move_up(modifier=armature_mod.name)
-
+            
     with bpy.context.temp_override(object=mesh_obj):
         bpy.ops.object.modifier_apply(modifier=armature_mod.name)
 
 def apply_armature_to_mesh_with_shapekeys(armature_obj: Object, mesh_obj: Object, context: Context) -> None:
+    """Apply armature deformation to mesh with shape keys"""
     old_active_index = mesh_obj.active_shape_key_index
     old_show_only = mesh_obj.show_only_shape_key
     mesh_obj.show_only_shape_key = True
-
+    
     shape_keys = mesh_obj.data.shape_keys.key_blocks
     vertex_groups = []
     mutes = []
+    
     for sk in shape_keys:
         vertex_groups.append(sk.vertex_group)
         sk.vertex_group = ''
@@ -318,7 +281,7 @@ def apply_armature_to_mesh_with_shapekeys(armature_obj: Object, mesh_obj: Object
 
     arm_mod = mesh_obj.modifiers.new('PoseToRest', 'ARMATURE')
     arm_mod.object = armature_obj
-
+    
     co_length = len(mesh_obj.data.vertices) * 3
     eval_cos = np.empty(co_length, dtype=np.single)
     
@@ -335,6 +298,7 @@ def apply_armature_to_mesh_with_shapekeys(armature_obj: Object, mesh_obj: Object
 
     for mod in disabled_mods:
         mod.show_viewport = True
+        
     mesh_obj.modifiers.remove(arm_mod)
     
     for sk, vg, mute in zip(shape_keys, vertex_groups, mutes):
@@ -343,157 +307,312 @@ def apply_armature_to_mesh_with_shapekeys(armature_obj: Object, mesh_obj: Object
         
     mesh_obj.active_shape_key_index = old_active_index
     mesh_obj.show_only_shape_key = old_show_only
+
+def validate_meshes(meshes: List[Object]) -> Tuple[bool, str]:
+    """Validates a list of mesh objects to ensure they are suitable for joining operations"""
+    if not meshes:
+        return False, t("Optimization.no_meshes")
+    if not all(mesh.data for mesh in meshes):
+        return False, t("Optimization.invalid_mesh_data")
+    if not all(mesh.type == 'MESH' for mesh in meshes):
+        return False, t("Optimization.non_mesh_objects")
+    return True, ""
+
+def join_mesh_objects(context: Context, meshes: List[Object], progress: Optional[ProgressTracker] = None) -> Optional[Object]:
+    """Combines multiple mesh objects into a single mesh with proper cleanup and UV fixing"""
+    try:
+        bpy.ops.object.mode_set(mode='OBJECT')
+        bpy.ops.object.select_all(action='DESELECT')
+        
+        for mesh in meshes:
+            mesh.select_set(True)
+        
+        if context.selected_objects:
+            context.view_layer.objects.active = context.selected_objects[0]
+            
+            if progress:
+                progress.step(t("Optimization.joining_meshes"))
+            bpy.ops.object.join()
+            
+            if progress:
+                progress.step(t("Optimization.applying_transforms"))
+            bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+            
+            if progress:
+                progress.step(t("Optimization.fixing_uvs"))
+            fix_uv_coordinates(context)
+            
+            # Return the joined mesh object
+            return context.active_object 
+            
+        else:
+            # No objects were selected, return None
+            return None
+            
+    except Exception as e:
+        logger.error(f"Failed to join meshes: {str(e)}")
+        return None
+
+def fix_uv_coordinates(context: Context) -> None:
+    """Normalizes and fixes UV coordinates for the active mesh object"""
+    obj: Object = context.object
+    current_mode: str = context.mode
+    current_active: Object = context.view_layer.objects.active
+    current_selected: List[Object] = context.selected_objects.copy()
+
+    try:
+        bpy.ops.object.mode_set(mode='OBJECT')
+        obj.select_set(True)
+        context.view_layer.objects.active = obj
+        bpy.ops.object.mode_set(mode='EDIT')
+        
+        bpy.ops.mesh.select_all(action='SELECT')
+
+        with context.temp_override(active_object=obj):
+            bpy.ops.uv.select_all(action='SELECT')
+            bpy.ops.uv.average_islands_scale()
+            
+        logger.debug(f"UV Fix - Successfully processed {obj.name}")
+
+    except Exception as e:
+        logger.warning(f"UV Fix - Skipped processing for {obj.name}: {str(e)}")
+
+    finally:
+        bpy.ops.object.mode_set(mode='OBJECT')
+        for sel_obj in current_selected:
+            sel_obj.select_set(True)
+        context.view_layer.objects.active = current_active
+# This should be at the top level, not indented inside any class or function
+def clear_unused_data_blocks() -> int:
+    """Removes all unused data blocks from the current Blender file"""
+    initial_count = sum(len(getattr(bpy.data, attr)) for attr in dir(bpy.data)
+                        if isinstance(getattr(bpy.data, attr), bpy.types.bpy_prop_collection))
+    bpy.ops.outliner.orphans_purge(do_local_ids=True, do_linked_ids=True, do_recursive=True)
+    final_count = sum(len(getattr(bpy.data, attr)) for attr in dir(bpy.data)
+                      if isinstance(getattr(bpy.data, attr), bpy.types.bpy_prop_collection))
+    return initial_count - final_count
+
+def simplify_bonename(name: str) -> str:
+    """Simplify bone name by removing spaces, underscores, dots and converting to lowercase"""
+    return name.lower().translate(dict.fromkeys(map(ord, u" _.")))
+
+def duplicate_bone_chain(bones: List[EditBone]) -> List[EditBone]:
+    """Duplicate a chain of bones while preserving hierarchy"""
+    new_bones = []
+    parent_map = {}
     
-def get_all_meshes(context: Context) -> List[Object]:
-    armature = get_selected_armature(context)
-    if armature and is_valid_armature(armature):
-        return [obj for obj in bpy.data.objects if obj.type == 'MESH' and obj.parent == armature]
-    return []
+    for bone in bones:
+        new_bone = duplicate_bone(bone)
+        if bone.parent and bone.parent in parent_map:
+            new_bone.parent = parent_map[bone.parent]
+        parent_map[bone] = new_bone
+        new_bones.append(new_bone)
+        
+    return new_bones
 
-def get_mesh_items(self, context):
-    return [(obj.name, obj.name, "") for obj in get_all_meshes(context)]
+def restore_bone_transforms(bone: EditBone, transforms: Dict[str, Any]) -> None:
+    """Restore bone transforms from stored data"""
+    bone.head = transforms['head']
+    bone.tail = transforms['tail'] 
+    bone.roll = transforms['roll']
+    bone.matrix = transforms['matrix']
 
-def open_web_after_delay_multi_threaded(delay: typing.Optional[float] = 1.0, url: typing.Union[str, typing.Any] = ""):
-    thread = threading.Thread(target=open_web_after_delay,args=[delay,url],name="open_browser_thread")
-    thread.start()
+def get_vertex_weights(mesh_obj: Object, group_name: str) -> Dict[int, float]:
+    """Get vertex weights for a specific vertex group"""
+    weights = {}
+    group_index = mesh_obj.vertex_groups[group_name].index
+    for vertex in mesh_obj.data.vertices:
+        for group in vertex.groups:
+            if group.group == group_index:
+                weights[vertex.index] = group.weight
+    return weights
 
-def open_web_after_delay(delay, url):
-    print("opening browser in "+str(delay)+" seconds.")
-    time.sleep(delay)
+def transfer_vertex_weights(mesh_obj: Object, 
+                          source_name: str, 
+                          target_name: str, 
+                          threshold: float = 0.01) -> None:
+    """Transfer vertex weights from source to target group"""
+    if source_name not in mesh_obj.vertex_groups:
+        return
+        
+    source_group = mesh_obj.vertex_groups[source_name]
+    target_group = mesh_obj.vertex_groups.get(target_name)
     
-    webbrowser.open_new_tab(url)
+    if not target_group:
+        target_group = mesh_obj.vertex_groups.new(name=target_name)
+    
+    # Get source weights
+    weights = get_vertex_weights(mesh_obj, source_name)
+    
+    # Transfer weights above threshold
+    for vertex_index, weight in weights.items():
+        if weight > threshold:
+            target_group.add([vertex_index], weight, 'ADD')
+            
+    # Remove source group
+    mesh_obj.vertex_groups.remove(source_group)
 
-def duplicatebone(b: bpy.types.EditBone) -> bpy.types.EditBone:
-    arm = bpy.context.object.data
-    cb = arm.edit_bones.new(b.name)
-
-    cb.head = b.head
-    cb.tail = b.tail
-    cb.matrix = b.matrix
-    cb.parent = b.parent
-    return cb
+def remove_unused_shapekeys(mesh_obj: Object, tolerance: float = 0.001) -> int:
+    """Remove unused shape keys from a mesh object"""
+    if not mesh_obj.data.shape_keys:
+        return 0
+        
+    key_blocks = mesh_obj.data.shape_keys.key_blocks
+    vertex_count = len(mesh_obj.data.vertices)
+    removed_count = 0
+    
+    # Cache for relative key locations
+    cache = {}
+    locations = np.empty(3 * vertex_count, dtype=np.float32)
+    to_delete = []
+    
+    for key in key_blocks:
+        if key == key.relative_key:
+            continue
+            
+        # Get current key locations
+        key.data.foreach_get("co", locations)
+        
+        # Get or calculate relative key locations
+        if key.relative_key.name not in cache:
+            rel_locations = np.empty(3 * vertex_count, dtype=np.float32)
+            key.relative_key.data.foreach_get("co", rel_locations)
+            cache[key.relative_key.name] = rel_locations
+            
+        # Compare locations
+        locations -= cache[key.relative_key.name]
+        if (np.abs(locations) < tolerance).all():
+            if not any(c in key.name for c in "-=~"):  # Skip category markers
+                to_delete.append(key.name)
+                
+    # Remove marked shape keys
+    for key_name in to_delete:
+        mesh_obj.shape_key_remove(key_blocks[key_name])
+        removed_count += 1
+        
+    return removed_count
 
 def has_shapekeys(mesh_obj: Object) -> bool:
     return mesh_obj.data.shape_keys is not None
 
-def sort_shape_keys(mesh: Object) -> None:
-    print("Starting shape key sorting...")
-    if not has_shapekeys(mesh):
-        print("No shape keys found. Exiting sort function.")
+# Identifier to indicate that an EnumProperty is empty
+# This is the default identifier used when a wrapped items function returns an empty list
+# This identifier needs to be something that should never normally be used, so as to avoid the possibility of
+# conflicting with an enum value that exists.
+_empty_enum_identifier = 'Cats_empty_enum_identifier'
+
+# names - The first object will be the first one in the list. So the first one has to be the one that exists in the most models
+# no_basis - If this is true the Basis will not be available in the list
+def get_shapekeys(context, names, is_mouth, no_basis, return_list):
+    choices = []
+    choices_simple = []
+    meshes_list = get_meshes_objects(check=False)
+
+    if meshes_list:
+        if is_mouth:
+            meshes = [get_objects().get(context.scene.mesh_name_viseme)]
+        else:
+            meshes = [get_objects().get(context.scene.mesh_name_eye)]
+    else:
+        return choices
+
+    for mesh in meshes:
+        if not mesh or not has_shapekeys(mesh):
+            return choices
+
+        for shapekey in mesh.data.shape_keys.key_blocks:
+            name = shapekey.name
+            if name in choices_simple:
+                continue
+            if no_basis and name == 'Basis':
+                continue
+            # 1. Will be returned by context.scene
+            # 2. Will be shown in lists
+            # 3. will be shown in the hover description (below description)
+            choices.append((name, name, name))
+            choices_simple.append(name)
+
+    _sort_enum_choices_by_identifier_lower(choices)
+
+    choices2 = []
+    for name in names:
+        if name in choices_simple and len(choices) > 1 and choices[0][0] != name:
+            continue
+        choices2.append((name, name, name))
+
+    choices2.extend(choices)
+
+    if return_list:
+        shape_list = []
+        for choice in choices2:
+            shape_list.append(choice[0])
+        return shape_list
+
+    return choices2
+
+# Default sorting for dynamic EnumProperty items
+def _sort_enum_choices_by_identifier_lower(choices, in_place=True):
+    """Sort a list of enum choices (items) by the lowercase of their identifier.
+
+    Sorting is performed in-place by default, but can be changed by setting in_place=False.
+
+    Returns the sorted list of enum choices."""
+
+    def identifier_lower(choice):
+        return choice[0].lower()
+
+    if in_place:
+        choices.sort(key=identifier_lower)
+    else:
+        choices = sorted(choices, key=identifier_lower)
+    return choices
+
+def is_enum_empty(string):
+    """Returns True only if the tested string is the string that signifies that an EnumProperty is empty.
+
+    Returns False in all other cases."""
+    return _empty_enum_identifier == string
+
+
+# This function isn't needed since you can 'not is_enum_empty(string)', but is included for code clarity and readability
+def is_enum_non_empty(string):
+    """Returns False only if the tested string is not the string that signifies that an EnumProperty is empty.
+
+    Returns True in all other cases."""
+    return _empty_enum_identifier != string
+
+def fix_zero_length_bones(armature: Object) -> None:
+    """Fix zero length bones by setting a minimum length"""
+    if not armature:
         return
-
-    # Set the mesh as the active object
-    bpy.context.view_layer.objects.active = mesh
+        
+    bpy.ops.object.mode_set(mode='EDIT')
+    for bone in armature.data.edit_bones:
+        if bone.length < 0.001:
+            bone.length = 0.001
     bpy.ops.object.mode_set(mode='OBJECT')
 
-    order = [
-        'Basis',
-        'vrc.blink_left',
-        'vrc.blink_right',
-        'vrc.lowerlid_left',
-        'vrc.lowerlid_right',
-        'vrc.v_aa',
-        'vrc.v_ch',
-        'vrc.v_dd',
-        'vrc.v_e',
-        'vrc.v_ff',
-        'vrc.v_ih',
-        'vrc.v_kk',
-        'vrc.v_nn',
-        'vrc.v_oh',
-        'vrc.v_ou',
-        'vrc.v_pp',
-        'vrc.v_rr',
-        'vrc.v_sil',
-        'vrc.v_ss',
-        'vrc.v_th',
-    ]
 
-    shape_keys = mesh.data.shape_keys.key_blocks
-    print(f"Total shape keys: {len(shape_keys)}")
+def calculate_bone_orientation(mesh, vertices):
+    """Calculate optimal bone orientation based on mesh geometry."""
+    
+    if not vertices:
+        return Vector((0, 0, 0.1)), 0.0
+        
+    coords = [mesh.data.vertices[v.index].co for v in vertices]
+    min_co = Vector(map(min, zip(*coords)))
+    max_co = Vector(map(max, zip(*coords)))
+    dimensions = max_co - min_co
+    
+    roll_angle = 0.0
+    
+    return dimensions, roll_angle
 
-    # Create a list of shape key names in their current order
-    current_order = [key.name for key in shape_keys]
+def add_armature_modifier(mesh: Object, armature: Object):
+    """Add armature modifier to mesh."""
+    for mod in mesh.modifiers:
+        if mod.type == 'ARMATURE':
+            mesh.modifiers.remove(mod)
 
-    # Create a new order list
-    new_order = []
-
-    # First, add all the keys that are in the predefined order
-    for name in order:
-        if name in current_order:
-            new_order.append(name)
-            current_order.remove(name)
-
-    # Then add any remaining keys that weren't in the predefined order
-    new_order.extend(current_order)
-
-    print("New order:", new_order)
-
-    # Now, rearrange the shape keys based on the new order
-    for i, name in enumerate(new_order):
-        index = shape_keys.find(name)
-        if index != i:
-            print(f"Moving {name} from index {index} to {i}")
-            mesh.active_shape_key_index = index
-            while mesh.active_shape_key_index > i:
-                bpy.ops.object.shape_key_move(type='UP')
-
-    print("Shape key sorting completed.")
-
-def get_shapekeys(mesh: Object, prefix: str = '') -> List[tuple]:
-    if not has_shapekeys(mesh):
-        return []
-    return [(key.name, key.name, key.name) for key in mesh.data.shape_keys.key_blocks if key.name != 'Basis' and key.name.startswith(prefix)]
-
-def remove_default_objects():
-    for obj in bpy.data.objects:
-        if obj.name in ["Camera", "Light", "Cube"]:
-            bpy.data.objects.remove(obj, do_unlink=True)
-
-def init_progress(context, steps):
-    context.window_manager.progress_begin(0, 100)
-    context.scene.avatar_toolkit_progress_steps = steps
-    context.scene.avatar_toolkit_progress_current = 0
-
-def update_progress(self, context, message):
-    context.scene.avatar_toolkit_progress_current += 1
-    progress = (context.scene.avatar_toolkit_progress_current / context.scene.avatar_toolkit_progress_steps) * 100
-    context.window_manager.progress_update(progress)
-    context.area.header_text_set(message)
-    self.report({'INFO'}, message)
-
-def finish_progress(context):
-    context.window_manager.progress_end()
-    context.area.header_text_set(None)
-
-def transfer_vertex_weights(context: Context, obj: bpy.types.Object, source_group: str, target_group: str, delete_source_group: bool = True) -> bool:
-    # Create and configure the Vertex Weight Mix modifier
-    modifier = obj.modifiers.new(name="merge_weights", type="VERTEX_WEIGHT_MIX")
-    modifier.show_viewport = True
-    modifier.show_render = True
-    modifier.mix_set = 'B'  # Replace weights in A with weights from B
-    modifier.vertex_group_a = target_group
-    modifier.vertex_group_b = source_group
-    modifier.mask_constant = 1.0
-
-    # Ensure we're in Object Mode
-    bpy.ops.object.mode_set(mode='OBJECT')
-
-    # Deselect all objects and select only our target object
-    bpy.ops.object.select_all(action='DESELECT')
-    obj.select_set(True)
-    context.view_layer.objects.active = obj
-
-    # Move modifier to the top of the stack if necessary
-    if len(obj.modifiers) > 1:
-        obj.modifiers.move(obj.modifiers.find(modifier.name), 0)
-
-    # Apply modifier
-    bpy.ops.object.modifier_apply(modifier=modifier.name)
-
-    # Clean up
-    if delete_source_group and source_group in obj.vertex_groups:
-        obj.vertex_groups.remove(obj.vertex_groups[source_group])
-
-    return True
-
+    modifier = mesh.modifiers.new('Armature', 'ARMATURE')
+    modifier.object = armature
