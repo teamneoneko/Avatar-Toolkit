@@ -293,6 +293,70 @@ class AvatarToolkitSceneProperties(PropertyGroup):
         description=t("EyeTracking.lowerlid_right_desc")
     )
 
+    merge_mode: EnumProperty(
+        name=t('CustomPanel.merge_mode'),
+        description=t('CustomPanel.merge_mode_desc'),
+        items=[
+            ('ARMATURE', t('CustomPanel.mode.armature'), t('CustomPanel.mode.armature_desc')),
+            ('MESH', t('CustomPanel.mode.mesh'), t('CustomPanel.mode.mesh_desc'))
+        ],
+        default='ARMATURE'
+    )
+
+    merge_armature_into: StringProperty(
+        name=t('CustomPanel.merge_into'),
+        description=t('CustomPanel.merge_into_desc'),
+        default=""
+    )
+
+    merge_armature: StringProperty(
+        name=t('CustomPanel.merge_from'),
+        description=t('CustomPanel.merge_from_desc'),
+        default=""
+    )
+
+    attach_mesh: StringProperty(
+        name=t('CustomPanel.attach_mesh'),
+        description=t('CustomPanel.attach_mesh_desc'),
+        default=""
+    )
+
+    attach_bone: StringProperty(
+        name=t('CustomPanel.attach_bone'),
+        description=t('CustomPanel.attach_bone_desc'),
+        default=""
+    )
+
+    merge_all_bones: BoolProperty(
+        name=t('CustomPanel.merge_all_bones'),
+        description=t('CustomPanel.merge_all_bones_desc'),
+        default=True
+    )
+
+    apply_transforms: BoolProperty(
+        name=t('CustomPanel.apply_transforms'),
+        description=t('CustomPanel.apply_transforms_desc'),
+        default=True
+    )
+
+    join_meshes: BoolProperty(
+        name=t('CustomPanel.join_meshes'),
+        description=t('CustomPanel.join_meshes_desc'),
+        default=True
+    )
+
+    remove_zero_weights: BoolProperty(
+        name=t('CustomPanel.remove_zero_weights'),
+        description=t('CustomPanel.remove_zero_weights_desc'),
+        default=True
+    )
+
+    cleanup_shape_keys: BoolProperty(
+        name=t('CustomPanel.cleanup_shape_keys'),
+        description=t('CustomPanel.cleanup_shape_keys_desc'),
+        default=True
+    )
+
 def register() -> None:
     """Register the Avatar Toolkit property group"""
     logger.info("Registering Avatar Toolkit properties")

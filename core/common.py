@@ -317,7 +317,7 @@ def validate_meshes(meshes: List[Object]) -> Tuple[bool, str]:
         return False, t("Optimization.non_mesh_objects")
     return True, ""
 
-def join_mesh_objects(context: Context, meshes: List[Object], progress: Optional[ProgressTracker] = None) -> Tuple[bool, str]:
+def join_mesh_objects(context: Context, meshes: List[Object], progress: Optional[ProgressTracker] = None) -> Optional[Object]:
     """Combines multiple mesh objects into a single mesh with proper cleanup and UV fixing"""
     try:
         bpy.ops.object.mode_set(mode='OBJECT')
@@ -341,13 +341,16 @@ def join_mesh_objects(context: Context, meshes: List[Object], progress: Optional
                 progress.step(t("Optimization.fixing_uvs"))
             fix_uv_coordinates(context)
             
-            return True, t("Optimization.meshes_joined")
+            # Return the joined mesh object
+            return context.active_object 
             
-        return False, t("Optimization.no_mesh_selected")
-        
+        else:
+            # No objects were selected, return None
+            return None
+            
     except Exception as e:
         logger.error(f"Failed to join meshes: {str(e)}")
-        return False, str(e)
+        return None
 
 def fix_uv_coordinates(context: Context) -> None:
     """Normalizes and fixes UV coordinates for the active mesh object"""
@@ -378,12 +381,14 @@ def fix_uv_coordinates(context: Context) -> None:
         for sel_obj in current_selected:
             sel_obj.select_set(True)
         context.view_layer.objects.active = current_active
-
-def clear_unused_data_blocks(self) -> int:
+# This should be at the top level, not indented inside any class or function
+def clear_unused_data_blocks() -> int:
     """Removes all unused data blocks from the current Blender file"""
-    initial_count: int = sum(len(getattr(bpy.data, attr)) for attr in dir(bpy.data) if isinstance(getattr(bpy.data, attr), bpy.types.bpy_prop_collection))
+    initial_count = sum(len(getattr(bpy.data, attr)) for attr in dir(bpy.data)
+                        if isinstance(getattr(bpy.data, attr), bpy.types.bpy_prop_collection))
     bpy.ops.outliner.orphans_purge(do_local_ids=True, do_linked_ids=True, do_recursive=True)
-    final_count: int = sum(len(getattr(bpy.data, attr)) for attr in dir(bpy.data) if isinstance(getattr(bpy.data, attr), bpy.types.bpy_prop_collection))
+    final_count = sum(len(getattr(bpy.data, attr)) for attr in dir(bpy.data)
+                      if isinstance(getattr(bpy.data, attr), bpy.types.bpy_prop_collection))
     return initial_count - final_count
 
 def simplify_bonename(name: str) -> str:
@@ -574,5 +579,16 @@ def is_enum_non_empty(string):
 
     Returns True in all other cases."""
     return _empty_enum_identifier != string
+
+def fix_zero_length_bones(armature: Object) -> None:
+    """Fix zero length bones by setting a minimum length"""
+    if not armature:
+        return
+        
+    bpy.ops.object.mode_set(mode='EDIT')
+    for bone in armature.data.edit_bones:
+        if bone.length < 0.001:
+            bone.length = 0.001
+    bpy.ops.object.mode_set(mode='OBJECT')
 
 
