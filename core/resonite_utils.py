@@ -3,20 +3,16 @@ import bpy
 import bpy_extras
 from numpy import double
 
-from .common import get_armature, get_selected_armature, simplify_bonename, is_valid_armature
+from .common import get_active_armature, simplify_bonename, validate_armature
 from bpy.types import Object, ShapeKey, Mesh, Context, Operator
 from functools import lru_cache
-from ..core.register import register_wrap
-from ..functions.translations import t
-from ..core.dictionaries import bone_names
+from ..core.translations import t
+from ..core.dictionaries import bone_names, resonite_translations
 
 import re
 from .resonite_loader import resonite_animx, resonite_types
 import os
 
-
-
-@register_wrap
 class AvatarToolKit_OT_ExportResonite(Operator):
     bl_idname = 'avatar_toolkit.export_resonite'
     bl_label = t("Importer.export_resonite.label")
@@ -24,15 +20,13 @@ class AvatarToolKit_OT_ExportResonite(Operator):
     bl_options = {'REGISTER', 'UNDO'}
     filepath: bpy.props.StringProperty()
 
-
     @classmethod
     def poll(cls, context: Context):
-        if get_armature(context) is None:
+        if get_active_armature(context) is None:
             return False
         return True
 
     def execute(self, context: Context):
-        #settings stolen from cats.
         bpy.ops.export_scene.gltf('INVOKE_AREA',
             export_image_format = 'WEBP',
             export_image_quality = 75,
@@ -43,109 +37,83 @@ class AvatarToolKit_OT_ExportResonite(Operator):
             export_nla_strips = True)
         return {'FINISHED'}
 
-@register_wrap
-class AvatarToolKit_OT_ConvertToResonite(Operator):
-    bl_idname = 'avatar_toolkit.convert_to_resonite'
-    bl_label = t('Tools.convert_to_resonite.label')
-    bl_description = t('Tools.convert_to_resonite.desc')
+class AvatarToolkit_OT_ConvertResonite(Operator):
+    """Convert armature bone names to Resonite format with progress tracking and validation"""
+    bl_idname = "avatar_toolkit.convert_resonite"
+    bl_label = t("Tools.convert_resonite")
+    bl_description = t("Tools.convert_resonite_desc")
     bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod
     def poll(cls, context: Context) -> bool:
-        armature = get_selected_armature(context)
-        return armature is not None and is_valid_armature(armature)
-        
-    def execute(self, context: Context) -> set:
-        armature = get_selected_armature(context)
+        armature = get_active_armature(context)
         if not armature:
-            self.report({'WARNING'}, t("Tools.no_armature_selected"))
+            return False
+        is_valid, _ = validate_armature(armature)
+        return is_valid
+
+    def execute(self, context: Context) -> Set[str]:
+        armature = get_active_armature(context)
+        if not armature:
+            logger.warning("No armature selected for Resonite conversion")
+            self.report({'WARNING'}, t("Armature.validation.no_armature"))
             return {'CANCELLED'}
 
-        translate_bone_fails = 0
-        untranslated_bones = set()
+        translate_bone_fails: int = 0
+        untranslated_bones: Set[str] = set()
+        simplified_names: Dict[str, str] = {}
 
-        reverse_bone_lookup = dict()
-        for (preferred_name, name_list) in bone_names.items():
+        # Create reverse lookup dictionary
+        reverse_bone_lookup = {}
+        for preferred_name, name_list in bone_names.items():
             for name in name_list:
                 reverse_bone_lookup[name] = preferred_name
 
-        resonite_translations = {
-            'hips': "Hips",
-            'spine': "Spine",
-            'chest': "Chest",
-            'neck': "Neck",
-            'head': "Head",
-            'left_eye': "Eye.L",
-            'right_eye': "Eye.R",
-            'right_leg': "UpperLeg.R",
-            'right_knee': "Calf.R",
-            'right_ankle': "Foot.R",
-            'right_toe': 'Toes.R',
-            'right_shoulder': "Shoulder.R",
-            'right_arm': "UpperArm.R",
-            'right_elbow': "ForeArm.R",
-            'right_wrist': "Hand.R",
-            'left_leg': "UpperLeg.L",
-            'left_knee': "Calf.L",
-            'left_ankle': "Foot.L",
-            'left_toe': "Toes.L",
-            'left_shoulder': "Shoulder.L",
-            'left_arm': "UpperArm.L",
-            'left_elbow': "ForeArm.L",
-            'left_wrist': "Hand.R",
+        try:
+            context.view_layer.objects.active = armature
+            bpy.ops.object.mode_set(mode='EDIT')
+            bpy.ops.object.mode_set(mode='OBJECT')
 
-            'pinkie_1_l': "pinkie1.L",
-            'pinkie_2_l': "pinkie2.L",
-            'pinkie_3_l': "pinkie3.L",
-            'ring_1_l': "ring1.L",
-            'ring_2_l': "ring2.L",
-            'ring_3_l': "ring3.L",
-            'middle_1_l': "middle1.L",
-            'middle_2_l': "middle2.L",
-            'middle_3_l': "middle3.L",
-            'index_1_l': "index1.L",
-            'index_2_l': "index2.L",
-            'index_3_l': "index3.L",
-            'thumb_1_l': "thumb1.L",
-            'thumb_2_l': "thumb2.L",
-            'thumb_3_l': "thumb3.L",
+            # Cache simplified bone names
+            for bone in armature.data.bones:
+                simplified_names[bone.name] = simplify_bonename(bone.name)
 
-            'pinkie_1_r': "pinkie1.R",
-            'pinkie_2_r': "pinkie2.R",
-            'pinkie_3_r': "pinkie3.R",
-            'ring_1_r': "ring1.R",
-            'ring_2_r': "ring2.R",
-            'ring_3_r': "ring3.R",
-            'middle_1_r': "middle1.R",
-            'middle_2_r': "middle2.R",
-            'middle_3_r': "middle3.R",
-            'index_1_r': "index1.R",
-            'index_2_r': "index2.R",
-            'index_3_r': "index3.R",
-            'thumb_1_r': "thumb1.R",
-            'thumb_2_r': "thumb2.R",
-            'thumb_3_r': "thumb3.R"
-        }
+            total_bones = len(armature.data.bones)
+            with ProgressTracker(context, total_bones, t("Tools.convert_resonite.operation")) as progress:
+                for bone in armature.data.bones:
+                    # Remove any existing "<noik>" tags
+                    bone.name = re.compile(re.escape("<noik>"), re.IGNORECASE).sub("", bone.name)
+                    simplified_name = simplified_names[bone.name]
 
-        context.view_layer.objects.active = armature
-        bpy.ops.object.mode_set(mode='EDIT')
+                    if simplified_name in reverse_bone_lookup and reverse_bone_lookup[simplified_name] in resonite_translations:
+                        new_name = resonite_translations[reverse_bone_lookup[simplified_name]]
+                        logger.debug(f"Translating bone: {bone.name} -> {new_name}")
+                        bone.name = new_name
+                    else:
+                        untranslated_bones.add(bone.name)
+                        bone.name = bone.name + "<noik>"
+                        translate_bone_fails += 1
+                        logger.debug(f"Failed to translate bone: {bone.name}")
 
-        bpy.ops.object.mode_set(mode='OBJECT')
-        bone.name = re.compile(re.escape("<noik>"), re.IGNORECASE).sub("",bone.name) #remove "NOIK" from bones before translating again, in case an update was done that fixes a translation.
-        for bone in armature.data.bones:
-            if simplify_bonename(bone.name) in reverse_bone_lookup and reverse_bone_lookup[simplify_bonename(bone.name)] in resonite_translations:
-                bone.name = resonite_translations[reverse_bone_lookup[simplify_bonename(bone.name)]]
-            else:
-                untranslated_bones.add(bone.name)
-                
-                bone.name = bone.name+"<noik>"
-                translate_bone_fails += 1
-            
-        bpy.ops.object.mode_set(mode='OBJECT')
+                    progress.step(t("Tools.convert_resonite.processing", name=bone.name))
+
+        except Exception as e:
+            logger.error(f"Error during Resonite conversion: {str(e)}")
+            self.report({'ERROR'}, str(e))
+            return {'CANCELLED'}
+
+        finally:
+            try:
+                bpy.ops.object.mode_set(mode='OBJECT')
+            except Exception as e:
+                logger.warning(f"Error returning to object mode: {str(e)}")
 
         if translate_bone_fails > 0:
-            self.report({'INFO'}, t("Tools.bones_translated_with_fails").format(translate_bone_fails=translate_bone_fails))
+            logger.info(f"Conversion completed with {translate_bone_fails} untranslated bones")
+            logger.debug(f"Untranslated bones: {untranslated_bones}")
+            self.report({'INFO'}, t("Tools.bones_translated_with_fails", translate_bone_fails=translate_bone_fails))
         else:
+            logger.info("All bones translated successfully")
             self.report({'INFO'}, t("Tools.bones_translated_success"))
 
         return {'FINISHED'}
@@ -159,7 +127,6 @@ def makeorexistingfcurve(action: bpy.types.Action,data_path: str,action_group: s
         print("fcurve with data \""+data_path+"\" already exists")
         return fcurve
 
-@register_wrap
 class AvatarToolKit_OT_AnimX_Importer(Operator,bpy_extras.io_utils.ImportHelper):
     bl_idname = 'avatar_toolkit.animx_importer'
     bl_label = t('Tools.animx_importer.label')
