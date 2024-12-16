@@ -119,7 +119,7 @@ class AvatarToolkit_OT_CombineMaterials(Operator):
                 progress.step("Cleaned material slots")
                 
                 try:
-                    num_removed = clear_unused_data_blocks(self)
+                    num_removed = clear_unused_data_blocks()
                 except Exception as e:
                     logger.error(f"Data block cleanup failed: {str(e)}")
                     self.report({'ERROR'}, t("Optimization.error.data_cleanup"))

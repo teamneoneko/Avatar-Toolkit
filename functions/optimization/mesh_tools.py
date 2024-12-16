@@ -41,15 +41,14 @@ class AvatarToolkit_OT_JoinAllMeshes(Operator):
                 return {'CANCELLED'}
 
             with ProgressTracker(context, 5, "Joining All Meshes") as progress:
-                success: bool
-                success, message = join_mesh_objects(context, meshes, progress)
+                joined_mesh = join_mesh_objects(context, meshes, progress)
                 
-                if success:
+                if joined_mesh:
                     context.view_layer.objects.active = armature
-                    self.report({'INFO'}, message)
+                    self.report({'INFO'}, t("Optimization.meshes_joined"))
                     return {'FINISHED'}
                 else:
-                    self.report({'ERROR'}, message)
+                    self.report({'ERROR'}, t("Optimization.error.join_meshes"))
                     return {'CANCELLED'}
                     
         except Exception as e:
@@ -87,14 +86,13 @@ class AvatarToolkit_OT_JoinSelectedMeshes(Operator):
                 return {'CANCELLED'}
 
             with ProgressTracker(context, 5, "Joining Selected Meshes") as progress:
-                success: bool
-                success, message = join_mesh_objects(context, selected_meshes, progress)
+                joined_mesh = join_mesh_objects(context, selected_meshes, progress)
                 
-                if success:
-                    self.report({'INFO'}, message)
+                if joined_mesh:
+                    self.report({'INFO'}, t("Optimization.selected_meshes_joined"))
                     return {'FINISHED'}
                 else:
-                    self.report({'ERROR'}, message)
+                    self.report({'ERROR'}, t("Optimization.error.join_selected"))
                     return {'CANCELLED'}
                 
         except Exception as e:
