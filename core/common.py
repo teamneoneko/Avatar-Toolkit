@@ -1,8 +1,18 @@
 import bpy
 import numpy as np
+import threading
+import time
+import webbrowser
+import typing
+import struct
+from io import BytesIO
+
+from typing import Optional, Tuple, List, Set, Dict, Any, Generator, Callable
 from mathutils import Vector
 from bpy.types import Context, Object, Modifier, EditBone, Operator
-from typing import Optional, Tuple, List, Set, Dict, Any, Generator, Callable
+from functools import lru_cache
+from bpy.props import PointerProperty, IntProperty, StringProperty
+from bpy.utils import register_class
 from ..core.logging_setup import logger
 from ..core.translations import t
 from ..core.dictionaries import bone_names
@@ -616,3 +626,16 @@ def add_armature_modifier(mesh: Object, armature: Object):
 
     modifier = mesh.modifiers.new('Armature', 'ARMATURE')
     modifier.object = armature
+
+#Binary tools
+
+
+
+
+#encoding FrooxEngine/C# types in binary:
+
+
+
+
+
+
