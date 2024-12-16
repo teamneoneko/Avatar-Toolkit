@@ -2,12 +2,13 @@ from types import FrameType
 import bpy
 import bpy_extras
 from numpy import double
+from typing import Set, Dict
 
-from .common import get_active_armature, simplify_bonename, validate_armature
-from bpy.types import Object, ShapeKey, Mesh, Context, Operator
-from functools import lru_cache
+from .common import get_active_armature, simplify_bonename, validate_armature, ProgressTracker
+from bpy.types import Context, Operator
 from ..core.translations import t
 from ..core.dictionaries import bone_names, resonite_translations
+from ..core.logging_setup import logger
 
 import re
 from .resonite_loader import resonite_animx, resonite_types
