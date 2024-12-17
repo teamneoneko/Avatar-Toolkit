@@ -1,7 +1,7 @@
 # Avatar Toolkit
 
-## Avatar Toolkit is classed as unstable, if you want to test it and report issues that is fine, however if you are looking for a more stable expiereince please use the Unoffical Cats Blender Plugin unto we release a stable version of Avatar Toolkit, you can find Cats Blender Plugin [HERE](https://github.com/unofficalcats/Cats-Blender-Plugin-Unofficial-)!
-#### Avatar Toolkit is in very early Alpha and will contain issues, please ensure you report them!
+## Avatar Toolkit is in Alpha, There will be issues, please ensure you report them!. If using a Alpha plugin isn't your fancy you can find Cats Blender Plugin [HERE](https://github.com/unofficalcats/Cats-Blender-Plugin-Unofficial-)!
+#### Avatar Toolkit is in Alpha and will contain issues, please ensure you report them!
 
 A new modern tool designed to shorten steps needed to import and optimize models into VRChat, Resonite and other similar games.
 
@@ -13,23 +13,32 @@ Need a more stable toolset while Avatar Toolkit is in Alpha? Then please use Ble
 
 ## Blender version support policies.
 
-Coming Soon.
+You can find them on the wiki here [HERE](https://avatartoolkit.xyz/wiki.html?version=0.1.0#what-is-avatar-toolkits-version-support-policy)
 
 ## Features
 
-Coming Soon.
+See everything Avatar Toolkit has ot offer [here](https://avatartoolkit.xyz/wiki.html)
 
 ## Requirements
-While The Avatar Toolkit is in Alpha, we are running on Blender 4.3 Alpha, however no stable releases will happen on Blender 4.x as we are aiming for Blender 5.0 for any type of stable release.
 
-- Blender 4.3 Alpha or above (run as administrator is recommended).
-- If you have custom Python installed which Blender might use, you need to have NumPy installed
+1) Blender Version
+- Blender 4.3 or newer is required
+- Blender 4.3 is the current recommended version
+
+
+2) Python Requirements
+- If using a custom Python installation with Blender, ensure NumPy is installed
+- Default Blender installation includes all required packages
+
+3) Recommended Setup
+- Download Blender directly from https://blender.org
+- Use Blender 4.3 for the best experience
 
 #### Additional Plugins Requirements.
 Currently None.
 
 ## Installation
-Coming Soon
+You can find out how to install Avatar Toolkit [here](https://avatartoolkit.xyz/wiki.html?version=0.1.0#how-to-install-avatar-toolkit)
 
 ## Help
 
