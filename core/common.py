@@ -323,6 +323,11 @@ def validate_meshes(meshes: List[Object]) -> Tuple[bool, str]:
 def join_mesh_objects(context: Context, meshes: List[Object], progress: Optional[ProgressTracker] = None) -> Optional[Object]:
     """Combines multiple mesh objects into a single mesh with proper cleanup and UV fixing"""
     try:
+        # Store UV maps before joining
+        uv_maps_data = {}
+        for mesh in meshes:
+            uv_maps_data[mesh.name] = {uv.name: uv.data.copy() for uv in mesh.data.uv_layers}
+
         bpy.ops.object.mode_set(mode='OBJECT')
         bpy.ops.object.select_all(action='DESELECT')
         
@@ -344,6 +349,14 @@ def join_mesh_objects(context: Context, meshes: List[Object], progress: Optional
                 progress.step(t("Optimization.fixing_uvs"))
             fix_uv_coordinates(context)
             
+            # Restore UV maps after joining
+            joined_mesh = context.active_object
+            for uv_name, uv_data in uv_maps_data.items():
+                for map_name, map_data in uv_data.items():
+                    if map_name not in joined_mesh.data.uv_layers:
+                        joined_mesh.data.uv_layers.new(name=map_name)
+                    joined_mesh.data.uv_layers[map_name].data.foreach_set("uv", map_data)
+            
             return context.active_object 
             
         return None
@@ -363,13 +376,17 @@ def fix_uv_coordinates(context: Context) -> None:
         bpy.ops.object.mode_set(mode='OBJECT')
         obj.select_set(True)
         context.view_layer.objects.active = obj
-        bpy.ops.object.mode_set(mode='EDIT')
         
-        bpy.ops.mesh.select_all(action='SELECT')
-
-        with context.temp_override(active_object=obj):
-            bpy.ops.uv.select_all(action='SELECT')
-            bpy.ops.uv.average_islands_scale()
+        # Process each UV layer
+        for uv_layer in obj.data.uv_layers:
+            obj.data.uv_layers.active = uv_layer
+            bpy.ops.object.mode_set(mode='EDIT')
+            bpy.ops.mesh.select_all(action='SELECT')
+            
+            with context.temp_override(active_object=obj):
+                bpy.ops.uv.select_all(action='SELECT')
+                bpy.ops.uv.pack_islands(margin=0.001)
+                bpy.ops.uv.average_islands_scale()
             
         logger.debug(f"UV Fix - Successfully processed {obj.name}")
 
