@@ -27,6 +27,11 @@ def consolidate_nodes(node1: ShaderNodeTexImage, node2: ShaderNodeTexImage) -> N
     """Transfer properties from one texture node to another to ensure consistency"""
     node2.color_space = node1.color_space
     node2.coordinates = node1.coordinates
+    # Add UV map synchronization
+    if node1.texture_mapping and node2.texture_mapping:
+        node2.texture_mapping.vector_type = node1.texture_mapping.vector_type
+    if hasattr(node1, "uv_map") and hasattr(node2, "uv_map"):
+        node2.uv_map = node1.uv_map
 
 def consolidate_textures(node_tree1: NodeTree, node_tree2: NodeTree) -> None:
     """Synchronize texture nodes between two material node trees"""
