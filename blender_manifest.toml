@@ -3,7 +3,7 @@
 schema_version = "1.0.0"
 
 id = "avatar_toolkit"
-version = "0.1.0"
+version = "0.1.1"
 name = "Avatar Toolkit"
 tagline = "A modern tool for importing and optimizing models for VRChat, Resonite, and other similar games."
 maintainer = "Team NekoNeo"
