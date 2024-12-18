@@ -81,6 +81,9 @@ class AvatarToolkit_OT_CombineMaterials(Operator):
     @classmethod
     def poll(cls, context: Context) -> bool:
         """Check if the operator can be executed"""
+        if context.mode != 'OBJECT':
+            return False
+            
         armature = get_active_armature(context)
         if not armature:
             return False

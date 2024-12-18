@@ -5,8 +5,8 @@ import math
 import bmesh
 import mathutils
 import json
-from bpy.types import Operator, Object, Context
-from typing import Optional, Dict, Tuple, Set
+from bpy.types import Operator, Object, Context, UILayout, WindowManager, Event, ShapeKey, EditBone, PoseBone
+from typing import Optional, Dict, Tuple, Set, List, Any, Union, ClassVar
 from collections import OrderedDict
 from random import random
 from itertools import chain
@@ -24,19 +24,19 @@ from ..core.common import (
     apply_vertex_positions
 )
 
-VALID_EYE_NAMES = {
+VALID_EYE_NAMES: Dict[str, List[str]] = {
     'left': ['LeftEye', 'Eye_L', 'eye_L', 'eye.L', 'EyeLeft', 'left_eye', 'l_eye'],
     'right': ['RightEye', 'Eye_R', 'eye_R', 'eye.R', 'EyeRight', 'right_eye', 'r_eye']
 }
 
 class CreateEyesAV3Button(bpy.types.Operator):
-    """Create eye tracking setup for VRChat Avatar 3.0"""
-    bl_idname = 'avatar_toolkit.create_eye_tracking_av3'
-    bl_label = t('EyeTracking.create.av3.label')
-    bl_description = t('EyeTracking.create.av3.desc')
-    bl_options = {'REGISTER', 'UNDO'}
+    """Creates eye tracking setup compatible with VRChat Avatar 3.0 system"""
+    bl_idname: str = 'avatar_toolkit.create_eye_tracking_av3'
+    bl_label: str = t('EyeTracking.create.av3.label')
+    bl_description: str = t('EyeTracking.create.av3.desc')
+    bl_options: Set[str] = {'REGISTER', 'UNDO'}
 
-    mesh = None
+    mesh: Optional[Object] = None
 
     @classmethod
     def poll(cls, context):
@@ -109,13 +109,13 @@ class CreateEyesAV3Button(bpy.types.Operator):
                 return {'CANCELLED'}
 
 class CreateEyesSDK2Button(bpy.types.Operator):
-    """Create eye tracking setup for VRChat SDK2"""
-    bl_idname = 'avatar_toolkit.create_eye_tracking_sdk2'
-    bl_label = t('EyeTracking.create.sdk2.label')
-    bl_description = t('EyeTracking.create.sdk2.desc')
-    bl_options = {'REGISTER', 'UNDO'}
+    """Creates eye tracking setup compatible with VRChat SDK2 system"""
+    bl_idname: str = 'avatar_toolkit.create_eye_tracking_sdk2'
+    bl_label: str = t('EyeTracking.create.sdk2.label')
+    bl_description: str = t('EyeTracking.create.sdk2.desc')
+    bl_options: Set[str] = {'REGISTER', 'UNDO'}
 
-    mesh = None
+    mesh: Optional[Object] = None
 
     @classmethod
     def poll(cls, context):
@@ -201,8 +201,9 @@ class CreateEyesSDK2Button(bpy.types.Operator):
                 return {'CANCELLED'}
 
 class EyeTrackingBackup:
-    def __init__(self):
-        self.backup_path = os.path.join(bpy.app.tempdir, "eye_tracking_backup.json")
+    """Manages backup and restoration of eye bone positions"""
+    def __init__(self) -> None:
+        self.backup_path: str = os.path.join(bpy.app.tempdir, "eye_tracking_backup.json")
         self.bone_positions: Dict[str, Dict[str, Tuple[float, float, float]]] = {}
         
     def store_bone_positions(self, armature) -> bool:
@@ -247,8 +248,10 @@ class EyeTrackingBackup:
             return False
 
 class EyeTrackingValidator:
+    """Validates eye tracking setup requirements and configurations"""
     @staticmethod
-    def find_eye_vertex_groups(mesh_name: str) -> Tuple[str, str]:
+    def find_eye_vertex_groups(mesh_name: str) -> Tuple[Optional[str], Optional[str]]:
+        """Locates left and right eye vertex groups in mesh"""
         mesh = bpy.data.objects.get(mesh_name)
         if not mesh:
             return None, None
@@ -265,7 +268,8 @@ class EyeTrackingValidator:
         return left_group, right_group
 
     @staticmethod
-    def validate_setup(context, mesh_name: str) -> Tuple[bool, str]:
+    def validate_setup(context: Context, mesh_name: str) -> Tuple[bool, str]:
+        """Validates complete eye tracking setup configuration"""
         armature = get_active_armature(context)
         if not armature:
             return False, t('EyeTracking.validation.noArmature')
@@ -299,10 +303,11 @@ class EyeTrackingValidator:
         return True, t('EyeTracking.validation.success')
             
 class StartTestingButton(bpy.types.Operator):
-    bl_idname = 'avatar_toolkit.start_eye_testing'
-    bl_label = t('EyeTracking.testing.start.label')
-    bl_description = t('EyeTracking.testing.start.desc')
-    bl_options = {'REGISTER', 'UNDO'}
+    """Initiates eye tracking testing mode"""
+    bl_idname: str = 'avatar_toolkit.start_eye_testing'
+    bl_label: str = t('EyeTracking.testing.start.label')
+    bl_description: str = t('EyeTracking.testing.start.desc')
+    bl_options: Set[str] = {'REGISTER', 'UNDO'}
 
     @classmethod
     def poll(cls, context):
@@ -351,10 +356,11 @@ class StartTestingButton(bpy.types.Operator):
         return {'FINISHED'}
     
 class StopTestingButton(bpy.types.Operator):
-    bl_idname = 'avatar_toolkit.stop_eye_testing'
-    bl_label = t('EyeTracking.testing.stop.label')
-    bl_description = t('EyeTracking.testing.stop.desc')
-    bl_options = {'REGISTER', 'UNDO'}
+    """Terminates eye tracking testing mode"""
+    bl_idname: str = 'avatar_toolkit.stop_eye_testing'
+    bl_label: str = t('EyeTracking.testing.stop.label')
+    bl_description: str = t('EyeTracking.testing.stop.desc')
+    bl_options: Set[str] = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
         global eye_left, eye_right, eye_left_data, eye_right_data, eye_left_rot, eye_right_rot
@@ -392,6 +398,7 @@ class StopTestingButton(bpy.types.Operator):
         return {'FINISHED'}
 
 def set_rotation(self, context):
+    """Updates eye bone rotations based on current settings"""
     global eye_left, eye_right, eye_left_rot, eye_right_rot
     toolkit = context.scene.avatar_toolkit
 
@@ -414,10 +421,11 @@ def set_rotation(self, context):
     return None
 
 class ResetRotationButton(bpy.types.Operator):
-    bl_idname = 'avatar_toolkit.reset_eye_rotation'
-    bl_label = t('EyeTracking.reset.label')
-    bl_description = t('EyeTracking.reset.desc')
-    bl_options = {'REGISTER', 'UNDO'}
+    """Resets eye bone rotations to default values"""
+    bl_idname: str = 'avatar_toolkit.reset_eye_rotation'
+    bl_label: str = t('EyeTracking.reset.label')
+    bl_description: str = t('EyeTracking.reset.desc')
+    bl_options: Set[str] = {'REGISTER', 'UNDO'}
 
     @classmethod
     def poll(cls, context):
@@ -445,10 +453,11 @@ class ResetRotationButton(bpy.types.Operator):
         return {'FINISHED'}
 
 class AdjustEyesButton(bpy.types.Operator):
-    bl_idname = 'avatar_toolkit.adjust_eyes'
-    bl_label = t('EyeTracking.adjust.label')
-    bl_description = t('EyeTracking.adjust.desc')
-    bl_options = {'REGISTER', 'UNDO'}
+    """Adjusts eye bone positions and orientations"""
+    bl_idname: str = 'avatar_toolkit.adjust_eyes'
+    bl_label: str = t('EyeTracking.adjust.label')
+    bl_description: str = t('EyeTracking.adjust.desc')
+    bl_options: Set[str] = {'REGISTER', 'UNDO'}
 
     @classmethod
     def poll(cls, context):
@@ -494,10 +503,11 @@ class AdjustEyesButton(bpy.types.Operator):
         return {'FINISHED'}
     
 class StartIrisHeightButton(bpy.types.Operator):
-    bl_idname = 'avatar_toolkit.adjust_iris_height'
-    bl_label = t('EyeTracking.iris.label')
-    bl_description = t('EyeTracking.iris.desc')
-    bl_options = {'REGISTER', 'UNDO'}
+    """Adjusts iris height for eye meshes"""
+    bl_idname: str = 'avatar_toolkit.adjust_iris_height'
+    bl_label: str = t('EyeTracking.iris.label')
+    bl_description: str = t('EyeTracking.iris.desc')
+    bl_options: Set[str] = {'REGISTER', 'UNDO'}
 
     @classmethod
     def poll(cls, context):
@@ -536,10 +546,11 @@ class StartIrisHeightButton(bpy.types.Operator):
         return {'FINISHED'}
 
 class TestBlinking(bpy.types.Operator):
-    bl_idname = 'avatar_toolkit.test_blinking'
-    bl_label = t('EyeTracking.blink.test.label')
-    bl_description = t('EyeTracking.blink.test.desc')
-    bl_options = {'REGISTER', 'UNDO'}
+    """Tests eye blinking animations"""
+    bl_idname: str = 'avatar_toolkit.test_blinking'
+    bl_label: str = t('EyeTracking.blink.test.label')
+    bl_description: str = t('EyeTracking.blink.test.desc')
+    bl_options: Set[str] = {'REGISTER', 'UNDO'}
 
     @classmethod
     def poll(cls, context):
@@ -559,10 +570,11 @@ class TestBlinking(bpy.types.Operator):
         return {'FINISHED'}
     
 class TestLowerlid(bpy.types.Operator):
-    bl_idname = 'avatar_toolkit.test_lowerlid'
-    bl_label = t('EyeTracking.lowerlid.test.label')
-    bl_description = t('EyeTracking.lowerlid.test.desc')
-    bl_options = {'REGISTER', 'UNDO'}
+    """Tests lower eyelid movements"""
+    bl_idname: str = 'avatar_toolkit.test_lowerlid'
+    bl_label: str = t('EyeTracking.lowerlid.test.label')
+    bl_description: str = t('EyeTracking.lowerlid.test.desc')
+    bl_options: Set[str] = {'REGISTER', 'UNDO'}
 
     @classmethod
     def poll(cls, context):
@@ -584,10 +596,11 @@ class TestLowerlid(bpy.types.Operator):
         return {'FINISHED'}
 
 class ResetBlinkTest(bpy.types.Operator):
-    bl_idname = 'avatar_toolkit.reset_blink_test'
-    bl_label = t('EyeTracking.blink.reset.label')
-    bl_description = t('EyeTracking.blink.reset.desc')
-    bl_options = {'REGISTER', 'UNDO'}
+    """Resets all eye blinking test values"""
+    bl_idname: str = 'avatar_toolkit.reset_blink_test'
+    bl_label: str = t('EyeTracking.blink.reset.label')
+    bl_description: str = t('EyeTracking.blink.reset.desc')
+    bl_options: Set[str] = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
         toolkit = context.scene.avatar_toolkit
@@ -601,7 +614,8 @@ class ResetBlinkTest(bpy.types.Operator):
 
         return {'FINISHED'}
 
-def fix_eye_position(context, old_eye, new_eye, head, right_side):
+def fix_eye_position(context: Context, old_eye: Union[EditBone, PoseBone], new_eye: EditBone, head: Optional[EditBone], right_side: bool) -> None:
+    """Adjusts eye bone positions and orientations for proper tracking"""
     toolkit = context.scene.avatar_toolkit
     scale = -toolkit.eye_distance + 1
     mesh = bpy.data.objects[toolkit.mesh_name_eye]
@@ -637,8 +651,8 @@ def fix_eye_position(context, old_eye, new_eye, head, right_side):
     new_eye.tail[y_cord] = new_eye.head[y_cord]
     new_eye.tail[z_cord] = new_eye.head[z_cord] + 0.1
 
-def repair_shapekeys(mesh_name, vertex_group):
-    """Fix VRC shape keys by slightly adjusting vertex positions"""
+def repair_shapekeys(mesh_name: str, vertex_group: str) -> None:
+    """Repairs VRChat shape keys by adjusting vertex positions"""
     armature = get_active_armature(bpy.context)
     mesh = bpy.data.objects[mesh_name]
     mesh.select_set(True)
@@ -696,10 +710,12 @@ def repair_shapekeys(mesh_name, vertex_group):
         logger.warning('Shape key repair failed, using random method')
         repair_shapekeys_mouth(mesh_name)
 
-def randBoolNumber():
+def randBoolNumber() -> int:
+    """Generates random boolean value as integer"""
     return -1 if random() < 0.5 else 1
 
-def repair_shapekeys_mouth(mesh_name):
+def repair_shapekeys_mouth(mesh_name: str) -> None:
+    """Repairs mouth-related shape keys using fallback method"""
     mesh = bpy.data.objects[mesh_name]
     mesh.select_set(True)
     bpy.context.view_layer.objects.active = mesh
@@ -730,12 +746,12 @@ def repair_shapekeys_mouth(mesh_name):
     if not moved:
         logger.error('Random shape key repair failed')
 
-def get_bone_orientations():
-    """Get bone orientation axes"""
+def get_bone_orientations() -> Tuple[int, int, int]:
+    """Returns standardized bone orientation axes"""
     return (0, 1, 2)  # x, y, z coordinates
 
-def find_center_vector_of_vertex_group(mesh, group_name):
-    """Calculate center position of vertex group"""
+def find_center_vector_of_vertex_group(mesh: Object, group_name: str) -> Union[mathutils.Vector, bool]:
+    """Calculates center position of vertex group"""
     group = mesh.vertex_groups.get(group_name)
     if not group:
         return False
@@ -751,8 +767,8 @@ def find_center_vector_of_vertex_group(mesh, group_name):
 
     return sum((v for v in vertices), mathutils.Vector()) / len(vertices)
 
-def vertex_group_exists(mesh_obj, group_name):
-    """Check if vertex group exists and has weights"""
+def vertex_group_exists(mesh_obj: Object, group_name: str) -> bool:
+    """Verifies existence and validity of vertex group"""
     if not mesh_obj or group_name not in mesh_obj.vertex_groups:
         return False
         
@@ -763,8 +779,8 @@ def vertex_group_exists(mesh_obj, group_name):
                 return True
     return False
 
-def copy_vertex_group(self, vertex_group, rename_to):
-    """Copy vertex group with new name"""
+def copy_vertex_group(self: Any, vertex_group: str, rename_to: str) -> None:
+    """Creates copy of vertex group with new name"""
     vertex_group_index = 0
     # Select and make mesh active
     bpy.ops.object.mode_set(mode='OBJECT')
@@ -781,8 +797,8 @@ def copy_vertex_group(self, vertex_group, rename_to):
         vertex_group_index += 1
 
 
-def copy_shape_key(self, context, from_shape, new_names, new_index):
-    """Copy shape key with new name"""
+def copy_shape_key(self: Any, context: Context, from_shape: str, new_names: List[str], new_index: int) -> str:
+    """Creates copy of shape key with new name"""
     blinking = not context.scene.avatar_toolkit.disable_eye_blinking
     new_name = new_names[new_index - 1]
 
@@ -847,11 +863,11 @@ class VertexGroupCache:
         cls._cache.clear()
 
 class RotateEyeBonesForAv3Button(Operator):
-    """Reorient eye bones for proper VRChat eye tracking"""
-    bl_idname = "avatar_toolkit.rotate_eye_bones"
-    bl_label = t("EyeTracking.rotate.label")
-    bl_description = t("EyeTracking.rotate.desc")
-    bl_options = {'REGISTER', 'UNDO'}
+    """Reorients eye bones for VRChat Avatar 3.0 compatibility"""
+    bl_idname: str = "avatar_toolkit.rotate_eye_bones"
+    bl_label: str = t("EyeTracking.rotate.label")
+    bl_description: str = t("EyeTracking.rotate.desc")
+    bl_options: Set[str] = {'REGISTER', 'UNDO'}
 
     @classmethod
     def poll(cls, context):
@@ -874,11 +890,11 @@ class RotateEyeBonesForAv3Button(Operator):
         return {'FINISHED'}
 
 class ResetEyeTrackingButton(Operator):
-    """Reset all eye tracking settings and state"""
-    bl_idname = 'avatar_toolkit.reset_eye_tracking'
-    bl_label = t('EyeTracking.reset.label')
-    bl_description = t('EyeTracking.reset.desc')
-    bl_options = {'REGISTER', 'UNDO'}
+    """Resets all eye tracking settings to default values"""
+    bl_idname: str = 'avatar_toolkit.reset_eye_tracking'
+    bl_label: str = t('EyeTracking.reset.label')
+    bl_description: str = t('EyeTracking.reset.desc')
+    bl_options: Set[str] = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
         global eye_left, eye_right, eye_left_data, eye_right_data, eye_left_rot, eye_right_rot
@@ -888,7 +904,7 @@ class ResetEyeTrackingButton(Operator):
         return {'FINISHED'}
 
 def validate_weights(mesh_obj: Object, vertex_group: str) -> bool:
-    """Validate vertex group weights"""
+    """Validates vertex group weight assignments"""
     group = mesh_obj.vertex_groups.get(vertex_group)
     if not group:
         return False
@@ -899,8 +915,8 @@ def validate_weights(mesh_obj: Object, vertex_group: str) -> bool:
                 return True
     return False
 
-def get_eye_bone_names(armature: Object) -> Dict[str, str]:
-    """Get standardized eye bone names"""
+def get_eye_bone_names(armature: Object) -> Dict[str, Optional[str]]:
+    """Retrieves standardized eye bone names from armature"""
     eye_bones = {'left': None, 'right': None}
     
     for bone in armature.data.bones:
@@ -912,7 +928,7 @@ def get_eye_bone_names(armature: Object) -> Dict[str, str]:
     return eye_bones
 
 def stop_testing(context: Context) -> None:
-    """Stop eye tracking testing mode"""
+    """Stops eye tracking testing mode and resets all values"""
     global eye_left, eye_right, eye_left_data, eye_right_data, eye_left_rot, eye_right_rot
     
     if not all([eye_left, eye_right, eye_left_data, eye_right_data, eye_left_rot, eye_right_rot]):
