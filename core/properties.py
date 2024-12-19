@@ -1,5 +1,5 @@
 import bpy
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Any, Dict, Union, Callable
 from bpy.types import PropertyGroup, Material, Scene, Object, Context
 from bpy.props import (
     StringProperty, 
@@ -18,19 +18,21 @@ from .common import get_armature_list, get_active_armature, get_all_meshes
 from ..functions.visemes import VisemePreview
 from ..functions.eye_tracking import set_rotation
 
-def update_validation_mode(self, context):
+def update_validation_mode(self: PropertyGroup, context: Context) -> None:
+    """Updates validation mode and saves preference"""
     logger.info(f"Updating validation mode to: {self.validation_mode}")
     save_preference("validation_mode", self.validation_mode)
 
-def update_logging_state(self, context):
+def update_logging_state(self: PropertyGroup, context: Context) -> None:
+    """Updates logging state and configures logging"""
     logger.info(f"Updating logging state to: {self.enable_logging}")
     save_preference("enable_logging", self.enable_logging)
     from .logging_setup import configure_logging
     configure_logging(self.enable_logging)
 
-def update_shape_intensity(self, context):
+def update_shape_intensity(self: PropertyGroup, context: Context) -> None:
+    """Updates shape key intensity and refreshes preview"""
     if self.viseme_preview_mode:
-        from ..functions.visemes import VisemePreview
         VisemePreview.update_preview(context)
 
 class AvatarToolkitSceneProperties(PropertyGroup):
@@ -133,13 +135,7 @@ class AvatarToolkitSceneProperties(PropertyGroup):
         description=t("Visemes.preview_mode_desc"),
         default=False
     )
-    
-    viseme_preview_selection: StringProperty(
-        name=t("Visemes.preview_selection"),
-        description=t("Visemes.preview_selection_desc"),
-        default="vrc.v_aa"
-    )
-    
+
     mouth_a: StringProperty(
         name=t("Visemes.mouth_a"),
         description=t("Visemes.mouth_a_desc")
@@ -153,6 +149,11 @@ class AvatarToolkitSceneProperties(PropertyGroup):
     mouth_ch: StringProperty(
         name=t("Visemes.mouth_ch"),
         description=t("Visemes.mouth_ch_desc")
+    )
+
+    viseme_mesh: StringProperty(
+        name=t("Visemes.mesh_select"),
+        description=t("Visemes.mesh_select_desc"),
     )
 
     shape_intensity: FloatProperty(
@@ -364,16 +365,6 @@ class AvatarToolkitSceneProperties(PropertyGroup):
         name=t('MergeArmature.cleanup_shape_keys'),
         description=t('MergeArmature.cleanup_shape_keys_desc'),
         default=True
-    )
-
-    attach_mesh: StringProperty(
-        name=t("Tools.attach_mesh_select"),
-        description=t("Tools.attach_mesh_select_desc")
-    )
-
-    attach_bone: StringProperty(
-        name=t("Tools.attach_bone_select"),
-        description=t("Tools.attach_bone_select_desc")
     )
 
 def register() -> None:

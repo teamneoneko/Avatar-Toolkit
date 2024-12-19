@@ -1,7 +1,7 @@
 import bpy
-from bpy.types import Operator, Context, Object
+from bpy.types import Operator, Context, Object, ArmatureModifier, VertexGroup
 from mathutils import Vector
-from typing import Set, Optional
+from typing import Set, Optional, List, Any
 
 from ...core.logging_setup import logger
 from ...core.translations import t
@@ -15,28 +15,34 @@ from ...core.common import (
 )
 
 class AvatarToolkit_OT_AttachMesh(Operator):
-    """Attach a mesh to an armature bone with automatic weight setup"""
-    bl_idname = "avatar_toolkit.attach_mesh"
-    bl_label = t("AttachMesh.label")
-    bl_description = t("AttachMesh.desc")
-    bl_options = {'REGISTER', 'UNDO'}
+    """Operator to attach a mesh to an armature bone with automatic weight setup"""
+    bl_idname: str = "avatar_toolkit.attach_mesh"
+    bl_label: str = t("AttachMesh.label")
+    bl_description: str = t("AttachMesh.desc")
+    bl_options: Set[str] = {'REGISTER', 'UNDO'}
 
     @classmethod
     def poll(cls, context: Context) -> bool:
-        armature = get_active_armature(context)
-        return armature is not None and context.mode == 'OBJECT' and len(get_all_meshes(context)) > 0
+        """Check if operator can be executed"""
+        armature: Optional[Object] = get_active_armature(context)
+        if not armature:
+            return False
+        is_valid, _ = validate_armature(armature)
+        return is_valid
 
     def execute(self, context: Context) -> Set[str]:
         try:
             logger.info("Starting mesh attachment process")
             
-            mesh_name = context.scene.avatar_toolkit.attach_mesh
-            armature = get_active_armature(context)
-            attach_bone_name = context.scene.avatar_toolkit.attach_bone
-            mesh = bpy.data.objects.get(mesh_name)
+            mesh_name: str = context.scene.avatar_toolkit.attach_mesh
+            armature: Object = get_active_armature(context)
+            attach_bone_name: str = context.scene.avatar_toolkit.attach_bone
+            mesh: Optional[Object] = bpy.data.objects.get(mesh_name)
 
             with ProgressTracker(context, 10, "Attaching Mesh") as progress:
                 # Validation steps
+                is_valid: bool
+                error_msg: str
                 is_valid, error_msg = validate_mesh_transforms(mesh)
                 if not is_valid:
                     raise ValueError(error_msg)
@@ -63,7 +69,7 @@ class AvatarToolkit_OT_AttachMesh(Operator):
                 
                 bpy.ops.object.mode_set(mode='EDIT')
                 bpy.ops.mesh.select_all(action='SELECT')
-                vg = mesh.vertex_groups.new(name=mesh_name)
+                vg: VertexGroup = mesh.vertex_groups.new(name=mesh_name)
                 bpy.ops.object.vertex_group_assign()
                 bpy.ops.object.mode_set(mode='OBJECT')
                 progress.step(t("AttachMesh.setup_weights"))
@@ -83,12 +89,14 @@ class AvatarToolkit_OT_AttachMesh(Operator):
                 progress.step(t("AttachMesh.create_bone"))
 
                 # Calculate bone placement
-                verts_in_group = [v for v in mesh.data.vertices 
+                verts_in_group: List[Any] = [v for v in mesh.data.vertices 
                                 for g in v.groups if g.group == vg.index]
+                dimensions: Vector
+                roll_angle: float
                 dimensions, roll_angle = calculate_bone_orientation(mesh, verts_in_group)
                 
                 # Set bone position and orientation
-                center = Vector((0, 0, 0))
+                center: Vector = Vector((0, 0, 0))
                 for v in verts_in_group:
                     center += mesh.data.vertices[v.index].co
                 center /= len(verts_in_group)
@@ -111,20 +119,20 @@ class AvatarToolkit_OT_AttachMesh(Operator):
             self.report({'ERROR'}, str(e))
             return {'CANCELLED'}
 
-def validate_mesh_transforms(mesh):
-    """Validate mesh transforms are suitable for attaching."""
+def validate_mesh_transforms(mesh: Optional[Object]) -> tuple[bool, str]:
+    """Validate mesh transforms are suitable for attaching"""
     if not mesh:
         return False, "Mesh not found"
     
     # Check for non-uniform scale
-    scale = mesh.scale
+    scale: Vector = mesh.scale
     if abs(scale[0] - scale[1]) > 0.001 or abs(scale[1] - scale[2]) > 0.001:
         return False, "Mesh has non-uniform scale. Please apply scale (Ctrl+A)"
     
     return True, ""
 
-def validate_mesh_name(armature, mesh_name):
-    """Validate mesh name doesn't conflict with existing bones."""
+def validate_mesh_name(armature: Object, mesh_name: str) -> tuple[bool, str]:
+    """Validate mesh name doesn't conflict with existing bones"""
     if mesh_name in armature.data.bones:
         return False, f"Bone named '{mesh_name}' already exists in armature"
     return True, ""

@@ -1,9 +1,8 @@
-# MIT License
 # This code was taken from Cats Blender Plugin Unoffical, some of this code is by the original developers, however was improved by myself.
 # Didn't think it was necessary to re-make something that works well.
 
 import bpy
-from typing import Dict, List, Optional, Tuple, Any, Set
+from typing import Dict, List, Optional, Tuple, Any, Set, Union
 from bpy.types import Operator, Context, Object, ShapeKey
 from collections import OrderedDict
 from ..core.logging_setup import logger
@@ -16,22 +15,24 @@ from ..core.common import (
 )
 
 class VisemeCache:
-    """Caches generated viseme shape data"""
-    _cache: Dict = {}
+    """Manages caching of generated viseme shape data for performance optimization"""
+    _cache: Dict[Tuple[str, Tuple[Tuple]], List] = {}
     
     @classmethod
-    def get_cached_shape(cls, key: str, mix_data: List) -> Optional[List]:
+    def get_cached_shape(cls, key: str, mix_data: List[List[Union[str, float]]]) -> Optional[List]:
+        """Retrieves cached shape data for a given viseme key and mix configuration"""
         cache_key = (key, tuple(tuple(x) for x in mix_data))
         return cls._cache.get(cache_key)
     
     @classmethod 
-    def cache_shape(cls, key: str, mix_data: List, shape_data: List) -> None:
+    def cache_shape(cls, key: str, mix_data: List[List[Union[str, float]]], shape_data: List) -> None:
+        """Stores shape data in cache for future retrieval"""
         cache_key = (key, tuple(tuple(x) for x in mix_data))
         cls._cache[cache_key] = shape_data
 
 class VisemePreview:
-    """Handles viseme preview functionality"""
-    _preview_data: Dict = {}
+    """Controls real-time preview functionality for viseme shapes"""
+    _preview_data: Dict[str, float] = {}
     _active: bool = False
     _preview_shapes: Optional[OrderedDict] = None
     
@@ -117,13 +118,18 @@ class VisemePreview:
         cls._preview_shapes = None
 
 class ATOOLKIT_OT_preview_visemes(Operator):
-    bl_idname = "avatar_toolkit.preview_visemes"
-    bl_label = t("Visemes.preview_label")
-    bl_description = t("Visemes.preview_desc")
-    bl_options = {'REGISTER', 'UNDO', 'INTERNAL'}
+    """Operator for previewing viseme shapes in real-time"""
+    bl_idname: str = "avatar_toolkit.preview_visemes"
+    bl_label: str = t("Visemes.preview_label")
+    bl_description: str = t("Visemes.preview_desc")
+    bl_options: Set[str] = {'REGISTER', 'UNDO', 'INTERNAL'}
     
     @classmethod
     def poll(cls, context: Context) -> bool:
+        # Check if we're in object mode first
+        if context.mode != 'OBJECT':
+            return False
+            
         armature = get_active_armature(context)
         if not armature:
             return False
@@ -165,10 +171,11 @@ def validate_deformation(mesh, mix_data):
     return max_deform < (mesh_size * 0.4)
 
 class ATOOLKIT_OT_create_visemes(Operator):
-    bl_idname = "avatar_toolkit.create_visemes"
-    bl_label = t("Visemes.create_label")
-    bl_description = t("Visemes.create_desc")
-    bl_options = {'REGISTER', 'UNDO'}
+    """Operator for generating VRChat-compatible viseme shape keys"""
+    bl_idname: str = "avatar_toolkit.create_visemes"
+    bl_label: str = t("Visemes.create_label")
+    bl_description: str = t("Visemes.create_desc")
+    bl_options: Set[str] = {'REGISTER', 'UNDO'}
     
     @classmethod
     def poll(cls, context: Context) -> bool:

@@ -1,6 +1,6 @@
 import bpy
-from typing import Set
-from bpy.types import Panel, Context, UILayout, Operator
+from typing import Set, List, Tuple, Any
+from bpy.types import Panel, Context, UILayout, Operator, Event, WindowManager
 from .main_panel import AvatarToolKit_PT_AvatarToolkitPanel, CATEGORY_NAME
 from ..core.translations import t
 from ..core.common import (
@@ -11,10 +11,11 @@ from ..core.common import (
 )
 
 class AvatarToolkit_OT_SearchMergeArmatureInto(Operator):
-    bl_idname = "avatar_toolkit.search_merge_armature_into"
-    bl_label = ""
-    bl_description = t('MergeArmature.into_search_desc')
-    bl_property = "search_merge_armature_into_enum"
+    """Search operator for selecting target armature to merge into"""
+    bl_idname: str = "avatar_toolkit.search_merge_armature_into"
+    bl_label: str = ""
+    bl_description: str = t('MergeArmature.into_search_desc')
+    bl_property: str = "search_merge_armature_into_enum"
 
     search_merge_armature_into_enum: bpy.props.EnumProperty(
         name=t('MergeArmature.into'),
@@ -22,19 +23,20 @@ class AvatarToolkit_OT_SearchMergeArmatureInto(Operator):
         items=get_armature_list
     )
 
-    def execute(self, context):
+    def execute(self, context: Context) -> Set[str]:
         context.scene.avatar_toolkit.merge_armature_into = self.search_merge_armature_into_enum
         return {'FINISHED'}
 
-    def invoke(self, context, event):
+    def invoke(self, context: Context, event: Event) -> Set[str]:
         context.window_manager.invoke_search_popup(self)
         return {'FINISHED'}
 
 class AvatarToolkit_OT_SearchMergeArmature(Operator):
-    bl_idname = "avatar_toolkit.search_merge_armature"
-    bl_label = ""
-    bl_description = t('MergeArmature.from_search_desc')
-    bl_property = "search_merge_armature_enum"
+    """Search operator for selecting source armature to merge from"""
+    bl_idname: str = "avatar_toolkit.search_merge_armature"
+    bl_label: str = ""
+    bl_description: str = t('MergeArmature.from_search_desc')
+    bl_property: str = "search_merge_armature_enum"
 
     search_merge_armature_enum: bpy.props.EnumProperty(
         name=t('MergeArmature.from'),
@@ -42,44 +44,46 @@ class AvatarToolkit_OT_SearchMergeArmature(Operator):
         items=get_armature_list
     )
 
-    def execute(self, context):
+    def execute(self, context: Context) -> Set[str]:
         context.scene.avatar_toolkit.merge_armature = self.search_merge_armature_enum
         return {'FINISHED'}
 
-    def invoke(self, context, event):
+    def invoke(self, context: Context, event: Event) -> Set[str]:
         context.window_manager.invoke_search_popup(self)
         return {'FINISHED'}
 
 class AvatarToolkit_OT_SearchAttachMesh(Operator):
-    bl_idname = "avatar_toolkit.search_attach_mesh"
-    bl_label = ""
-    bl_description = t('AttachMesh.search_desc')
-    bl_property = "search_attach_mesh_enum"
+    """Search operator for selecting mesh to attach to armature"""
+    bl_idname: str = "avatar_toolkit.search_attach_mesh"
+    bl_label: str = ""
+    bl_description: str = t('AttachMesh.search_desc')
+    bl_property: str = "search_attach_mesh_enum"
 
     search_attach_mesh_enum: bpy.props.EnumProperty(
         name=t('AttachMesh.select'),
         description=t('AttachMesh.select_desc'),
         items=lambda self, context: [
-            (obj.name, obj.name, "")
+            (obj.name, obj.name, "") 
             for obj in bpy.data.objects 
             if obj.type == 'MESH' 
             and not any(mod.type == 'ARMATURE' for mod in obj.modifiers)
         ]
     )
 
-    def execute(self, context):
+    def execute(self, context: Context) -> Set[str]:
         context.scene.avatar_toolkit.attach_mesh = self.search_attach_mesh_enum
         return {'FINISHED'}
 
-    def invoke(self, context, event):
+    def invoke(self, context: Context, event: Event) -> Set[str]:
         context.window_manager.invoke_search_popup(self)
         return {'FINISHED'}
 
 class AvatarToolkit_OT_SearchAttachBone(Operator):
-    bl_idname = "avatar_toolkit.search_attach_bone"
-    bl_label = ""
-    bl_description = t('AttachBone.search_desc')
-    bl_property = "search_attach_bone_enum"
+    """Search operator for selecting bone to attach mesh to"""
+    bl_idname: str = "avatar_toolkit.search_attach_bone"
+    bl_label: str = ""
+    bl_description: str = t('AttachBone.search_desc')
+    bl_property: str = "search_attach_bone_enum"
 
     search_attach_bone_enum: bpy.props.EnumProperty(
         name=t('AttachBone.select'),
@@ -90,26 +94,27 @@ class AvatarToolkit_OT_SearchAttachBone(Operator):
         ] if get_active_armature(context) else []
     )
 
-    def execute(self, context):
+    def execute(self, context: Context) -> Set[str]:
         context.scene.avatar_toolkit.attach_bone = self.search_attach_bone_enum
         return {'FINISHED'}
 
-    def invoke(self, context, event):
+    def invoke(self, context: Context, event: Event) -> Set[str]:
         context.window_manager.invoke_search_popup(self)
         return {'FINISHED'}
 
 class AvatarToolKit_PT_CustomPanel(Panel):
     """Panel containing tools for custom avatar creation and merging"""
-    bl_label = t('CustomPanel.label')
-    bl_idname = "VIEW3D_PT_avatar_toolkit_custom"
-    bl_space_type = 'VIEW_3D'
-    bl_region_type = 'UI'
-    bl_category = CATEGORY_NAME
-    bl_parent_id = AvatarToolKit_PT_AvatarToolkitPanel.bl_idname
-    bl_order = 4
-    bl_options = {'DEFAULT_CLOSED'}
+    bl_label: str = t('CustomPanel.label')
+    bl_idname: str = "VIEW3D_PT_avatar_toolkit_custom"
+    bl_space_type: str = 'VIEW_3D'
+    bl_region_type: str = 'UI'
+    bl_category: str = CATEGORY_NAME
+    bl_parent_id: str = AvatarToolKit_PT_AvatarToolkitPanel.bl_idname
+    bl_order: int = 4
+    bl_options: Set[str] = {'DEFAULT_CLOSED'}
 
     def draw(self, context: Context) -> None:
+        """Draw the custom avatar panel UI"""
         layout: UILayout = self.layout
         toolkit = context.scene.avatar_toolkit
 
@@ -129,6 +134,7 @@ class AvatarToolKit_PT_CustomPanel(Panel):
             self.draw_mesh_tools(layout, context)
 
     def draw_armature_tools(self, layout: UILayout, context: Context) -> None:
+        """Draw the armature merging tools section"""
         toolkit = context.scene.avatar_toolkit
         
         # Merge Settings Box
@@ -148,13 +154,13 @@ class AvatarToolKit_PT_CustomPanel(Panel):
         col.separator(factor=0.5)
         
         # Group related options together
-        transform_col = col.column(align=True)
+        transform_col: UILayout = col.column(align=True)
         transform_col.prop(toolkit, "merge_all_bones")
         transform_col.prop(toolkit, "apply_transforms")
         
         col.separator(factor=0.5)
         
-        cleanup_col = col.column(align=True)
+        cleanup_col: UILayout = col.column(align=True)
         cleanup_col.prop(toolkit, "join_meshes")
         cleanup_col.prop(toolkit, "remove_zero_weights")
         cleanup_col.prop(toolkit, "cleanup_shape_keys")
@@ -178,12 +184,13 @@ class AvatarToolKit_PT_CustomPanel(Panel):
 
         # Merge button with emphasis
         merge_box: UILayout = layout.box()
-        col = merge_box.column(align=True)
-        row = col.row(align=True)
+        col: UILayout = merge_box.column(align=True)
+        row: UILayout = col.row(align=True)
         row.scale_y = 1.5
         row.operator("avatar_toolkit.merge_armatures", icon='ARMATURE_DATA')
 
     def draw_mesh_tools(self, layout: UILayout, context: Context) -> None:
+        """Draw the mesh attachment tools section"""
         toolkit = context.scene.avatar_toolkit
         
         # Mesh Tools Box
@@ -220,8 +227,7 @@ class AvatarToolKit_PT_CustomPanel(Panel):
 
         # Attach button with emphasis
         attach_box: UILayout = layout.box()
-        col = attach_box.column(align=True)
-        row = col.row(align=True)
+        col: UILayout = attach_box.column(align=True)
+        row: UILayout = col.row(align=True)
         row.scale_y = 1.5
         row.operator("avatar_toolkit.attach_mesh", icon='ARMATURE_DATA')
-

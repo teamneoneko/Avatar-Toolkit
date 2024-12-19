@@ -134,6 +134,10 @@ class AvatarToolKit_OT_DeleteBoneConstraints(Operator):
 
     def execute(self, context: Context) -> set[str]:
         """Execute the constraint removal operation"""
+
+        # Make sure we are in Object mode first or it will error
+        bpy.ops.object.mode_set(mode='OBJECT')
+
         armature = get_active_armature(context)
         
         # Select armature and make it active before changing mode
