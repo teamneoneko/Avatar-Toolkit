@@ -1,6 +1,6 @@
 import bpy
 from typing import Set
-from bpy.types import Panel, Context, UILayout, Operator
+from bpy.types import Panel, Context, UILayout, Operator, Event, WindowManager
 from .main_panel import AvatarToolKit_PT_AvatarToolkitPanel, CATEGORY_NAME
 from ..core.translations import t
 from ..core.common import get_active_armature, get_all_meshes
@@ -20,32 +20,32 @@ from ..functions.eye_tracking import (
 
 class AvatarToolKit_PT_EyeTrackingPanel(Panel):
     """Panel containing eye tracking setup and testing tools"""
-    bl_label = t("EyeTracking.label")
-    bl_idname = "VIEW3D_PT_avatar_toolkit_eye_tracking"
-    bl_space_type = 'VIEW_3D'
-    bl_region_type = 'UI'
-    bl_category = CATEGORY_NAME
-    bl_parent_id = AvatarToolKit_PT_AvatarToolkitPanel.bl_idname
-    bl_order = 6
-    bl_options = {'DEFAULT_CLOSED'}
+    bl_label: str = t("EyeTracking.label")
+    bl_idname: str = "VIEW3D_PT_avatar_toolkit_eye_tracking"
+    bl_space_type: str = 'VIEW_3D'
+    bl_region_type: str = 'UI'
+    bl_category: str = CATEGORY_NAME
+    bl_parent_id: str = AvatarToolKit_PT_AvatarToolkitPanel.bl_idname
+    bl_order: int = 6
+    bl_options: Set[str] = {'DEFAULT_CLOSED'}
 
     def draw(self, context: Context) -> None:
         """Draw the eye tracking panel interface"""
-        layout = self.layout
+        layout: UILayout = self.layout
         toolkit = context.scene.avatar_toolkit
 
         # SDK Version Selection Box
-        sdk_box = layout.box()
-        col = sdk_box.column(align=True)
+        sdk_box: UILayout = layout.box()
+        col: UILayout = sdk_box.column(align=True)
         col.label(text=t("EyeTracking.sdk_version"), icon='PRESET')
         col.separator(factor=0.5)
-        row = col.row(align=True)
+        row: UILayout = col.row(align=True)
         row.prop(toolkit, "eye_tracking_type", expand=True)
 
         if toolkit.eye_tracking_type == 'SDK2':
             # Mode Selection Box
-            mode_box = layout.box()
-            col = mode_box.column(align=True)
+            mode_box: UILayout = layout.box()
+            col: UILayout = mode_box.column(align=True)
             col.label(text=t("EyeTracking.setup"), icon='TOOL_SETTINGS')
             col.separator(factor=0.5)
             col.prop(toolkit, "eye_mode", expand=True)
@@ -59,11 +59,12 @@ class AvatarToolKit_PT_EyeTrackingPanel(Panel):
             self.draw_av3_setup(context, layout)
 
     def draw_av3_setup(self, context: Context, layout: UILayout) -> None:
+        """Draw the AV3 eye tracking setup interface"""
         toolkit = context.scene.avatar_toolkit
 
         # Bone Setup Box
-        bone_box = layout.box()
-        col = bone_box.column(align=True)
+        bone_box: UILayout = layout.box()
+        col: UILayout = bone_box.column(align=True)
         col.label(text=t("EyeTracking.bone_setup"), icon='BONE_DATA')
         col.separator(factor=0.5)
 
@@ -76,16 +77,17 @@ class AvatarToolKit_PT_EyeTrackingPanel(Panel):
             col.label(text=t("EyeTracking.no_armature"), icon='ERROR')
 
         # Create Button
-        row = layout.row(align=True)
+        row: UILayout = layout.row(align=True)
         row.scale_y = 1.5
         row.operator(CreateEyesAV3Button.bl_idname, icon='PLAY')
 
     def draw_creation_mode(self, context: Context, layout: UILayout) -> None:
+        """Draw the eye tracking creation mode interface"""
         toolkit = context.scene.avatar_toolkit
 
         # Bone Setup Box
-        bone_box = layout.box()
-        col = bone_box.column(align=True)
+        bone_box: UILayout = layout.box()
+        col: UILayout = bone_box.column(align=True)
         col.label(text=t("EyeTracking.bone_setup"), icon='BONE_DATA')
         col.separator(factor=0.5)
 
@@ -98,15 +100,15 @@ class AvatarToolKit_PT_EyeTrackingPanel(Panel):
             col.label(text=t("EyeTracking.no_armature"), icon='ERROR')
 
         # Mesh Setup Box
-        mesh_box = layout.box()
-        col = mesh_box.column(align=True)
+        mesh_box: UILayout = layout.box()
+        col: UILayout = mesh_box.column(align=True)
         col.label(text=t("EyeTracking.mesh_setup"), icon='MESH_DATA')
         col.separator(factor=0.5)
         col.prop_search(toolkit, "mesh_name_eye", bpy.data, "objects", text="")
 
         # Shape Key Setup Box
-        shape_box = layout.box()
-        col = shape_box.column(align=True)
+        shape_box: UILayout = layout.box()
+        col: UILayout = shape_box.column(align=True)
         col.label(text=t("EyeTracking.shapekey_setup"), icon='SHAPEKEY_DATA')
         col.separator(factor=0.5)
 
@@ -120,8 +122,8 @@ class AvatarToolKit_PT_EyeTrackingPanel(Panel):
             col.label(text=t("EyeTracking.no_shapekeys"), icon='ERROR')
 
         # Options Box
-        options_box = layout.box()
-        col = options_box.column(align=True)
+        options_box: UILayout = layout.box()
+        col: UILayout = options_box.column(align=True)
         col.label(text=t("EyeTracking.options"), icon='SETTINGS')
         col.separator(factor=0.5)
         col.prop(toolkit, "disable_eye_blinking")
@@ -130,26 +132,27 @@ class AvatarToolKit_PT_EyeTrackingPanel(Panel):
             col.prop(toolkit, "eye_distance")
 
         # Create Button
-        row = layout.row(align=True)
+        row: UILayout = layout.row(align=True)
         row.scale_y = 1.5
         row.operator(CreateEyesSDK2Button.bl_idname, icon='PLAY')
 
     def draw_testing_mode(self, context: Context, layout: UILayout) -> None:
+        """Draw the eye tracking testing mode interface"""
         toolkit = context.scene.avatar_toolkit
 
         if context.mode != 'POSE':
             # Testing Start Box
-            test_box = layout.box()
-            col = test_box.column(align=True)
+            test_box: UILayout = layout.box()
+            col: UILayout = test_box.column(align=True)
             col.label(text=t("EyeTracking.testing"), icon='PLAY')
             col.separator(factor=0.5)
-            row = col.row(align=True)
+            row: UILayout = col.row(align=True)
             row.scale_y = 1.5
             row.operator(StartTestingButton.bl_idname, icon='PLAY')
         else:
             # Eye Rotation Box
-            rotation_box = layout.box()
-            col = rotation_box.column(align=True)
+            rotation_box: UILayout = layout.box()
+            col: UILayout = rotation_box.column(align=True)
             col.label(text=t("EyeTracking.rotation_controls"), icon='DRIVER_ROTATIONAL_DIFFERENCE')
             col.separator(factor=0.5)
             col.prop(toolkit, "eye_rotation_x", text=t("EyeTracking.rotation.x"))
@@ -157,31 +160,31 @@ class AvatarToolKit_PT_EyeTrackingPanel(Panel):
             col.operator(ResetRotationButton.bl_idname, icon='LOOP_BACK')
 
             # Eye Adjustment Box
-            adjust_box = layout.box()
-            col = adjust_box.column(align=True)
+            adjust_box: UILayout = layout.box()
+            col: UILayout = adjust_box.column(align=True)
             col.label(text=t("EyeTracking.adjustments"), icon='MODIFIER')
             col.separator(factor=0.5)
             col.prop(toolkit, "eye_distance")
             col.operator(AdjustEyesButton.bl_idname, icon='CON_TRACKTO')
 
             # Blinking Test Box
-            blink_box = layout.box()
-            col = blink_box.column(align=True)
+            blink_box: UILayout = layout.box()
+            col: UILayout = blink_box.column(align=True)
             col.label(text=t("EyeTracking.blink_testing"), icon='HIDE_OFF')
             col.separator(factor=0.5)
-            row = col.row(align=True)
+            row: UILayout = col.row(align=True)
             row.prop(toolkit, "eye_blink_shape")
             row.operator(TestBlinking.bl_idname, icon='RESTRICT_VIEW_OFF')
-            row = col.row(align=True)
+            row: UILayout = col.row(align=True)
             row.prop(toolkit, "eye_lowerlid_shape")
             row.operator(TestLowerlid.bl_idname, icon='RESTRICT_VIEW_OFF')
             col.operator(ResetBlinkTest.bl_idname, icon='LOOP_BACK')
 
             # Stop Testing Button
-            row = layout.row(align=True)
+            row: UILayout = layout.row(align=True)
             row.scale_y = 1.5
             row.operator(StopTestingButton.bl_idname, icon='PAUSE')
 
         # Reset Button
-        row = layout.row(align=True)
+        row: UILayout = layout.row(align=True)
         row.operator(ResetEyeTrackingButton.bl_idname, icon='FILE_REFRESH')

@@ -1,5 +1,6 @@
 import logging
-from typing import Optional
+from typing import Optional, Any
+from bpy.types import Context
 
 logger = logging.getLogger('avatar_toolkit')
 
@@ -18,7 +19,7 @@ def configure_logging(enabled: bool = False) -> None:
         handler.setFormatter(formatter)
         logger.addHandler(handler)
 
-def update_logging_state(self, context) -> None:
+def update_logging_state(self: Any, context: Context) -> None:
     """Update logging state based on user preference"""
     from .addon_preferences import save_preference
     enabled = self.enable_logging

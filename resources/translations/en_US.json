@@ -1,7 +1,7 @@
 {
   "authors": ["Avatar Toolkit Team"],
   "messages": {
-    "AvatarToolkit.label": "Avatar Toolkit (Alpha 0.1.0)",
+    "AvatarToolkit.label": "Avatar Toolkit (Alpha 0.1.1)",
     "AvatarToolkit.desc1": "Avatar Toolkit is in Early Access there",
     "AvatarToolkit.desc2": "will be issues, if you find any issues,",
     "AvatarToolkit.desc3": "please report it on our Github.",
@@ -231,6 +231,8 @@
     "Visemes.error.no_shapekeys": "Mesh has no shape keys",
     "Visemes.error.select_shapekeys": "Please select shape keys for A, O and CH",
     "Visemes.success": "Visemes created successfully",
+    "Visemes.mesh_select": "Select Mesh",
+    "Visemes.mesh_select_desc": "Select the mesh to create visemes on",
 
     "EyeTracking.label": "Eye Tracking",
     "EyeTracking.setup": "Eye Tracking Setup",
@@ -314,6 +316,8 @@
     "EyeTracking.type.av3_desc": "VRChat Avatar 3.0 eye tracking setup",
     "EyeTracking.type.sdk2": "SDK2 (Legacy)",
     "EyeTracking.type.sdk2_desc": "VRChat SDK2 eye tracking setup",
+    "EyeTracking.adjust.label": "Adjust Eye Position",
+    "EyeTracking.adjust.desc": "Adjust the position of eye bones based on vertex groups",
 
     "CustomPanel.label": "Custom Avatar Tools",
     "CustomPanel.merge_mode": "Merge Mode",
@@ -396,6 +400,7 @@
     "Language.auto": "Automatic",
     "Language.en_US": "English",
     "Language.ja_JP": "Japanese",
+    "Language.ko_KR": "Korean",
     "Language.changed.title": "Language Changed",
     "Language.changed.success": "Language changed successfully!",
     "Language.changed.restart": "Some UI elements may require restarting Blender"
