@@ -1,7 +1,30 @@
 import struct
 from dataclasses import dataclass
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Union
 from mathutils import Vector
+from ..logging_setup import logger
+
+INDEX_TYPES = {
+    1: {'vertex': 'B', 'bone': 'b', 'other': 'b'},  # unsigned/signed byte
+    2: {'vertex': 'H', 'bone': 'h', 'other': 'h'},  # unsigned/signed short  
+    4: {'vertex': 'I', 'bone': 'i', 'other': 'i'}   # unsigned/signed int
+}
+
+# Bone flag constants
+BONE_FLAGS = {
+    'INDEXED_TAIL_POSITION': 0x0001,
+    'ROTATABLE': 0x0002,
+    'TRANSLATABLE': 0x0004,
+    'VISIBLE': 0x0008,
+    'ENABLED': 0x0010,
+    'IK': 0x0020,
+    'INHERIT_ROTATION': 0x0100,
+    'INHERIT_TRANSLATION': 0x0200,
+    'FIXED_AXIS': 0x0400,
+    'LOCAL_COORDINATE': 0x0800,
+    'PHYSICS_AFTER_DEFORM': 0x1000,
+    'EXTERNAL_PARENT_DEFORM': 0x2000
+}
 
 @dataclass
 class PMXVertex:
@@ -11,31 +34,64 @@ class PMXVertex:
     bone_indices: List[int] 
     bone_weights: List[float]
 
-@dataclass 
+@dataclass
 class PMXMaterial:
     name: str
-    diffuse: Tuple[float, float, float, float]
-    specular: Tuple[float, float, float]
-    ambient: Tuple[float, float, float]
+    name_en: str
+    diffuse: Tuple[float, float, float, float]  # RGBA
+    specular: Tuple[float, float, float]        # RGB
+    specular_strength: float
+    ambient: Tuple[float, float, float]         # RGB
+    flags: int                                  # Drawing flags
+    edge_color: Tuple[float, float, float, float]  # RGBA
+    edge_scale: float
     texture_index: int
-    sphere_texture_index: int
-    sphere_mode: int
-    toon_texture_index: int
-    vertex_count: int
+    environment_index: int
+    environment_blend_mode: int
+    toon_reference: int
+    toon_value: Union[int, bytes]
+    metadata: str
+    surface_count: int
+
+@dataclass
+class PMXBone:
+    name: str
+    name_en: str
+    position: Tuple[float, float, float]
+    parent_index: int
+    layer: int
+    flags: int
+    tail_position: Union[Tuple[float, float, float], int]
+    inherit_bone: Optional[dict] = None
+    fixed_axis: Optional[dict] = None
+    local_coordinate: Optional[dict] = None
+    external_parent: Optional[dict] = None
+    ik: Optional[dict] = None
 
 def load_pmx_file(filepath: str):
     """Load and parse PMX file format"""
     with open(filepath, 'rb') as f:
+        # Debug file header
+        header_bytes = f.read(4)
+        logger.debug(f"File signature: {header_bytes}")
+        f.seek(0)  # Reset position
+        
         # Check PMX signature
         if f.read(4) != b'PMX ':
             raise ValueError("Not a valid PMX file")
             
-        # Read header
-        version = struct.unpack('f', f.read(4))[0]
-        header_size = struct.unpack('b', f.read(1))[0]
+        # Read version
+        version = struct.unpack('<f', f.read(4))[0]
+        logger.debug(f"PMX Version: {version}")
         
-        # Read model info
-        encoding = 'utf-16-le' if f.read(1)[0] else 'utf-8'
+        # Read header info
+        header_size = f.read(1)[0]
+        logger.debug(f"Header size: {header_size}")
+        
+        # Read encoding flags
+        encoding_flag = f.read(1)[0]
+        encoding = 'utf-16-le' if encoding_flag == 0 else 'utf-8'
+        logger.debug(f"Detected encoding flag: {encoding_flag}")
         additional_vec4s = f.read(1)[0]
         vertex_index_size = f.read(1)[0]
         texture_index_size = f.read(1)[0]
@@ -43,32 +99,44 @@ def load_pmx_file(filepath: str):
         bone_index_size = f.read(1)[0]
         morph_index_size = f.read(1)[0]
         rigid_body_index_size = f.read(1)[0]
+        
+        logger.debug(f"Encoding: {encoding}")
+        logger.debug(f"Additional Vec4s: {additional_vec4s}")
+        logger.debug(f"Index Sizes - Vertex: {vertex_index_size}, Texture: {texture_index_size}, Material: {material_index_size}")
+        logger.debug(f"Index Sizes - Bone: {bone_index_size}, Morph: {morph_index_size}, RigidBody: {rigid_body_index_size}")
 
-        # Read model name
+        # Read model info
         name_jp = _read_text(f, encoding)
         name_en = _read_text(f, encoding)
         comment_jp = _read_text(f, encoding)
         comment_en = _read_text(f, encoding)
+        
+        logger.debug(f"Model name: {name_en} ({name_jp})")
 
         # Read vertices
-        vertex_count = struct.unpack('i', f.read(4))[0]
+        vertex_count = struct.unpack('<i', f.read(4))[0]
+        logger.debug(f"Vertex count: {vertex_count}")
         vertices = _read_vertices(f, vertex_count)
 
         # Read faces
-        face_count = struct.unpack('i', f.read(4))[0] 
+        face_count = struct.unpack('<i', f.read(4))[0]
+        logger.debug(f"Face count: {face_count}")
         faces = _read_faces(f, face_count, vertex_index_size)
 
-        # Read textures
-        texture_count = struct.unpack('i', f.read(4))[0]
+        # Read texture count and paths
+        texture_count = struct.unpack('<i', f.read(4))[0]
+        logger.debug(f"Texture count: {texture_count}")
         textures = _read_textures(f, texture_count, encoding)
 
-        # Read materials
-        material_count = struct.unpack('i', f.read(4))[0]
-        materials = _read_materials(f, material_count, encoding)
+        # Read materials with texture index size
+        material_count = struct.unpack('<i', f.read(4))[0]
+        logger.debug(f"Material count: {material_count}")
+        materials = _read_materials(f, material_count, encoding, texture_index_size)
 
         # Read bones
-        bone_count = struct.unpack('i', f.read(4))[0]
-        bones = _read_bones(f, bone_count, encoding)
+        bone_count = struct.unpack('<i', f.read(4))[0]
+        logger.debug(f"Bone count: {bone_count}")
+        bones = _read_bones(f, bone_count, encoding, bone_index_size)
 
         return {
             'name': name_jp,
@@ -85,41 +153,54 @@ def _read_text(f, encoding: str) -> str:
     length = struct.unpack('i', f.read(4))[0]
     if length == 0:
         return ""
-    return f.read(length).decode(encoding)
+    try:
+        return f.read(length).decode(encoding, errors='replace')
+    except UnicodeDecodeError:
+        # Fallback to utf-8 if utf-16-le fails
+        return f.read(length).decode('utf-8', errors='replace')
 
 def _read_vertices(f, count: int) -> List[PMXVertex]:
-    """Read vertex data"""
+    """Read vertex data according to PMX 2.0/2.1 specification"""
     vertices = []
-    for _ in range(count):
-        pos = struct.unpack('fff', f.read(12))
-        normal = struct.unpack('fff', f.read(12))
-        uv = struct.unpack('ff', f.read(8))
+    for vertex_index in range(count):
+        # Position, Normal, UV
+        pos = struct.unpack('<fff', f.read(12))
+        normal = struct.unpack('<fff', f.read(12))
+        uv = struct.unpack('<ff', f.read(8))
         
-        weight_type = struct.unpack('b', f.read(1))[0]
+        # Skip any additional UV coordinates (vec4s)
+        additional_vec4_count = 0  # This should be passed from header
+        if additional_vec4_count > 0:
+            f.read(16 * additional_vec4_count)
+        
+        # Read weight type as a single byte
+        weight_type = struct.unpack('<B', f.read(1))[0]
         
         if weight_type == 0:  # BDEF1
-            indices = [struct.unpack('i', f.read(4))[0]]
+            indices = [struct.unpack('<h', f.read(2))[0]]  # Using correct index size
             weights = [1.0]
         elif weight_type == 1:  # BDEF2
-            indices = [struct.unpack('i', f.read(4))[0] for _ in range(2)]
-            weights = [struct.unpack('f', f.read(4))[0]]
+            indices = [struct.unpack('<h', f.read(2))[0] for _ in range(2)]
+            weights = [struct.unpack('<f', f.read(4))[0]]
             weights.append(1.0 - weights[0])
         elif weight_type == 2:  # BDEF4
-            indices = [struct.unpack('i', f.read(4))[0] for _ in range(4)]
-            weights = [struct.unpack('f', f.read(4))[0] for _ in range(4)]
+            indices = [struct.unpack('<h', f.read(2))[0] for _ in range(4)]
+            weights = [struct.unpack('<f', f.read(4))[0] for _ in range(4)]
         elif weight_type == 3:  # SDEF
-            indices = [struct.unpack('i', f.read(4))[0] for _ in range(2)]
-            weights = [struct.unpack('f', f.read(4))[0]]
+            indices = [struct.unpack('<h', f.read(2))[0] for _ in range(2)]
+            weights = [struct.unpack('<f', f.read(4))[0]]
             weights.append(1.0 - weights[0])
-            # Read SDEF data
-            sdef_c = struct.unpack('fff', f.read(12))
-            sdef_r0 = struct.unpack('fff', f.read(12))
-            sdef_r1 = struct.unpack('fff', f.read(12))
+            sdef_c = struct.unpack('<fff', f.read(12))
+            sdef_r0 = struct.unpack('<fff', f.read(12))
+            sdef_r1 = struct.unpack('<fff', f.read(12))
         elif weight_type == 4:  # QDEF
-            indices = [struct.unpack('i', f.read(4))[0] for _ in range(4)]
-            weights = [struct.unpack('f', f.read(4))[0] for _ in range(4)]
+            indices = [struct.unpack('<h', f.read(2))[0] for _ in range(4)]
+            weights = [struct.unpack('<f', f.read(4))[0] for _ in range(4)]
         else:
-            raise ValueError(f"Invalid weight type: {weight_type}")
+            raise ValueError(f"Weight type {weight_type} is outside valid range (0-4)")
+            
+        # Edge scale
+        edge_scale = struct.unpack('<f', f.read(4))[0]
             
         vertices.append(PMXVertex(
             Vector(pos),
@@ -129,6 +210,7 @@ def _read_vertices(f, count: int) -> List[PMXVertex]:
             weights
         ))
     return vertices
+
 
 def _read_faces(f, count: int, index_size: int) -> List[Tuple[int, int, int]]:
     """Read face indices"""
@@ -145,70 +227,165 @@ def _read_faces(f, count: int, index_size: int) -> List[Tuple[int, int, int]]:
 
 def _read_textures(f, count: int, encoding: str) -> List[str]:
     """Read texture paths"""
-    return [_read_text(f, encoding) for _ in range(count)]
+    textures = []
+    for _ in range(count):
+        path = _read_text(f, encoding)
+        # Handle reserved toon textures
+        if any(toon in path.lower() for toon in [f"toon{i:02d}.bmp" for i in range(1, 11)]):
+            logger.warning(f"Found reserved toon texture name: {path}")
+        textures.append(path)
+    return textures
 
-def _read_materials(f, count: int, encoding: str) -> List[PMXMaterial]:
-    """Read material data"""
+def _read_vec2(f) -> Tuple[float, float]:
+    """Read 2D vector"""
+    return struct.unpack('<ff', f.read(8))
+
+def _read_vec3(f) -> Tuple[float, float, float]:
+    """Read 3D vector"""
+    return struct.unpack('<fff', f.read(12))
+
+def _read_vec4(f) -> Tuple[float, float, float, float]:
+    """Read 4D vector"""
+    return struct.unpack('<ffff', f.read(16))
+
+def _read_index(f, size: int, index_type: str = 'other') -> int:
+    """Read index value based on size and type"""
+    format_char = INDEX_TYPES[size][index_type]
+    return struct.unpack(f'<{format_char}', f.read(size))[0]
+
+def _read_materials(f, count: int, encoding: str, texture_index_size: int) -> List[PMXMaterial]:
+    """Read material data according to PMX 2.0/2.1 spec"""
     materials = []
     for _ in range(count):
+        # Basic info
         name = _read_text(f, encoding)
         name_en = _read_text(f, encoding)
         
-        diffuse = struct.unpack('ffff', f.read(16))
-        specular = struct.unpack('fff', f.read(12))
-        ambient = struct.unpack('fff', f.read(12))
+        # Colors and properties
+        diffuse = _read_vec4(f)
+        specular = _read_vec3(f)
+        specular_strength = struct.unpack('<f', f.read(4))[0]
+        ambient = _read_vec3(f)
         
-        # Skip flags
-        f.read(1)
+        # Flags and edge properties
+        flags = struct.unpack('B', f.read(1))[0]
+        edge_color = _read_vec4(f)
+        edge_scale = struct.unpack('<f', f.read(4))[0]
         
-        # Edge color and size
-        f.read(16)
+        # Texture references
+        texture_index = _read_index(f, texture_index_size)
+        environment_index = _read_index(f, texture_index_size)
+        environment_blend_mode = struct.unpack('B', f.read(1))[0]
         
-        # Texture and sphere indices
-        texture_index = struct.unpack('i', f.read(4))[0]
-        sphere_texture_index = struct.unpack('i', f.read(4))[0]
-        sphere_mode = struct.unpack('b', f.read(1))[0]
-        
-        # Toon texture
-        shared_toon_flag = struct.unpack('b', f.read(1))[0]
-        if shared_toon_flag:
-            toon_texture_index = struct.unpack('b', f.read(1))[0]
+        # Toon properties
+        toon_reference = struct.unpack('B', f.read(1))[0]
+        if toon_reference == 0:
+            toon_value = _read_index(f, texture_index_size)
         else:
-            toon_texture_index = struct.unpack('i', f.read(4))[0]
+            toon_value = struct.unpack('B', f.read(1))[0]
             
-        # Skip comment
-        _read_text(f, encoding)
-        
-        vertex_count = struct.unpack('i', f.read(4))[0]
+        # Additional data
+        metadata = _read_text(f, encoding)
+        surface_count = struct.unpack('<I', f.read(4))[0]
         
         materials.append(PMXMaterial(
             name=name,
+            name_en=name_en,
             diffuse=diffuse,
             specular=specular,
+            specular_strength=specular_strength,
             ambient=ambient,
+            flags=flags,
+            edge_color=edge_color,
+            edge_scale=edge_scale,
             texture_index=texture_index,
-            sphere_texture_index=sphere_texture_index,
-            sphere_mode=sphere_mode,
-            toon_texture_index=toon_texture_index,
-            vertex_count=vertex_count
+            environment_index=environment_index,
+            environment_blend_mode=environment_blend_mode,
+            toon_reference=toon_reference,
+            toon_value=toon_value,
+            metadata=metadata,
+            surface_count=surface_count
         ))
     return materials
 
-def _read_bones(f, count: int, encoding: str) -> List[dict]:
-    """Read bone data"""
+def _read_bones(f, count: int, encoding: str, bone_index_size: int) -> List[PMXBone]:
+    """Read bone data according to PMX spec"""
     bones = []
     for _ in range(count):
-        bone = {
-            'name': _read_text(f, encoding),
-            'name_en': _read_text(f, encoding),
-            'position': struct.unpack('fff', f.read(12)),
-            'parent_index': struct.unpack('i', f.read(4))[0],
-            'layer': struct.unpack('i', f.read(4))[0],
-            'flags': struct.unpack('H', f.read(2))[0]
-        }
-        bones.append(bone)
+        # Basic bone data
+        name = _read_text(f, encoding)
+        name_en = _read_text(f, encoding)
+        position = _read_vec3(f)
+        parent_index = _read_index(f, bone_index_size, 'bone')
+        layer = struct.unpack('<i', f.read(4))[0]
+        flags = struct.unpack('<H', f.read(2))[0]
         
-        # Skip additional bone data for now
-        # TODO: Implement full bone data reading
+        # Handle tail position based on flag
+        if flags & BONE_FLAGS['INDEXED_TAIL_POSITION']:
+            tail_position = _read_index(f, bone_index_size, 'bone')
+        else:
+            tail_position = _read_vec3(f)
+            
+        bone_data = {
+            'name': name,
+            'name_en': name_en,
+            'position': position,
+            'parent_index': parent_index,
+            'layer': layer,
+            'flags': flags,
+            'tail_position': tail_position
+        }
+        
+        # Read inheritance data
+        if flags & (BONE_FLAGS['INHERIT_ROTATION'] | BONE_FLAGS['INHERIT_TRANSLATION']):
+            bone_data['inherit_bone'] = {
+                'parent_index': _read_index(f, bone_index_size, 'bone'),
+                'influence': struct.unpack('<f', f.read(4))[0]
+            }
+            
+        # Read fixed axis data
+        if flags & BONE_FLAGS['FIXED_AXIS']:
+            bone_data['fixed_axis'] = {
+                'axis_direction': _read_vec3(f)
+            }
+            
+        # Read local coordinate data
+        if flags & BONE_FLAGS['LOCAL_COORDINATE']:
+            bone_data['local_coordinate'] = {
+                'x_vector': _read_vec3(f),
+                'z_vector': _read_vec3(f)
+            }
+            
+        # Read external parent data
+        if flags & BONE_FLAGS['EXTERNAL_PARENT_DEFORM']:
+            bone_data['external_parent'] = {
+                'parent_index': _read_index(f, bone_index_size, 'bone')
+            }
+            
+        # Read IK data
+        if flags & BONE_FLAGS['IK']:
+            ik_data = {
+                'target_index': _read_index(f, bone_index_size, 'bone'),
+                'loop_count': struct.unpack('<i', f.read(4))[0],
+                'limit_radian': struct.unpack('<f', f.read(4))[0],
+                'links': []
+            }
+            
+            link_count = struct.unpack('<i', f.read(4))[0]
+            for _ in range(link_count):
+                link = {
+                    'bone_index': _read_index(f, bone_index_size, 'bone'),
+                    'has_limits': struct.unpack('B', f.read(1))[0]
+                }
+                
+                if link['has_limits']:
+                    link['limit_min'] = _read_vec3(f)
+                    link['limit_max'] = _read_vec3(f)
+                    
+                ik_data['links'].append(link)
+                
+            bone_data['ik'] = ik_data
+            
+        bones.append(PMXBone(**bone_data))
         
     return bones

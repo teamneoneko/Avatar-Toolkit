@@ -345,7 +345,23 @@ class PMXImporter:
         rb_const.limit_ang_y_upper = joint.angular_upper_limit[1]
         rb_const.limit_ang_z_lower = joint.angular_lower_limit[2]
         rb_const.limit_ang_z_upper = joint.angular_upper_limit[2]
-    
+
+    def _create_base_objects(self, context: bpy.types.Context) -> None:
+        """Create base armature and mesh objects"""
+        # Create armature
+        armature = bpy.data.armatures.new(name=self.model['name'])
+        self.armature_obj = bpy.data.objects.new(self.model['name'], armature)
+        context.scene.collection.objects.link(self.armature_obj)
+        
+        # Create mesh
+        mesh = bpy.data.meshes.new(name=f"{self.model['name']}_mesh")
+        self.mesh_obj = bpy.data.objects.new(f"{self.model['name']}_mesh", mesh)
+        context.scene.collection.objects.link(self.mesh_obj)
+        
+        # Set active object
+        context.view_layer.objects.active = self.armature_obj
+        self.armature_obj.select_set(True)
+
 def import_pmx(context: bpy.types.Context, filepath: str, **options) -> Set[str]:
     """Import a PMX file into Blender"""
     importer = PMXImporter()
