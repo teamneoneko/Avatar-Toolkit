@@ -1,6 +1,6 @@
 import struct
 from dataclasses import dataclass
-from typing import List, Tuple, Optional, Union
+from typing import List, Tuple, Optional, Union, Dict
 from mathutils import Vector
 from ..logging_setup import logger
 
@@ -138,6 +138,66 @@ def load_pmx_file(filepath: str):
         logger.debug(f"Bone count: {bone_count}")
         bones = _read_bones(f, bone_count, encoding, bone_index_size)
 
+        # Read morphs
+        morph_count = struct.unpack('<i', f.read(4))[0]
+        logger.debug(f"Morph count: {morph_count}")
+        morphs = []
+
+        # Read rigid bodies
+        rigid_body_count = struct.unpack('<i', f.read(4))[0]
+        logger.debug(f"Rigid body count: {rigid_body_count}")
+        rigid_bodies = _read_rigid_bodies(f, rigid_body_count, encoding, bone_index_size)
+
+        # Read joints
+        joint_count = struct.unpack('<i', f.read(4))[0]
+        logger.debug(f"Joint count: {joint_count}")
+        joints = _read_joints(f, joint_count, encoding, rigid_body_index_size)
+
+        for _ in range(morph_count):
+            morph_data = {
+                'name': _read_text(f, encoding),
+                'name_en': _read_text(f, encoding),
+                'panel': struct.unpack('B', f.read(1))[0],
+                'type': struct.unpack('B', f.read(1))[0],
+                'offsets': []
+            }
+            
+            offset_count = struct.unpack('<i', f.read(4))[0]
+            
+            for _ in range(offset_count):
+                offset = {}
+                morph_type = morph_data['type']
+                
+                if morph_type == 0:  # Group
+                    offset['index'] = _read_index(f, morph_index_size)
+                    offset['influence'] = struct.unpack('<f', f.read(4))[0]
+                elif morph_type == 1:  # Vertex
+                    offset['index'] = _read_index(f, vertex_index_size)
+                    offset['translation'] = _read_vec3(f)
+                elif morph_type == 2:  # Bone
+                    offset['index'] = _read_index(f, bone_index_size)
+                    offset['translation'] = _read_vec3(f)
+                    offset['rotation'] = _read_vec4(f)
+                elif morph_type == 3:  # UV
+                    offset['index'] = _read_index(f, vertex_index_size)
+                    offset['floats'] = _read_vec4(f)
+                elif morph_type == 8:  # Material
+                    offset['index'] = _read_index(f, material_index_size)
+                    offset['is_add'] = struct.unpack('B', f.read(1))[0]
+                    offset['diffuse'] = _read_vec4(f)
+                    offset['specular'] = _read_vec3(f)
+                    offset['specularity'] = struct.unpack('<f', f.read(4))[0]
+                    offset['ambient'] = _read_vec3(f)
+                    offset['edge_color'] = _read_vec4(f)
+                    offset['edge_size'] = struct.unpack('<f', f.read(4))[0]
+                    offset['texture_tint'] = _read_vec4(f)
+                    offset['environment_tint'] = _read_vec4(f)
+                    offset['toon_tint'] = _read_vec4(f)
+                    
+                morph_data['offsets'].append(offset)
+                
+            morphs.append(morph_data)
+
         return {
             'name': name_jp,
             'name_en': name_en,
@@ -145,19 +205,37 @@ def load_pmx_file(filepath: str):
             'faces': faces,
             'textures': textures,
             'materials': materials,
-            'bones': bones
+            'bones': bones,
+            'morphs': morphs,
+            'rigid_bodies': rigid_bodies,
+            'joints': joints,
+            'comment_jp': comment_jp,
+            'comment_en': comment_en
         }
 
 def _read_text(f, encoding: str) -> str:
-    """Read encoded text from file"""
-    length = struct.unpack('i', f.read(4))[0]
-    if length == 0:
+    """Read text according to PMX specification with robust UTF-16-LE handling"""
+
+    # Read 4-byte length (int32_t)
+    length = struct.unpack('<i', f.read(4))[0]
+    
+    if length <= 0:
         return ""
-    try:
-        return f.read(length).decode(encoding, errors='replace')
-    except UnicodeDecodeError:
-        # Fallback to utf-8 if utf-16-le fails
-        return f.read(length).decode('utf-8', errors='replace')
+        
+    # Read exact number of bytes
+    text_bytes = f.read(length)
+    
+    # Try encodings in order of likelihood
+    encodings = [encoding, 'shift-jis', 'cp932']
+    
+    for enc in encodings:
+        try:
+            return text_bytes.decode(enc)
+        except UnicodeDecodeError:
+            continue
+            
+    # If all decodings fail, return empty string to continue parsing
+    return ""
 
 def _read_vertices(f, count: int) -> List[PMXVertex]:
     """Read vertex data according to PMX 2.0/2.1 specification"""
@@ -389,3 +467,88 @@ def _read_bones(f, count: int, encoding: str, bone_index_size: int) -> List[PMXB
         bones.append(PMXBone(**bone_data))
         
     return bones
+    
+def _read_rigid_bodies(f, count: int, encoding: str, bone_index_size: int) -> List[Dict]:
+    rigid_bodies = []
+    start_pos = f.tell()
+    
+    for i in range(count):
+        try:
+            # Validate remaining file size
+            current_pos = f.tell()
+            
+            # Read name with validation
+            name = _read_text(f, encoding)
+            if name is None:
+                logger.warning(f"Invalid name for rigid body {i}")
+                continue
+                
+            name_en = _read_text(f, encoding)
+            bone_index = _read_index(f, bone_index_size, 'bone')
+            
+            # Read fixed-size data in one operation
+            try:
+                group_id = int.from_bytes(f.read(1), byteorder='little')
+                non_collision_group = int.from_bytes(f.read(2), byteorder='little')
+                shape_type = int.from_bytes(f.read(1), byteorder='little')
+            except Exception as e:
+                logger.error(f"Failed to read rigid body header data: {str(e)}")
+                break
+
+            # Create data structure with validated fields
+            data = {
+                'name': name,
+                'name_en': name_en,
+                'bone_index': bone_index,
+                'group_id': group_id,
+                'non_collision_group': non_collision_group,
+                'shape_type': shape_type,
+                'shape_size': _read_vec3(f),
+                'position': _read_vec3(f),
+                'rotation': _read_vec3(f)
+            }
+
+            # Read physics parameters with validation
+            try:
+                data.update({
+                    'mass': struct.unpack('<f', f.read(4))[0],
+                    'move_attenuation': struct.unpack('<f', f.read(4))[0],
+                    'rotation_damping': struct.unpack('<f', f.read(4))[0],
+                    'repulsion': struct.unpack('<f', f.read(4))[0],
+                    'friction': struct.unpack('<f', f.read(4))[0],
+                    'physics_mode': int.from_bytes(f.read(1), byteorder='little')
+                })
+            except struct.error as e:
+                logger.error(f"Failed to read physics parameters: {str(e)}")
+                break
+
+            rigid_bodies.append(data)
+            
+        except Exception as e:
+            logger.error(f"Error reading rigid body {i}: {str(e)}")
+            break
+            
+    return rigid_bodies
+
+def _read_joints(f, count: int, encoding: str, rigid_body_index_size: int) -> List[Dict]:
+    """Read joint data according to PMX 2.1 spec"""
+    joints = []
+    for _ in range(count):
+        joint = {
+            'name': _read_text(f, encoding),
+            'name_en': _read_text(f, encoding),
+            'joint_type': struct.unpack('B', f.read(1))[0],
+            'rigid_body_a': _read_index(f, rigid_body_index_size, 'other'),
+            'rigid_body_b': _read_index(f, rigid_body_index_size, 'other'),
+            'position': _read_vec3(f),
+            'rotation': _read_vec3(f),
+            'position_min': _read_vec3(f),
+            'position_max': _read_vec3(f),
+            'rotation_min': _read_vec3(f),
+            'rotation_max': _read_vec3(f),
+            'spring_position': _read_vec3(f),
+            'spring_rotation': _read_vec3(f)
+        }
+        joints.append(joint)
+    return joints
+

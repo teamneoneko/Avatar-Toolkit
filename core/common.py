@@ -49,9 +49,12 @@ class ProgressTracker:
 
 def get_active_armature(context: Context) -> Optional[Object]:
     """Get the currently selected armature from Avatar Toolkit properties"""
-    armature_name = str(context.scene.avatar_toolkit.active_armature)
-    if armature_name and armature_name != 'NONE':
-        return bpy.data.objects.get(armature_name)
+    try:
+        armature_name = context.scene.avatar_toolkit.active_armature
+        if armature_name and armature_name != 'NONE':
+            return bpy.data.objects.get(str(armature_name))
+    except UnicodeDecodeError:
+        logger.warning("Failed to decode armature name, falling back to None")
     return None
 
 def set_active_armature(context: Context, armature: Object) -> None:
