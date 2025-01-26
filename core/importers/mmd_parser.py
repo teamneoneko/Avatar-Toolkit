@@ -469,66 +469,49 @@ def _read_bones(f, count: int, encoding: str, bone_index_size: int) -> List[PMXB
     return bones
     
 def _read_rigid_bodies(f, count: int, encoding: str, bone_index_size: int) -> List[Dict]:
+    """Read rigid body data according to PMX 2.0/2.1 spec"""
     rigid_bodies = []
-    start_pos = f.tell()
     
     for i in range(count):
         try:
-            # Validate remaining file size
-            current_pos = f.tell()
-            
-            # Read name with validation
-            name = _read_text(f, encoding)
-            if name is None:
-                logger.warning(f"Invalid name for rigid body {i}")
-                continue
-                
-            name_en = _read_text(f, encoding)
-            bone_index = _read_index(f, bone_index_size, 'bone')
-            
-            # Read fixed-size data in one operation
-            try:
-                group_id = int.from_bytes(f.read(1), byteorder='little')
-                non_collision_group = int.from_bytes(f.read(2), byteorder='little')
-                shape_type = int.from_bytes(f.read(1), byteorder='little')
-            except Exception as e:
-                logger.error(f"Failed to read rigid body header data: {str(e)}")
-                break
-
-            # Create data structure with validated fields
+            # Read fixed-length data first
             data = {
-                'name': name,
-                'name_en': name_en,
-                'bone_index': bone_index,
-                'group_id': group_id,
-                'non_collision_group': non_collision_group,
-                'shape_type': shape_type,
-                'shape_size': _read_vec3(f),
-                'position': _read_vec3(f),
-                'rotation': _read_vec3(f)
+                'name': _read_text(f, encoding) or f"RigidBody_{i}",
+                'name_en': _read_text(f, encoding) or f"RigidBody_{i}",
+                'bone_index': _read_index(f, bone_index_size, 'bone'),
+                'group_id': struct.unpack('B', f.read(1))[0],
+                'non_collision_group': struct.unpack('<H', f.read(2))[0],
+                'shape_type': struct.unpack('B', f.read(1))[0],
+                'shape_size': _read_vec3(f)
             }
-
+            
+            # Read position and rotation separately with validation
+            pos = _read_vec3(f)
+            rot = _read_vec3(f)
+            data['position'] = pos
+            data['rotation'] = rot
+            
             # Read physics parameters with validation
-            try:
-                data.update({
-                    'mass': struct.unpack('<f', f.read(4))[0],
-                    'move_attenuation': struct.unpack('<f', f.read(4))[0],
-                    'rotation_damping': struct.unpack('<f', f.read(4))[0],
-                    'repulsion': struct.unpack('<f', f.read(4))[0],
-                    'friction': struct.unpack('<f', f.read(4))[0],
-                    'physics_mode': int.from_bytes(f.read(1), byteorder='little')
-                })
-            except struct.error as e:
-                logger.error(f"Failed to read physics parameters: {str(e)}")
-                break
-
+            data.update({
+                'mass': struct.unpack('<f', f.read(4))[0],
+                'move_attenuation': struct.unpack('<f', f.read(4))[0],
+                'rotation_damping': struct.unpack('<f', f.read(4))[0],
+                'repulsion': struct.unpack('<f', f.read(4))[0],
+                'friction': struct.unpack('<f', f.read(4))[0],
+                'physics_mode': struct.unpack('B', f.read(1))[0]
+            })
+            
+            logger.debug(f"Successfully read rigid body {i}: {data['name']}")
             rigid_bodies.append(data)
             
-        except Exception as e:
-            logger.error(f"Error reading rigid body {i}: {str(e)}")
+        except struct.error as e:
+            logger.error(f"Failed to read rigid body {i}: {str(e)}")
+            logger.debug(f"Current file position: {f.tell()}")
             break
             
     return rigid_bodies
+
+
 
 def _read_joints(f, count: int, encoding: str, rigid_body_index_size: int) -> List[Dict]:
     """Read joint data according to PMX 2.1 spec"""

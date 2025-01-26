@@ -333,31 +333,43 @@ class PMXImporter:
                     principled.inputs['Roughness'].default_value *= offset['specularity']
 
     def _import_rigid_bodies(self):
-        """Import rigid body physics"""
+        """Import rigid body physics with enhanced error handling"""
+        if not self.model.get('rigid_bodies'):
+            logger.warning("No rigid bodies found in model")
+            return
+            
+        logger.info(f"Importing {len(self.model['rigid_bodies'])} rigid bodies")
+        
         for i, rigid in enumerate(self.model['rigid_bodies']):
-            obj = bpy.data.objects.new(f"rigid_{rigid['name']}", None)
-            obj.empty_display_type = 'SPHERE'
-            bpy.context.scene.collection.objects.link(obj)
-            
-            # Set transform
-            obj.location = Vector(rigid['position']).xzy * self.scale
-            obj.rotation_euler = Euler(Vector(rigid['rotation']).xzy)
-            
-            # Setup rigid body physics
-            obj.rigid_body.type = 'ACTIVE' if rigid['physics_mode'] == 0 else 'PASSIVE'
-            obj.rigid_body.collision_shape = self._get_collision_shape(rigid['shape_type'])
-            obj.rigid_body.mass = rigid['mass']
-            obj.rigid_body.friction = rigid['friction']
-            obj.rigid_body.restitution = rigid['restitution']
-            
-            # Link to bone if specified
-            if rigid['bone_index'] >= 0:
-                bone = self.bone_table[rigid['bone_index']]
-                constraint = obj.constraints.new('CHILD_OF')
-                constraint.target = self.armature_obj
-                constraint.subtarget = bone.name
+            try:
+                obj = bpy.data.objects.new(f"rigid_{rigid['name']}", None)
+                obj.empty_display_type = 'SPHERE'
+                bpy.context.scene.collection.objects.link(obj)
                 
-            self.rigid_table[i] = obj
+                # Set transform with validation
+                obj.location = Vector(rigid['position']).xzy * self.scale
+                obj.rotation_euler = Euler(Vector(rigid['rotation']).xzy)
+                
+                # Setup rigid body physics with validation
+                obj.rigid_body.type = 'ACTIVE' if rigid['physics_mode'] == 0 else 'PASSIVE'
+                obj.rigid_body.collision_shape = self._get_collision_shape(rigid['shape_type'])
+                obj.rigid_body.mass = max(0.001, rigid['mass'])
+                obj.rigid_body.friction = max(0, min(1, rigid['friction']))
+                obj.rigid_body.restitution = max(0, min(1, rigid['repulsion']))
+                
+                # Link to bone if valid
+                if rigid['bone_index'] >= 0 and rigid['bone_index'] < len(self.bone_table):
+                    bone = self.bone_table[rigid['bone_index']]
+                    constraint = obj.constraints.new('CHILD_OF')
+                    constraint.target = self.armature_obj
+                    constraint.subtarget = bone.name
+                    
+                self.rigid_table[i] = obj
+                logger.debug(f"Successfully imported rigid body {i}: {rigid['name']}")
+                
+            except Exception as e:
+                logger.error(f"Failed to import rigid body {i}: {str(e)}")
+
 
     def _import_joints(self):
         """Import physics joints/constraints"""
