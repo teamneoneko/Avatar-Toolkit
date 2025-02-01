@@ -68,6 +68,84 @@ class PMXBone:
     external_parent: Optional[dict] = None
     ik: Optional[dict] = None
 
+def _read_display_frames(f, count: int, encoding: str, bone_index_size: int, morph_index_size: int) -> List[Dict]:
+    """Read display frame data according to PMX spec"""
+    frames = []
+    for _ in range(count):
+        frame = {
+            'name': _read_text(f, encoding),
+            'name_en': _read_text(f, encoding),
+            'special_flag': struct.unpack('B', f.read(1))[0],
+            'frame_count': struct.unpack('<i', f.read(4))[0],
+            'frames': []
+        }
+        
+        for _ in range(frame['frame_count']):
+            frame_type = struct.unpack('B', f.read(1))[0]
+            if frame_type == 0:  # Bone frame
+                frame['frames'].append({
+                    'type': 'bone',
+                    'index': _read_index(f, bone_index_size, 'bone')
+                })
+            elif frame_type == 1:  # Morph frame
+                frame['frames'].append({
+                    'type': 'morph',
+                    'index': _read_index(f, morph_index_size, 'other')
+                })
+                
+        frames.append(frame)
+    return frames
+
+def _read_morphs(f, count: int, encoding: str, vertex_index_size: int, bone_index_size: int, material_index_size: int, morph_index_size: int) -> List[Dict]:
+    """Read morph data according to PMX spec"""
+    morphs = []
+    for _ in range(count):
+        morph_data = {
+            'name': _read_text(f, encoding),
+            'name_en': _read_text(f, encoding),
+            'panel': struct.unpack('B', f.read(1))[0],
+            'type': struct.unpack('B', f.read(1))[0],
+            'offsets': []
+        }
+        
+        offset_count = struct.unpack('<i', f.read(4))[0]
+        
+        for _ in range(offset_count):
+            offset = {}
+            morph_type = morph_data['type']
+            
+            if morph_type == 0:  # Group
+                offset['index'] = _read_index(f, morph_index_size)
+                offset['influence'] = struct.unpack('<f', f.read(4))[0]
+            elif morph_type == 1:  # Vertex
+                offset['index'] = _read_index(f, vertex_index_size)
+                offset['translation'] = _read_vec3(f)
+            elif morph_type == 2:  # Bone
+                offset['index'] = _read_index(f, bone_index_size)
+                offset['translation'] = _read_vec3(f)
+                offset['rotation'] = _read_vec4(f)
+            elif morph_type == 3:  # UV
+                offset['index'] = _read_index(f, vertex_index_size)
+                offset['floats'] = _read_vec4(f)
+            elif morph_type == 8:  # Material
+                offset['index'] = _read_index(f, material_index_size)
+                offset['is_add'] = struct.unpack('B', f.read(1))[0]
+                offset['diffuse'] = _read_vec4(f)
+                offset['specular'] = _read_vec3(f)
+                offset['specularity'] = struct.unpack('<f', f.read(4))[0]
+                offset['ambient'] = _read_vec3(f)
+                offset['edge_color'] = _read_vec4(f)
+                offset['edge_size'] = struct.unpack('<f', f.read(4))[0]
+                offset['texture_tint'] = _read_vec4(f)
+                offset['environment_tint'] = _read_vec4(f)
+                offset['toon_tint'] = _read_vec4(f)
+                
+            morph_data['offsets'].append(offset)
+            
+        morphs.append(morph_data)
+        
+    return morphs
+
 def load_pmx_file(filepath: str):
     """Load and parse PMX file format"""
     with open(filepath, 'rb') as f:
@@ -123,12 +201,12 @@ def load_pmx_file(filepath: str):
         logger.debug(f"Face count: {face_count}")
         faces = _read_faces(f, face_count, vertex_index_size)
 
-        # Read texture count and paths
+        # Read textures
         texture_count = struct.unpack('<i', f.read(4))[0]
         logger.debug(f"Texture count: {texture_count}")
         textures = _read_textures(f, texture_count, encoding)
 
-        # Read materials with texture index size
+        # Read materials
         material_count = struct.unpack('<i', f.read(4))[0]
         logger.debug(f"Material count: {material_count}")
         materials = _read_materials(f, material_count, encoding, texture_index_size)
@@ -141,7 +219,12 @@ def load_pmx_file(filepath: str):
         # Read morphs
         morph_count = struct.unpack('<i', f.read(4))[0]
         logger.debug(f"Morph count: {morph_count}")
-        morphs = []
+        morphs = _read_morphs(f, morph_count, encoding, vertex_index_size, bone_index_size, material_index_size, morph_index_size)
+
+        # Read display frames
+        display_frame_count = struct.unpack('<i', f.read(4))[0]
+        logger.debug(f"Display frame count: {display_frame_count}")
+        display_frames = _read_display_frames(f, display_frame_count, encoding, bone_index_size, morph_index_size)
 
         # Read rigid bodies
         rigid_body_count = struct.unpack('<i', f.read(4))[0]
@@ -153,51 +236,6 @@ def load_pmx_file(filepath: str):
         logger.debug(f"Joint count: {joint_count}")
         joints = _read_joints(f, joint_count, encoding, rigid_body_index_size)
 
-        for _ in range(morph_count):
-            morph_data = {
-                'name': _read_text(f, encoding),
-                'name_en': _read_text(f, encoding),
-                'panel': struct.unpack('B', f.read(1))[0],
-                'type': struct.unpack('B', f.read(1))[0],
-                'offsets': []
-            }
-            
-            offset_count = struct.unpack('<i', f.read(4))[0]
-            
-            for _ in range(offset_count):
-                offset = {}
-                morph_type = morph_data['type']
-                
-                if morph_type == 0:  # Group
-                    offset['index'] = _read_index(f, morph_index_size)
-                    offset['influence'] = struct.unpack('<f', f.read(4))[0]
-                elif morph_type == 1:  # Vertex
-                    offset['index'] = _read_index(f, vertex_index_size)
-                    offset['translation'] = _read_vec3(f)
-                elif morph_type == 2:  # Bone
-                    offset['index'] = _read_index(f, bone_index_size)
-                    offset['translation'] = _read_vec3(f)
-                    offset['rotation'] = _read_vec4(f)
-                elif morph_type == 3:  # UV
-                    offset['index'] = _read_index(f, vertex_index_size)
-                    offset['floats'] = _read_vec4(f)
-                elif morph_type == 8:  # Material
-                    offset['index'] = _read_index(f, material_index_size)
-                    offset['is_add'] = struct.unpack('B', f.read(1))[0]
-                    offset['diffuse'] = _read_vec4(f)
-                    offset['specular'] = _read_vec3(f)
-                    offset['specularity'] = struct.unpack('<f', f.read(4))[0]
-                    offset['ambient'] = _read_vec3(f)
-                    offset['edge_color'] = _read_vec4(f)
-                    offset['edge_size'] = struct.unpack('<f', f.read(4))[0]
-                    offset['texture_tint'] = _read_vec4(f)
-                    offset['environment_tint'] = _read_vec4(f)
-                    offset['toon_tint'] = _read_vec4(f)
-                    
-                morph_data['offsets'].append(offset)
-                
-            morphs.append(morph_data)
-
         return {
             'name': name_jp,
             'name_en': name_en,
@@ -207,6 +245,7 @@ def load_pmx_file(filepath: str):
             'materials': materials,
             'bones': bones,
             'morphs': morphs,
+            'display_frames': display_frames,
             'rigid_bodies': rigid_bodies,
             'joints': joints,
             'comment_jp': comment_jp,
