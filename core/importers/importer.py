@@ -123,7 +123,7 @@ import_types: Dict[str, ImportMethod] = {
     ),
     "vrm": lambda directory, files, filepath: bpy.ops.import_scene.vrm(filepath=filepath),
     "pmx": lambda directory, files, filepath: import_pmx(bpy.context, filepath, 
-        scale=1.0,
+        scale=0.08,
         use_mipmap=True,
         sph_blend_factor=1.0,
         spa_blend_factor=1.0
