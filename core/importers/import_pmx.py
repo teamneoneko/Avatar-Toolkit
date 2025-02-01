@@ -6,6 +6,7 @@ from mathutils import Vector, Matrix, Euler
 from ..common import ProgressTracker
 from ..logging_setup import logger
 from .mmd_parser import load_pmx_file, BONE_FLAGS
+from ..rigdbodies import RigidBodyManager
 
 class PMXImporter:
     CATEGORIES = {
@@ -248,28 +249,66 @@ class PMXImporter:
                     self._create_additional_transform(pose_bone, bone)
 
     def _create_ik_constraint(self, pose_bone, pmx_bone):
-        """Create IK constraint for a bone"""
-        if pmx_bone.ik and pmx_bone.ik['target_index'] >= 0:
-            target_index = pmx_bone.ik['target_index']
-            if target_index < len(self.bone_table):
-                target_bone = self.bone_table[target_index]
-                ik = pose_bone.constraints.new('IK')
-                ik.target = self.armature_obj
-                ik.subtarget = target_bone.name
-                ik.chain_count = len(pmx_bone.ik['links'])
-                ik.iterations = pmx_bone.ik['loop_count']
+        """Create IK constraint with robust cycle detection"""
+        try:
+            if not pmx_bone.ik or pmx_bone.ik['target_index'] < 0:
+                logger.debug(f"Skipping IK setup for {pose_bone.name} - no valid IK data")
+                return
                 
-            # Set IK limits
-            for link in pmx_bone.ik['links']:
-                if link['has_limits']:
+            target_index = pmx_bone.ik['target_index']
+            if target_index >= len(self.bone_table):
+                logger.warning(f"Invalid target index {target_index} for bone {pose_bone.name}")
+                return
+                
+            target_bone = self.bone_table[target_index]
+            logger.debug(f"Processing IK chain: {pose_bone.name} -> {target_bone.name}")
+            
+            def check_chain(bone, target, depth=0, visited=None):
+                if visited is None:
+                    visited = set()
+                    
+                if not bone or bone.name in visited:
+                    return False
+                    
+                if depth > 10:
+                    logger.debug(f"Max depth reached in chain check")
+                    return False
+                    
+                visited.add(bone.name)
+                
+                if bone == target:
+                    return True
+                    
+                return bone.parent and check_chain(bone.parent, target, depth + 1, visited)
+            
+            if check_chain(target_bone, pose_bone):
+                logger.info(f"Detected and skipped cyclic IK chain: {pose_bone.name} -> {target_bone.name}")
+                return
+            
+            # Create IK constraint
+            ik = pose_bone.constraints.new('IK')
+            ik.target = self.armature_obj
+            ik.subtarget = target_bone.name
+            ik.chain_count = min(len(pmx_bone.ik['links']), 3)
+            ik.iterations = min(pmx_bone.ik['loop_count'], 10)
+            logger.debug(f"Created IK constraint: chain_count={ik.chain_count}, iterations={ik.iterations}")
+            
+            # Set up chain limits
+            for link_idx, link in enumerate(pmx_bone.ik['links'][:ik.chain_count]):
+                if link['bone_index'] < len(self.bone_table):
                     bone = self.bone_table[link['bone_index']]
-                    bone.use_ik_limit_x = bone.use_ik_limit_y = bone.use_ik_limit_z = True
-                    bone.ik_min_x = link['limit_min'][0]
-                    bone.ik_min_y = link['limit_min'][1]
-                    bone.ik_min_z = link['limit_min'][2]
-                    bone.ik_max_x = link['limit_max'][0]
-                    bone.ik_max_y = link['limit_max'][1]
-                    bone.ik_max_z = link['limit_max'][2]
+                    if link['has_limits']:
+                        logger.debug(f"Setting IK limits for chain link {link_idx}: {bone.name}")
+                        for axis in ['x', 'y', 'z']:
+                            setattr(bone, f'use_ik_limit_{axis}', True)
+                            setattr(bone, f'ik_min_{axis}', link['limit_min'][{'x':0, 'y':1, 'z':2}[axis]])
+                            setattr(bone, f'ik_max_{axis}', link['limit_max'][{'x':0, 'y':1, 'z':2}[axis]])
+            
+            logger.info(f"Successfully created IK chain for {pose_bone.name}")
+            
+        except Exception as e:
+            logger.error(f"IK constraint creation failed for {pose_bone.name}", exc_info=True)
+            raise
 
     def _create_additional_transform(self, pose_bone, pmx_bone):
         """Create additional transform constraints for a bone"""
@@ -333,43 +372,67 @@ class PMXImporter:
                     principled.inputs['Roughness'].default_value *= offset['specularity']
 
     def _import_rigid_bodies(self):
-        """Import rigid body physics with enhanced error handling"""
-        if not self.model.get('rigid_bodies'):
-            logger.warning("No rigid bodies found in model")
-            return
-            
-        logger.info(f"Importing {len(self.model['rigid_bodies'])} rigid bodies")
-        
-        for i, rigid in enumerate(self.model['rigid_bodies']):
-            try:
-                obj = bpy.data.objects.new(f"rigid_{rigid['name']}", None)
-                obj.empty_display_type = 'SPHERE'
-                bpy.context.scene.collection.objects.link(obj)
-                
-                # Set transform with validation
-                obj.location = Vector(rigid['position']).xzy * self.scale
-                obj.rotation_euler = Euler(Vector(rigid['rotation']).xzy)
-                
-                # Setup rigid body physics with validation
-                obj.rigid_body.type = 'ACTIVE' if rigid['physics_mode'] == 0 else 'PASSIVE'
-                obj.rigid_body.collision_shape = self._get_collision_shape(rigid['shape_type'])
-                obj.rigid_body.mass = max(0.001, rigid['mass'])
-                obj.rigid_body.friction = max(0, min(1, rigid['friction']))
-                obj.rigid_body.restitution = max(0, min(1, rigid['repulsion']))
-                
-                # Link to bone if valid
-                if rigid['bone_index'] >= 0 and rigid['bone_index'] < len(self.bone_table):
-                    bone = self.bone_table[rigid['bone_index']]
-                    constraint = obj.constraints.new('CHILD_OF')
-                    constraint.target = self.armature_obj
-                    constraint.subtarget = bone.name
-                    
-                self.rigid_table[i] = obj
-                logger.debug(f"Successfully imported rigid body {i}: {rigid['name']}")
-                
-            except Exception as e:
-                logger.error(f"Failed to import rigid body {i}: {str(e)}")
+        """Import rigid body physics with proper bone parenting"""
+        try:
+            if not self.model.get('rigid_bodies'):
+                logger.info("No rigid bodies found in model")
+                return
 
+            rigid_count = len(self.model['rigid_bodies'])
+            logger.info(f"Starting rigid body import for {rigid_count} objects")
+            
+            # Initialize rigid body manager
+            rb_manager = RigidBodyManager(self.armature_obj, self.scale)
+            
+            # Create rigid bodies with progress tracking
+            for i, rigid in enumerate(self.model['rigid_bodies']):
+                logger.debug(f"Creating rigid body {i}/{rigid_count}: {rigid['name']}")
+                
+                try:
+                    rb_obj = rb_manager.create_rigid_body(
+                        name=rigid['name'],
+                        bone_index=rigid['bone_index'],
+                        position=rigid['position'],
+                        rotation=rigid['rotation'],
+                        shape_type=rigid['shape_type'],
+                        shape_size=rigid['shape_size'],
+                        physics_mode=rigid['physics_mode'],
+                        group_id=rigid['group_id'],
+                        non_collision_group_mask=rigid['non_collision_group'],
+                        mass=rigid['mass'],
+                        friction=rigid['friction'],
+                        restitution=rigid['repulsion'],
+                        linear_damping=rigid['move_attenuation'],
+                        angular_damping=rigid['rotation_damping']
+                    )
+                    
+                    self.rigid_table[i] = rb_obj
+                    logger.debug(f"Successfully created rigid body {i}: {rigid['name']}")
+                    
+                except Exception as e:
+                    logger.error(f"Failed to create rigid body {i}: {rigid['name']}", exc_info=True)
+                    continue
+
+            # Create non-collision constraints
+            logger.debug("Creating non-collision constraints")
+            rb_manager.create_non_collision_constraints()
+            
+            # Create physics container and parent rigid bodies
+            logger.debug("Setting up physics container")
+            physics_container = rb_manager.create_physics_container()
+            
+            for i, rigid in self.rigid_table.items():
+                try:
+                    if not rigid.parent or rigid.parent_type != 'BONE':
+                        rigid.parent = physics_container
+                except Exception as e:
+                    logger.error(f"Failed to parent rigid body {i} to physics container", exc_info=True)
+
+            logger.info(f"Successfully created {len(self.rigid_table)} rigid bodies")
+
+        except Exception as e:
+            logger.error("Rigid body import failed", exc_info=True)
+            raise
 
     def _import_joints(self):
         """Import physics joints/constraints"""
