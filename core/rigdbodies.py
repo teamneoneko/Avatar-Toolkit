@@ -89,9 +89,11 @@ class RigidBodyManager:
             logger.debug(f"Successfully created rigid body: {obj.name}")
             return obj
             
-        except Exception as e:
-            logger.error(f"Failed to create rigid body {name}: {str(e)}")
-            raise
+    except Exception as e:
+        logger.error(f"Failed to create rigid body {name} | Error: {str(e)}")
+        logger.debug(f"Creation state: Physics Mode={physics_mode}, Group={group_id}, Shape={shape_type}")
+        logger.debug(f"Stack trace: ", exc_info=True)
+        raise
 
     def _ensure_context_collection(self, obj: bpy.types.Object):
         """Ensure object is in the correct collection"""
