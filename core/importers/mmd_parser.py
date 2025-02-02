@@ -543,13 +543,13 @@ def _read_rigid_bodies(f, count: int, encoding: str, bone_index_size: int) -> Li
             logger.debug(f"Successfully read rigid body {i}: {data['name']}")
             rigid_bodies.append(data)
             
-    except struct.error as e:
-        logger.error(f"Failed to read rigid body {i}: {str(e)}")
-        logger.debug(f"Current file position: 0x{f.tell():08x}")
-        logger.debug(f"Last successful rigid body count: {len(rigid_bodies)}")
-        logger.debug(f"Stack trace: ", exc_info=True)
-        break
-            
+        except struct.error as e:
+            logger.error(f"Failed to read rigid body {i}: {str(e)}")
+            logger.debug(f"Current file position: 0x{f.tell():08x}")
+            logger.debug(f"Last successful rigid body count: {len(rigid_bodies)}")
+            logger.debug(f"Stack trace: ", exc_info=True)
+            break
+                
     return rigid_bodies
 
 def _read_joints(f, count: int, encoding: str, rigid_body_index_size: int) -> List[Dict]:
