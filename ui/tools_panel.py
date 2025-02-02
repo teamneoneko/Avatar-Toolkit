@@ -1,8 +1,20 @@
 import bpy
 from typing import Set
-from bpy.types import Panel, Context, UILayout, Operator
+from bpy.types import Panel, Context, UILayout, Operator, UIList
 from .main_panel import AvatarToolKit_PT_AvatarToolkitPanel, CATEGORY_NAME
 from ..core.translations import t
+
+class AVATAR_TOOLKIT_UL_ZeroWeightBones(UIList):
+    """UI List for displaying zero weight bones with selection options"""
+    def draw_item(self, context, layout, data, item, icon, active_data, active_propname):
+        if self.layout_type in {'DEFAULT', 'COMPACT'}:
+            row = layout.row(align=True)
+            row.prop(item, "selected", text="")
+            row.label(text=item.name)
+            if item.has_children:
+                row.label(text="", icon='OUTLINER_OB_ARMATURE')
+            if item.is_deform:
+                row.label(text="", icon='MOD_ARMATURE')
 
 class AvatarToolKit_PT_ToolsPanel(Panel):
     """Panel containing various tools for avatar customization and optimization"""
@@ -18,6 +30,7 @@ class AvatarToolKit_PT_ToolsPanel(Panel):
     def draw(self, context: Context) -> None:
         """Draw the tools panel interface"""
         layout: UILayout = self.layout
+        toolkit = context.scene.avatar_toolkit
         
         # General Tools
         tools_box: UILayout = layout.box()
@@ -45,7 +58,22 @@ class AvatarToolKit_PT_ToolsPanel(Panel):
         # Weight Tools
         weight_box: UILayout = bone_box.box()
         col = weight_box.column(align=True)
-        col.prop(context.scene.avatar_toolkit, "merge_twist_bones", text=t("Tools.merge_twist_bones"))
+        col.prop(toolkit, "merge_twist_bones", text=t("Tools.merge_twist_bones"))
+        col.prop(toolkit, "preserve_parent_bones")
+        col.prop(toolkit, "target_bone_type")
+        col.prop(toolkit, "list_only_mode")
+        
+        if toolkit.list_only_mode and len(toolkit.zero_weight_bones) > 0:
+            box = weight_box.box()
+            row = box.row()
+            row.template_list("AVATAR_TOOLKIT_UL_ZeroWeightBones", "", 
+                            toolkit, "zero_weight_bones",
+                            toolkit, "zero_weight_bones_index")
+            
+            col = box.column(align=True)
+            col.operator("avatar_toolkit.remove_selected_bones", 
+                        text=t("Tools.remove_selected_bones"))
+        
         row = col.row(align=True)
         row.operator("avatar_toolkit.clean_weights", text=t("Tools.clean_weights"), icon='GROUP_BONE')
         row.operator("avatar_toolkit.clean_constraints", text=t("Tools.clean_constraints"), icon='CONSTRAINT_BONE')

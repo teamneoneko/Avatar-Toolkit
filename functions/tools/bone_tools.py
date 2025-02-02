@@ -134,17 +134,11 @@ class AvatarToolKit_OT_DeleteBoneConstraints(Operator):
 
     def execute(self, context: Context) -> set[str]:
         """Execute the constraint removal operation"""
-
-        # Make sure we are in Object mode first or it will error
         bpy.ops.object.mode_set(mode='OBJECT')
-
         armature = get_active_armature(context)
-        
-        # Select armature and make it active before changing mode
         bpy.ops.object.select_all(action='DESELECT')
         armature.select_set(True)
         context.view_layer.objects.active = armature
-        
         bpy.ops.object.mode_set(mode='POSE')
         
         constraints_removed = 0
@@ -157,7 +151,6 @@ class AvatarToolKit_OT_DeleteBoneConstraints(Operator):
         self.report({'INFO'}, t("Tools.clean_constraints_success", count=constraints_removed))
         return {'FINISHED'}
 
-
 class AvatarToolKit_OT_RemoveZeroWeightBones(Operator):
     """Operator to remove bones with no vertex weights"""
     bl_idname = "avatar_toolkit.clean_weights"
@@ -167,9 +160,36 @@ class AvatarToolKit_OT_RemoveZeroWeightBones(Operator):
 
     def should_preserve_bone(self, bone_name: str, context: Context) -> bool:
         """Check if bone should be preserved based on settings"""
-        if context.scene.avatar_toolkit.merge_twist_bones:
-            return "twist" in bone_name.lower()
+        toolkit = context.scene.avatar_toolkit
+        bone = context.active_object.data.bones.get(bone_name)
+        
+        if not bone:
+            return False
+            
+        if toolkit.preserve_parent_bones and bone.children:
+            return True
+            
+        if toolkit.target_bone_type == 'DEFORM' and not bone.use_deform:
+            return True
+            
+        if toolkit.target_bone_type == 'NON_DEFORM' and bone.use_deform:
+            return True
+            
         return False
+
+    def populate_bone_list(self, context: Context, zero_weight_bones: List[str]) -> None:
+        """Populate the zero weight bones list"""
+        toolkit = context.scene.avatar_toolkit
+        toolkit.zero_weight_bones.clear()
+        
+        armature = get_active_armature(context)
+        for bone_name in zero_weight_bones:
+            bone = armature.data.bones.get(bone_name)
+            if bone:
+                item = toolkit.zero_weight_bones.add()
+                item.name = bone_name
+                item.has_children = len(bone.children) > 0
+                item.is_deform = bone.use_deform
 
     def execute(self, context: Context) -> set[str]:
         """Execute the zero weight bone removal operation"""
@@ -192,6 +212,7 @@ class AvatarToolKit_OT_RemoveZeroWeightBones(Operator):
         # Get weighted bones
         weighted_bones: List[str] = []
         meshes = get_all_meshes(context)
+        zero_weight_bones: List[str] = []
         
         for mesh in meshes:
             mesh_data: Mesh = mesh.data
@@ -209,6 +230,10 @@ class AvatarToolKit_OT_RemoveZeroWeightBones(Operator):
             if (bone.name not in weighted_bones and 
                 not self.should_preserve_bone(bone.name, context)):
                 
+                if context.scene.avatar_toolkit.list_only_mode:
+                    zero_weight_bones.append(bone.name)
+                    continue
+
                 # Store children data
                 children = bone.children
                 children_data = {child.name: initial_transforms[child.name] for child in children}
@@ -227,11 +252,38 @@ class AvatarToolKit_OT_RemoveZeroWeightBones(Operator):
                 for child_name, data in children_data.items():
                     if child_name in armature_data.edit_bones:
                         child = armature_data.edit_bones[child_name]
-                        child.head = data['head']
-                        child.tail = data['tail']
-                        child.roll = data['roll']
-                        child.matrix = data['matrix']
+                        restore_bone_transforms(child, data)
 
         bpy.ops.object.mode_set(mode='OBJECT')
+        
+        if context.scene.avatar_toolkit.list_only_mode:
+            self.populate_bone_list(context, zero_weight_bones)
+            return {'FINISHED'}
+            
         self.report({'INFO'}, t("Tools.clean_weights_success", count=removed_count))
+        return {'FINISHED'}
+
+class AvatarToolKit_OT_RemoveSelectedBones(Operator):
+    """Operator to remove selected bones from the zero weight bones list"""
+    bl_idname = "avatar_toolkit.remove_selected_bones"
+    bl_label = t("Tools.remove_selected_bones")
+    bl_description = t("Tools.remove_selected_bones_desc")
+    bl_options = {'REGISTER', 'UNDO'}
+    
+    def execute(self, context: Context) -> set[str]:
+        armature = get_active_armature(context)
+        toolkit = context.scene.avatar_toolkit
+        
+        selected_bones = [item.name for item in toolkit.zero_weight_bones 
+                         if item.selected]
+        
+        bpy.ops.object.mode_set(mode='EDIT')
+        for bone_name in selected_bones:
+            if bone_name in armature.data.edit_bones:
+                armature.data.edit_bones.remove(armature.data.edit_bones[bone_name])
+                
+        bpy.ops.object.mode_set(mode='OBJECT')
+        toolkit.zero_weight_bones.clear()
+        
+        self.report({'INFO'}, t("Tools.bones_removed", count=len(selected_bones)))
         return {'FINISHED'}

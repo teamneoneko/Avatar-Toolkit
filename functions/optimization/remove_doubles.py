@@ -54,6 +54,28 @@ def process_vertex_merging(mesh_data: bpy.types.Mesh, vertices_original: dict[in
     
     return merged_vertices
 
+def vertex_moves(mesh_data: bpy.types.Mesh, vertex: int) -> bool:
+
+    for shapekey in mesh_data.shape_keys.key_blocks:
+        data: bpy.types.ShapeKey = shapekey
+
+        if data.points[vertex].co.xyz != mesh_data.vertices[vertex].co.xyz:
+            return True
+
+    return False
+
+def merge_vertex_at_index(mesh_data: bpy.types.Mesh, index: int, distance: float):
+
+    select_target_vertex = [False]*len(mesh_data.vertices)
+    select_target_vertex[index] = True
+
+    bpy.ops.object.mode_set(mode='OBJECT')
+    mesh_data.vertices.foreach_set("select",select_target_vertex)
+    bpy.ops.object.mode_set(mode='EDIT')
+    for _ in range(0,20): #for some reason, if using merge to unselected on a vertex, the vertex will only merge to 1 other vertex. so we gotta spam it to fix it.
+        bpy.ops.mesh.remove_doubles(threshold=distance, use_unselected=True, use_sharp_edge_from_normals=False)
+    bpy.ops.object.mode_set(mode='OBJECT')
+
 class AvatarToolkit_OT_RemoveDoublesAdvanced(Operator):
     bl_idname = "avatar_toolkit.remove_doubles_advanced"
     bl_label = t("Optimization.remove_doubles_advanced")
@@ -168,7 +190,7 @@ class AvatarToolkit_OT_RemoveDoubles(Operator):
         except Exception as e:
             logger.error(f"Error in modify_mesh: {str(e)}")
 
-    def modify_mesh_advanced(self, context: Context, mesh_entry: MeshEntry) -> bool:
+    def modify_mesh_advanced(self, context: Context, mesh_entry: MeshEntry) -> int:
         """Advanced mesh modification with shape key handling"""
         try:
             final_merged_vertex_group = []
@@ -179,26 +201,28 @@ class AvatarToolkit_OT_RemoveDoubles(Operator):
                 duplicate = create_duplicate_for_merge(context, mesh_entry["mesh"], shapekey_name)
                 vertices_original = {i: v.co.xyz for i, v in enumerate(duplicate.data.vertices)}
                 
+                
+                merge_vertex_at_index(duplicate.data, mesh_entry["cur_vertex_pass"], merge_distance) #merge the vertex at our pass to find vertices that would merge to our vertex at this shapekey.
+
                 # Process merging
-                merged_vertices = process_vertex_merging(duplicate.data, vertices_original, mesh_entry["cur_vertex_pass"])
+                merged_vertices = process_vertex_merging(duplicate.data, vertices_original, mesh_entry["cur_vertex_pass"]) # find what vertices actually merged.
                 
                 if not initialized_final:
                     final_merged_vertex_group = merged_vertices.copy()
                     initialized_final = True
                 else:
-                    final_merged_vertex_group = [v for v in final_merged_vertex_group if v in merged_vertices]
-                
+                    final_merged_vertex_group = [v for v in final_merged_vertex_group if v in merged_vertices] # remove vertices that merged from the list if they didn't merge during this shapkey.
                 bpy.ops.object.delete()
 
             # Apply final merging
             if final_merged_vertex_group:
-                self.apply_final_merging(context, mesh_entry, final_merged_vertex_group, merge_distance)
+                self.apply_final_merging(context, mesh_entry, final_merged_vertex_group, merge_distance) # merge all vertices that merged on every shapekey no matter the shapekey during the loop.
                 
-            return not (len(final_merged_vertex_group) > 1)
+            return len(final_merged_vertex_group)
             
         except Exception as e:
             logger.error(f"Error in modify_mesh_advanced: {str(e)}")
-            return True
+            return 1
 
     def apply_final_merging(self, context: Context, mesh_entry: MeshEntry, vertex_group: list[int], merge_distance: float) -> None:
         """Apply final vertex merging operations"""
@@ -232,16 +256,14 @@ class AvatarToolkit_OT_RemoveDoubles(Operator):
     def finish_mesh_processing(self, context: Context, mesh: MeshEntry, advanced: bool, merge_distance: float) -> None:
         """Complete the mesh processing by performing final merge operations"""
         logger.debug("Finishing mesh processing")
+        mesh["mesh"].select_set(True)
+        context.view_layer.objects.active = mesh["mesh"]
+        bpy.ops.object.mode_set(mode='EDIT')
+        bpy.ops.mesh.select_all(action="INVERT")
+        bpy.ops.mesh.remove_doubles(threshold=merge_distance, use_unselected=False)
         
-        if not advanced:
-            mesh["mesh"].select_set(True)
-            context.view_layer.objects.active = mesh["mesh"]
-            bpy.ops.object.mode_set(mode='EDIT')
-            bpy.ops.mesh.select_all(action="INVERT")
-            bpy.ops.mesh.remove_doubles(threshold=merge_distance, use_unselected=False)
-            
-            bpy.ops.object.mode_set(mode='OBJECT')
-            mesh["mesh"].select_set(False)
+        bpy.ops.object.mode_set(mode='OBJECT')
+        mesh["mesh"].select_set(False)
 
     def modal(self, context: Context, event: Event) -> set[ModalReturnType]:
         """Modal operator execution"""
@@ -266,10 +288,21 @@ class AvatarToolkit_OT_RemoveDoubles(Operator):
                 self.process_simple_mesh(context, mesh, merge_distance)
                 self.objects_to_do.pop(0)
                 
-            elif not (mesh["cur_vertex_pass"] > mesh["vertices"]) and advanced:
-                if self.modify_mesh_advanced(context, mesh):
+            elif not (mesh["cur_vertex_pass"] > mesh["vertices"]) and advanced: #advanced merging vertex by vertex
+                if(mesh["cur_vertex_pass"] < 0): #make sure it doesn't go below 0 and explode when advancing backwards from a previous step
+                    mesh["cur_vertex_pass"] = 0
+                
+                if vertex_moves(mesh["mesh"].data, mesh["cur_vertex_pass"]): # do not do advanced merging for vertices that don't move
+                    mesh["cur_vertex_pass"] -= self.modify_mesh_advanced(context, mesh)-2 #advance forward or backwards based on how many vertices actually got merged, changing the list size.
+                    #if above returns 1 (no vertices other than this one being merged to ourselves), advance by 1. else don't advance or go backwards. Makes sure all vertices get merged in the end.
+                else:
                     mesh["cur_vertex_pass"] += 1
-                    
+
+            elif (mesh["cur_vertex_pass"] > mesh["vertices"]) and advanced and len(mesh['shapekeys']) > 0: #after advanced merging has gone past all the moving vertices, now we need to merge non moving vertices.
+                shapekeyname = mesh['shapekeys'].pop(0)
+                mesh["mesh"].active_shape_key_index = mesh_data.shape_keys.key_blocks.find(shapekeyname)
+                logger.debug(f"Processing shapekey {shapekeyname}")
+                self.modify_mesh(context, mesh)
             else:
                 self.finish_mesh_processing(context, mesh, advanced, merge_distance)
                 self.objects_to_do.pop(0)

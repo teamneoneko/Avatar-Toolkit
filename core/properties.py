@@ -18,6 +18,13 @@ from .common import get_armature_list, get_active_armature, get_all_meshes
 from ..functions.visemes import VisemePreview
 from ..functions.eye_tracking import set_rotation
 
+class ZeroWeightBoneItem(PropertyGroup):
+    """Property group for zero weight bone list items"""
+    name: StringProperty(name="Bone Name")
+    selected: BoolProperty(name="Selected", default=True)
+    has_children: BoolProperty(name="Has Children", default=False)
+    is_deform: BoolProperty(name="Is Deform Bone", default=False)
+
 def update_validation_mode(self: PropertyGroup, context: Context) -> None:
     """Updates validation mode and saves preference"""
     logger.info(f"Updating validation mode to: {self.validation_mode}")
@@ -359,6 +366,40 @@ class AvatarToolkitSceneProperties(PropertyGroup):
         name=t('MergeArmature.remove_zero_weights'),
         description=t('MergeArmature.remove_zero_weights_desc'),
         default=True
+    )
+
+    preserve_parent_bones: BoolProperty(
+        name=t("Tools.preserve_parent_bones"),
+        description=t("Tools.preserve_parent_bones_desc"),
+        default=True
+    )
+
+    target_bone_type: EnumProperty(
+        name=t("Tools.target_bone_type"),
+        description=t("Tools.target_bone_type_desc"),
+        items=[
+            ('ALL', t("Tools.target_all_bones"), ""),
+            ('DEFORM', t("Tools.target_deform_bones"), ""),
+            ('NON_DEFORM', t("Tools.target_non_deform_bones"), "")
+        ],
+        default='ALL'
+    )
+
+    zero_weight_bones: CollectionProperty(
+        type=ZeroWeightBoneItem,
+        name="Zero Weight Bones",
+        description="List of bones with zero weights"
+    )
+    
+    zero_weight_bones_index: IntProperty(
+        name="Zero Weight Bone Index",
+        default=0
+    )
+
+    list_only_mode: BoolProperty(
+        name=t("Tools.list_only_mode"),
+        description=t("Tools.list_only_mode_desc"),
+        default=False
     )
 
     cleanup_shape_keys: BoolProperty(
