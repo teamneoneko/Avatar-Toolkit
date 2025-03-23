@@ -51,7 +51,7 @@ class AvatarToolkit_OT_ConvertResonite(Operator):
         armature = get_active_armature(context)
         if not armature:
             return False
-        is_valid, _ = validate_armature(armature)
+        is_valid, _, _ = validate_armature(armature)
         return is_valid
 
     def execute(self, context: Context) -> Set[str]:

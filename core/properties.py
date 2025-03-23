@@ -42,6 +42,12 @@ def update_shape_intensity(self: PropertyGroup, context: Context) -> None:
     if self.viseme_preview_mode:
         VisemePreview.update_preview(context)
 
+def get_mesh_objects(self, context):
+    meshes = [(obj.name, obj.name, "") for obj in bpy.data.objects if obj.type == 'MESH']
+    if not meshes:
+        return [('NONE', t("Visemes.no_meshes"), '')]
+    return meshes
+
 class AvatarToolkitSceneProperties(PropertyGroup):
     """Property group containing Avatar Toolkit scene-level settings and properties"""
 
@@ -126,6 +132,12 @@ class AvatarToolkitSceneProperties(PropertyGroup):
         description=t("TextureAtlas.texture_use_atlas.desc").format(name=t("TextureAtlas.roughness").lower()),
         default=0,
         items=get_texture_node_list
+    )
+
+    list_only_mode: BoolProperty(
+        name=t("Tools.list_only_mode"),
+        description=t("Tools.list_only_mode_desc"),
+        default=False
     )
 
     Material.include_in_atlas = BoolProperty(
@@ -269,9 +281,10 @@ class AvatarToolkitSceneProperties(PropertyGroup):
         description=t("Visemes.mouth_ch_desc")
     )
 
-    viseme_mesh: StringProperty(
+    viseme_mesh: EnumProperty(
         name=t("Visemes.mesh_select"),
         description=t("Visemes.mesh_select_desc"),
+        items=get_mesh_objects
     )
 
     shape_intensity: FloatProperty(
