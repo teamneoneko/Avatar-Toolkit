@@ -1,3 +1,4 @@
 
 *.pyc
 .vscode/settings.json
+core/preferences.json

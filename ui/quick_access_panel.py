@@ -14,7 +14,6 @@ from ..core.translations import t
 from ..core.common import (
     get_active_armature, 
     clear_default_objects, 
-    validate_armature,
     get_armature_list,
     get_armature_stats
 )
@@ -24,6 +23,7 @@ from ..functions.pose_mode import (
     AvatarToolkit_OT_ApplyPoseAsShapekey,
     AvatarToolkit_OT_ApplyPoseAsRest
 )
+from ..core.armature_validation import validate_armature
 
 class AvatarToolKit_OT_ExportFBX(Operator):
     """Export selected objects as FBX"""
@@ -70,6 +70,7 @@ class AvatarToolKit_PT_QuickAccessPanel(Panel):
     def draw(self, context: Context) -> None:
         """Draw the panel layout"""
         layout: UILayout = self.layout
+        props = context.scene.avatar_toolkit
         
         # Armature Selection Box
         armature_box: UILayout = layout.box()
@@ -83,28 +84,87 @@ class AvatarToolKit_PT_QuickAccessPanel(Panel):
         # Armature Validation
         active_armature: Optional[Object] = get_active_armature(context)
         if active_armature:
-            is_valid: bool
-            messages: List[str]
-            is_valid, messages = validate_armature(active_armature)
+            is_valid, messages, is_acceptable = validate_armature(active_armature)
             
-            # Create info box for all validation information
-            info_box: UILayout = col.box()
+            info_box = col.box()
             
-            if is_valid:
-                row: UILayout = info_box.row()
-                split: UILayout = row.split(factor=0.6)
+            if not is_valid:
+                # Display non-standard bones and hierarchy issues
+                if len(messages) > 1:
+                    # Found Bones section
+                    validation_box = info_box.box()
+                    row = validation_box.row()
+                    row.prop(props, "show_found_bones", text=t("Validation.section.found_bones"), icon='TRIA_DOWN' if props.show_found_bones else 'TRIA_RIGHT', emboss=False)
+                    if props.show_found_bones:
+                        for line in messages[0].split('\n'):
+                            validation_box.label(text=line)
+                    
+                    # Main validation status
+                    validation_box = info_box.box()
+                    row = validation_box.row()
+                    row.alert = True
+                    row.label(text=t("Validation.status.failed"))
+                    
+                    # Detailed validation message
+                    validation_box = info_box.box()
+                    row = validation_box.row()
+                    row.alert = True
+                    row.label(text=t("Validation.message.failed.line1"))
+                    row = validation_box.row()
+                    row.alert = True
+                    row.label(text=t("Validation.message.failed.line2"))
+                    row = validation_box.row()
+                    row.alert = True
+                    row.label(text=t("Validation.message.failed.line3"))
+                    
+                    # Non-Standard Bones section
+                    validation_box = info_box.box()
+                    row = validation_box.row()
+                    row.alert = True
+                    row.prop(props, "show_non_standard", text=t("Validation.section.non_standard"), icon='TRIA_DOWN' if props.show_non_standard else 'TRIA_RIGHT', emboss=False)
+                    if props.show_non_standard:
+                        for line in messages[1].split('\n'):
+                            sub_row = validation_box.row()
+                            sub_row.alert = True
+                            sub_row.label(text=line)
+                            
+                    # Hierarchy Issues section
+                    validation_box = info_box.box()
+                    row = validation_box.row()
+                    row.alert = True
+                    row.prop(props, "show_hierarchy", text=t("Validation.section.hierarchy"), icon='TRIA_DOWN' if props.show_hierarchy else 'TRIA_RIGHT', emboss=False)
+                    if props.show_hierarchy:
+                        for message in messages[2:]:
+                            sub_row = validation_box.row()
+                            sub_row.alert = True
+                            sub_row.label(text=message)
+                else:
+                    # If no specific issues, show acceptable message
+                    info_box.label(text=messages[0], icon='INFO')
+                    info_box.label(text=messages[1])
+                    info_box.label(text=messages[2])
+            elif is_valid and not is_acceptable:
+                row = info_box.row()
+                split = row.split(factor=0.6)
                 split.label(text=t("QuickAccess.valid_armature"), icon='CHECKMARK')
-                stats: Dict[str, int] = get_armature_stats(active_armature)
+                stats = get_armature_stats(active_armature)
                 split.label(text=t("QuickAccess.bones_count", count=stats['bone_count']))
                 
                 if stats['has_pose']:
                     info_box.label(text=t("QuickAccess.pose_bones_available"), icon='POSE_HLT')
-            else:
-                # Display validation failure messages
-                for message in messages:
-                    info_box.label(text=message, icon='ERROR')
+            elif is_valid and is_acceptable:
+                # Show acceptable standard message
+                info_box.label(text=messages[0], icon='INFO')
+                info_box.label(text=messages[1])
+                info_box.label(text=messages[2])
+                
+                # Add standardize button
+                standardize_box = info_box.box()
+                standardize_box.operator("avatar_toolkit.standardize_armature", 
+                                    text=t("QuickAccess.standardize_armature"),
+                                    icon='MODIFIER')
 
-            # Validation Mode Warnings - always show in info box
+            # Validation Mode Warnings
             validation_mode = context.scene.avatar_toolkit.validation_mode
             if validation_mode == 'BASIC':
                 warning_row = info_box.box()

@@ -6,9 +6,9 @@ from ..core.translations import t
 from ..core.common import (
     get_active_armature,
     get_all_meshes,
-    validate_armature,
     get_armature_list
 )
+from ..core.armature_validation import validate_armature
 
 class AvatarToolkit_OT_SearchMergeArmatureInto(Operator):
     """Search operator for selecting target armature to merge into"""
@@ -155,7 +155,6 @@ class AvatarToolKit_PT_CustomPanel(Panel):
         
         # Group related options together
         transform_col: UILayout = col.column(align=True)
-        transform_col.prop(toolkit, "merge_all_bones")
         transform_col.prop(toolkit, "apply_transforms")
         
         col.separator(factor=0.5)

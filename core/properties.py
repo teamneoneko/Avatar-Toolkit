@@ -14,7 +14,7 @@ from .logging_setup import logger
 from .translations import t, get_languages_list, update_language
 from .addon_preferences import get_preference, save_preference
 from .updater import get_version_list
-from .common import get_armature_list, get_active_armature, get_all_meshes
+from .common import get_armature_list, get_active_armature, get_all_meshes, SceneMatClass
 from ..functions.visemes import VisemePreview
 from ..functions.eye_tracking import set_rotation
 
@@ -44,6 +44,117 @@ def update_shape_intensity(self: PropertyGroup, context: Context) -> None:
 
 class AvatarToolkitSceneProperties(PropertyGroup):
     """Property group containing Avatar Toolkit scene-level settings and properties"""
+
+    show_found_bones: BoolProperty(
+        name="Show Found Bones",
+        default=False
+    )
+    
+    show_non_standard: BoolProperty(
+        name="Show Non-Standard Bones", 
+        default=False
+    )
+
+    show_hierarchy: BoolProperty(
+        name="Show Hierarchy Issues",
+        default=False
+    )
+
+    material_search_filter: StringProperty(
+        name=t("TextureAtlas.search_materials"),
+        description=t("TextureAtlas.search_materials_desc"),
+        default=""
+    )
+
+    def get_texture_node_list(self: Material, context: Context) -> list[tuple]:
+        if self.use_nodes:
+            Object.Enum = [((i.image.name if i.image else i.name+"_image"),
+                        (i.image.name if i.image else "node with no image..."),
+                        (i.image.name if i.image else i.name),index+1) 
+                        for index,i in enumerate(self.node_tree.nodes) 
+                        if i.bl_idname == "ShaderNodeTexImage"]
+            if not len(Object.Enum):
+                Object.Enum = [(t("TextureAtlas.error.label"), 
+                            t("TextureAtlas.no_images_error.desc"),
+                            t("TextureAtlas.error.label"), 0)]
+        else:
+            Object.Enum = [(t("TextureAtlas.error.label"),
+                        t("TextureAtlas.no_nodes_error.desc"),
+                        t("TextureAtlas.error.label"), 0)]
+        Object.Enum.append((t("TextureAtlas.none.label"),
+                        t("TextureAtlas.none.label"),
+                        t("TextureAtlas.none.label"), 0))
+        return Object.Enum
+
+    Material.texture_atlas_albedo = EnumProperty(
+        name=t("TextureAtlas.albedo"),
+        description=t("TextureAtlas.texture_use_atlas.desc").format(name=t("TextureAtlas.albedo").lower()),
+        default=0,
+        items=get_texture_node_list
+    )
+
+    Material.texture_atlas_normal = EnumProperty(
+        name=t("TextureAtlas.normal"),
+        description=t("TextureAtlas.texture_use_atlas.desc").format(name=t("TextureAtlas.normal").lower()),
+        default=0,
+        items=get_texture_node_list
+    )
+
+    Material.texture_atlas_emission = EnumProperty(
+        name=t("TextureAtlas.emission"),
+        description=t("TextureAtlas.texture_use_atlas.desc").format(name=t("TextureAtlas.emission").lower()),
+        default=0,
+        items=get_texture_node_list
+    )
+
+    Material.texture_atlas_ambient_occlusion = EnumProperty(
+        name=t("TextureAtlas.ambient_occlusion"),
+        description=t("TextureAtlas.texture_use_atlas.desc").format(name=t("TextureAtlas.ambient_occlusion").lower()),
+        default=0,
+        items=get_texture_node_list
+    )
+
+    Material.texture_atlas_height = EnumProperty(
+        name=t("TextureAtlas.height"),
+        description=t("TextureAtlas.texture_use_atlas.desc").format(name=t("TextureAtlas.height").lower()),
+        default=0,
+        items=get_texture_node_list
+    )
+
+    Material.texture_atlas_roughness = EnumProperty(
+        name=t("TextureAtlas.roughness"),
+        description=t("TextureAtlas.texture_use_atlas.desc").format(name=t("TextureAtlas.roughness").lower()),
+        default=0,
+        items=get_texture_node_list
+    )
+
+    Material.include_in_atlas = BoolProperty(
+        name=t("TextureAtlas.include_in_atlas"),
+        description=t("TextureAtlas.include_in_atlas_desc"),
+        default=False
+    )
+
+    Material.material_expanded = BoolProperty(
+        name=t("TextureAtlas.material_expanded"),
+        description=t("TextureAtlas.material_expanded_desc"),
+        default=False
+    )
+
+    texture_atlas_Has_Mat_List_Shown: BoolProperty(
+        name=t("TextureAtlas.list_shown"),
+        description=t("TextureAtlas.list_shown_desc"),
+        default=False
+    )
+
+    texture_atlas_material_index: IntProperty(
+        default=-1,
+        get=lambda self: -1,
+        set=lambda self, context: None
+    )
+
+    materials: CollectionProperty(
+        type=SceneMatClass
+    )
     
     avatar_toolkit_updater_version_list: EnumProperty(
         items=get_version_list,
@@ -344,12 +455,6 @@ class AvatarToolkitSceneProperties(PropertyGroup):
         default=""
     )
 
-    merge_all_bones: BoolProperty(
-        name=t('MergeArmature.merge_all'),
-        description=t('MergeArmature.merge_all_desc'),
-        default=True
-    )
-
     apply_transforms: BoolProperty(
         name=t('MergeArmature.apply_transforms'),
         description=t('MergeArmature.apply_transforms_desc'),
@@ -407,12 +512,21 @@ class AvatarToolkitSceneProperties(PropertyGroup):
         description=t('MergeArmature.cleanup_shape_keys_desc'),
         default=True
     )
-
+      
+    merge_twist_bones: BoolProperty(
+        name=t("Tools.merge_twist_bones"),
+        description=t("Tools.merge_twist_bones_desc"),
+        default=True
+    )
+                
 def register() -> None:
     """Register the Avatar Toolkit property group"""
     logger.info("Registering Avatar Toolkit properties")
     try:
+        bpy.utils.register_class(ZeroWeightBoneItem)
         bpy.utils.register_class(AvatarToolkitSceneProperties)
+        
+        
     except ValueError:
         # Class already registered, we can continue
         pass
@@ -427,7 +541,9 @@ def unregister() -> None:
     except:
         pass
     try:
+        bpy.utils.unregister_class(ZeroWeightBoneItem)
         bpy.utils.unregister_class(AvatarToolkitSceneProperties)
+        
     except RuntimeError:
         pass
     logger.debug("Properties unregistered successfully")

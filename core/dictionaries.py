@@ -354,3 +354,244 @@ resonite_translations = {
     'thumb_2_r': "thumb2.R",
     'thumb_3_r': "thumb3.R"
 }
+
+standard_bones = {
+    # Core Structure
+    'hips': 'Hips',
+    'spine': 'Spine',
+    'chest': 'Chest',
+    'upper_chest': 'Chest.Up',
+    'neck': 'Neck',
+    'head': 'Head',
+    
+    # Arms
+    'left_arm': 'UpperArm.L',
+    'left_elbow': 'LowerArm.L',
+    'left_wrist': 'Hand.L',
+    'right_arm': 'UpperArm.R',
+    'right_elbow': 'LowerArm.R',
+    'right_wrist': 'Hand.R',
+    
+    # Legs
+    'left_leg': 'UpperLeg.L',
+    'left_knee': 'LowerLeg.L',
+    'left_ankle': 'Foot.L',
+    'left_toe': 'Toes.L',
+    'right_leg': 'UpperLeg.R',
+    'right_knee': 'LowerLeg.R',
+    'right_ankle': 'Foot.R',
+    'right_toe': 'Toes.R',
+    
+    # Fingers Left
+    'thumb_1_l': 'Thumb1.L',
+    'thumb_2_l': 'Thumb2.L',
+    'thumb_3_l': 'Thumb3.L',
+    'index_1_l': 'Index1.L',
+    'index_2_l': 'Index2.L',
+    'index_3_l': 'Index3.L',
+    'middle_1_l': 'Middle1.L',
+    'middle_2_l': 'Middle2.L',
+    'middle_3_l': 'Middle3.L',
+    'ring_1_l': 'Ring1.L',
+    'ring_2_l': 'Ring2.L',
+    'ring_3_l': 'Ring3.L',
+    'pinkie_1_l': 'Pinky1.L',
+    'pinkie_2_l': 'Pinky2.L',
+    'pinkie_3_l': 'Pinky3.L',
+    
+    # Fingers Right
+    'thumb_1_r': 'Thumb1.R',
+    'thumb_2_r': 'Thumb2.R',
+    'thumb_3_r': 'Thumb3.R',
+    'index_1_r': 'Index1.R',
+    'index_2_r': 'Index2.R',
+    'index_3_r': 'Index3.R',
+    'middle_1_r': 'Middle1.R',
+    'middle_2_r': 'Middle2.R',
+    'middle_3_r': 'Middle3.R',
+    'ring_1_r': 'Ring1.R',
+    'ring_2_r': 'Ring2.R',
+    'ring_3_r': 'Ring3.R',
+    'pinkie_1_r': 'Pinky1.R',
+    'pinkie_2_r': 'Pinky2.R',
+    'pinkie_3_r': 'Pinky3.R',
+    
+    # Eyes
+    'left_eye': 'Eye.L',
+    'right_eye': 'Eye.R'
+}
+
+bone_hierarchy = [
+    ('Hips', 'Spine'),
+    ('Spine', 'Chest'),
+    ('Chest', 'Chest.Up'),
+    ('Chest.Up', 'Neck'),
+    ('Neck', 'Head'),
+    ('Head', 'Eye.L'),
+    ('Head', 'Eye.R'),
+    
+    # Left Arm Chain
+    ('Chest.Up', 'UpperArm.L'),
+    ('UpperArm.L', 'LowerArm.L'),
+    ('LowerArm.L', 'Hand.L'),
+    
+    # Right Arm Chain
+    ('Chest.Up', 'UpperArm.R'),
+    ('UpperArm.R', 'LowerArm.R'),
+    ('LowerArm.R', 'Hand.R'),
+    
+    # Left Leg Chain
+    ('Hips', 'UpperLeg.L'),
+    ('UpperLeg.L', 'LowerLeg.L'),
+    ('LowerLeg.L', 'Foot.L'),
+    ('Foot.L', 'Toes.L'),
+    
+    # Right Leg Chain
+    ('Hips', 'UpperLeg.R'),
+    ('UpperLeg.R', 'LowerLeg.R'),
+    ('LowerLeg.R', 'Foot.R'),
+    ('Foot.R', 'Toes.R')
+]
+
+finger_hierarchy = {
+    'left': [
+        ('Hand.L', 'Thumb1.L', 'Thumb2.L', 'Thumb3.L'),
+        ('Hand.L', 'Index1.L', 'Index2.L', 'Index3.L'),
+        ('Hand.L', 'Middle1.L', 'Middle2.L', 'Middle3.L'),
+        ('Hand.L', 'Ring1.L', 'Ring2.L', 'Ring3.L'),
+        ('Hand.L', 'Pinky1.L', 'Pinky2.L', 'Pinky3.L')
+    ],
+    'right': [
+        ('Hand.R', 'Thumb1.R', 'Thumb2.R', 'Thumb3.R'),
+        ('Hand.R', 'Index1.R', 'Index2.R', 'Index3.R'),
+        ('Hand.R', 'Middle1.R', 'Middle2.R', 'Middle3.R'),
+        ('Hand.R', 'Ring1.R', 'Ring2.R', 'Ring3.R'),
+        ('Hand.R', 'Pinky1.R', 'Pinky2.R', 'Pinky3.R')
+    ]
+}
+
+acceptable_bone_hierarchy = [
+    # Right side chain
+    ('Hips', 'Chest'),
+    ('Chest', 'Shoulder.R'),
+    ('Shoulder.R', 'Arm.R'),
+    ('Arm.R', 'Elbow.R'),
+    ('Elbow.R', 'Wrist.R'),
+    ('Hips', 'Leg.R'),
+    ('Leg.R', 'Knee.R'),
+    ('Knee.R', 'Foot.R'),
+    ('Foot.R', 'Toes.R'),
+    
+    # Left side chain
+    ('Chest', 'Shoulder.L'),
+    ('Shoulder.L', 'Arm.L'),
+    ('Arm.L', 'Elbow.L'),
+    ('Elbow.L', 'Wrist.L'),
+    ('Hips', 'Leg.L'),
+    ('Leg.L', 'Knee.L'),
+    ('Knee.L', 'Foot.L'),
+    ('Foot.L', 'Toes.L'),
+
+    # Head and Eyes
+    ('Chest', 'Neck'),
+    ('Neck', 'Head'),
+    ('Head', 'Eye_L'),
+    ('Head', 'Eye_R'),
+    ('Head', 'LeftEye'),
+    ('Head', 'RightEye')
+]
+
+acceptable_bone_names = {
+    'hips': ['Hips'],
+    'chest': ['Chest'],
+    'neck': ['Neck'],
+    'head': ['Head'],
+    'eye_l': ['Eye_L', 'LeftEye'],
+    'eye_r': ['Eye_R', 'RightEye'],
+    'shoulder_r': ['Shoulder.R'],
+    'arm_r': ['Arm.R'],
+    'elbow_r': ['Elbow.R'],
+    'wrist_r': ['Wrist.R'],
+    'leg_r': ['Leg.R'],
+    'knee_r': ['Knee.R'],
+    'foot_r': ['Foot.R'],
+    'toes_r': ['Toes.R'],
+    'shoulder_l': ['Shoulder.L'],
+    'arm_l': ['Arm.L'],
+    'elbow_l': ['Elbow.L'],
+    'wrist_l': ['Wrist.L'],
+    'leg_l': ['Leg.L'],
+    'knee_l': ['Knee.L'],
+    'foot_l': ['Foot.L'],
+    'toes_l': ['Toes.L']
+}
+
+rigify_unity_names = {
+    "DEF-spine": "Hips",
+    "DEF-spine.001": "Spine",
+    "DEF-spine.002": "Chest",
+    "DEF-spine.003": "UpperChest",
+    "DEF-neck": "Neck",
+    "DEF-head": "Head",
+    "DEF-shoulder.L": "LeftShoulder",
+    "DEF-upper_arm.L": "LeftUpperArm",
+    "DEF-forearm.L": "LeftLowerArm",
+    "DEF-hand.L": "LeftHand",
+    "DEF-shoulder.R": "RightShoulder",
+    "DEF-upper_arm.R": "RightUpperArm",
+    "DEF-forearm.R": "RightLowerArm",
+    "DEF-hand.R": "RightHand",
+    "DEF-thigh.L": "LeftUpperLeg",
+    "DEF-shin.L": "LeftLowerLeg",
+    "DEF-foot.L": "LeftFoot",
+    "DEF-toe.L": "LeftToes",
+    "DEF-thigh.R": "RightUpperLeg",
+    "DEF-shin.R": "RightLowerLeg",
+    "DEF-foot.R": "RightFoot",
+    "DEF-toe.R": "RightToes"
+}
+
+rigify_basic_unity_names = {
+    "spine": "Hips",
+    "spine.001": "Spine",
+    "spine.002": "Chest",
+    "spine.003": "UpperChest",
+    "neck": "Neck",
+    "head": "Head",
+    "shoulder.L": "LeftShoulder",
+    "upper_arm.L": "LeftUpperArm",
+    "forearm.L": "LeftLowerArm",
+    "hand.L": "LeftHand",
+    "shoulder.R": "RightShoulder",
+    "upper_arm.R": "RightUpperArm",
+    "forearm.R": "RightLowerArm",
+    "hand.R": "RightHand",
+    "thigh.L": "LeftUpperLeg",
+    "shin.L": "LeftLowerLeg",
+    "foot.L": "LeftFoot",
+    "toe.L": "LeftToes",
+    "thigh.R": "RightUpperLeg",
+    "shin.R": "RightLowerLeg",
+    "foot.R": "RightFoot",
+    "toe.R": "RightToes"
+}
+
+rigify_unnecessary_bones = [
+    'face',
+    'ear.l', 'ear.r',
+    'forehead',
+    'cheek.t.l', 'cheek.t.r',
+    'cheek.b.l', 'cheek.b.r',
+    'brow.t.l', 'brow.t.r',
+    'brow.b.l', 'brow.b.r',
+    'jaw',
+    'chin',
+    'nose',
+    'temple.l', 'temple.r',
+    'teeth',
+    'lip',
+    'lid',
+    'heel',
+    'pelvis.'
+]
+

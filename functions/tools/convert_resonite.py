@@ -4,8 +4,9 @@ from typing import Set, Dict, Optional
 from bpy.types import Operator, Context
 from ...core.translations import t
 from ...core.logging_setup import logger
-from ...core.common import get_active_armature, simplify_bonename, validate_armature, ProgressTracker
+from ...core.common import get_active_armature, simplify_bonename, ProgressTracker
 from ...core.dictionaries import bone_names, resonite_translations
+from ...core.armature_validation import validate_armature
 
 class AvatarToolkit_OT_ConvertResonite(Operator):
     """Convert armature bone names to Resonite format with progress tracking and validation"""
@@ -19,8 +20,8 @@ class AvatarToolkit_OT_ConvertResonite(Operator):
         armature = get_active_armature(context)
         if not armature:
             return False
-        is_valid, _ = validate_armature(armature)
-        return is_valid
+        valid, _, _ = validate_armature(armature)
+        return valid
 
     def execute(self, context: Context) -> Set[str]:
         armature = get_active_armature(context)

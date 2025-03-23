@@ -9,10 +9,10 @@ from ..core.logging_setup import logger
 from ..core.translations import t
 from ..core.common import (
     get_active_armature,
-    validate_armature,
     get_all_meshes,
     validate_mesh_for_pose
 )
+from ..core.armature_validation import validate_armature
 
 class VisemeCache:
     """Manages caching of generated viseme shape data for performance optimization"""
@@ -138,9 +138,8 @@ class ATOOLKIT_OT_preview_visemes(Operator):
         armature = get_active_armature(context)
         if not armature:
             return False
-        valid, _ = validate_armature(armature)
+        valid, _, _ = validate_armature(armature)
         return valid and mesh_obj and mesh_obj.type == 'MESH'
-
     
     def execute(self, context: Context) -> Set[str]:
         props = context.scene.avatar_toolkit
@@ -197,7 +196,7 @@ class ATOOLKIT_OT_create_visemes(Operator):
         armature = get_active_armature(context)
         if not armature:
             return False
-        valid, _ = validate_armature(armature)
+        valid, _, _ = validate_armature(armature)
         return valid and mesh_obj and mesh_obj.type == 'MESH'
 
 

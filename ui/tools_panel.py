@@ -95,3 +95,11 @@ class AvatarToolKit_PT_ToolsPanel(Panel):
         col.separator(factor=0.5)
         col.operator("avatar_toolkit.apply_transforms", text=t("Tools.apply_transforms"), icon='OBJECT_DATA')
         col.operator("avatar_toolkit.clean_shapekeys", text=t("Tools.clean_shapekeys"), icon='SHAPEKEY_DATA')
+
+        # Rigify Tools
+        rigify_box: UILayout = layout.box()
+        col = rigify_box.column(align=True)
+        col.label(text=t("Tools.rigify_title"), icon='ARMATURE_DATA')
+        col.separator(factor=0.5)
+        col.operator("avatar_toolkit.convert_rigify_to_unity", icon='ARMATURE_DATA')
+        col.prop(context.scene.avatar_toolkit, "merge_twist_bones")

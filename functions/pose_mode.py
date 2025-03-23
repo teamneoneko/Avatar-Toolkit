@@ -8,13 +8,13 @@ from ..core.common import (
     get_active_armature,
     get_all_meshes,
     apply_pose_as_rest,
-    validate_armature,
     cache_vertex_positions,
     apply_vertex_positions,
     validate_mesh_for_pose,
     process_armature_modifiers,
     ProgressTracker
 )
+from ..core.armature_validation import validate_armature
 
 class BatchPoseOperationMixin:
     """Base class for batch pose operations"""
@@ -23,7 +23,7 @@ class BatchPoseOperationMixin:
         armature = get_active_armature(context)
         if not armature:
             return False
-        valid, _ = validate_armature(armature)
+        valid, _, _ = validate_armature(armature)
         return valid and context.mode == 'POSE'
     
     def validate_meshes(self, meshes: List[Object]) -> List[Tuple[Object, str]]:
@@ -46,7 +46,7 @@ class AvatarToolkit_OT_StartPoseMode(Operator):
         armature = get_active_armature(context)
         if not armature or context.mode == "POSE":
             return False
-        valid, _ = validate_armature(armature)
+        valid, _, _ = validate_armature(armature)
         return valid
 
     def execute(self, context: Context) -> Set[str]:

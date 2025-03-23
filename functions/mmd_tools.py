@@ -6,13 +6,13 @@ from ..core.logging_setup import logger
 from ..core.common import (
     ProgressTracker, 
     get_active_armature,
-    validate_armature,
     get_vertex_weights,
     transfer_vertex_weights,
     get_all_meshes
 )
 from ..core.translations import t
 from ..core.dictionaries import bone_names, dont_delete_these_main_bones
+from ..core.armature_validation import validate_armature, validate_bone_hierarchy
 
 class AVATAR_TOOLKIT_OT_StandardizeMmd(Operator):
     """MMD Bone standardization system"""

@@ -4,7 +4,8 @@ from bpy.types import Operator, Context
 from typing import Set
 from ...core.translations import t
 from ...core.logging_setup import logger
-from ...core.common import get_active_armature, get_all_meshes, validate_armature, remove_unused_shapekeys
+from ...core.common import get_active_armature, get_all_meshes, remove_unused_shapekeys
+from ...core.armature_validation import validate_armature
 
 class AvatarToolkit_OT_ApplyTransforms(Operator):
     """Apply all transformations to armature and associated meshes"""
@@ -18,8 +19,8 @@ class AvatarToolkit_OT_ApplyTransforms(Operator):
         armature = get_active_armature(context)
         if not armature:
             return False
-        is_valid, _ = validate_armature(armature)
-        return is_valid and context.mode == 'OBJECT'
+        valid, _, _ = validate_armature(armature)
+        return valid and context.mode == 'OBJECT'
 
     def execute(self, context: Context) -> Set[str]:
         try:
@@ -66,8 +67,8 @@ class AvatarToolkit_OT_CleanShapekeys(Operator):
         armature = get_active_armature(context)
         if not armature:
             return False
-        is_valid, _ = validate_armature(armature)
-        return is_valid and context.mode == 'OBJECT' and len(get_all_meshes(context)) > 0
+        valid, _, _ = validate_armature(armature)
+        return valid and context.mode == 'OBJECT' and len(get_all_meshes(context)) > 0
 
     def execute(self, context: Context) -> Set[str]:
         try:

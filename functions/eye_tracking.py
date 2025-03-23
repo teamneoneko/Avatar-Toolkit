@@ -18,11 +18,11 @@ from ..core.common import (
     get_active_armature,
     get_all_meshes,
     get_armature_list,
-    validate_armature,
     validate_mesh_for_pose,
     cache_vertex_positions,
     apply_vertex_positions
 )
+from ..core.armature_validation import validate_armature
 
 VALID_EYE_NAMES: Dict[str, List[str]] = {
     'left': ['LeftEye', 'Eye_L', 'eye_L', 'eye.L', 'EyeLeft', 'left_eye', 'l_eye'],

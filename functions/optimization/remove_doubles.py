@@ -7,8 +7,8 @@ from ...core.translations import t
 from ...core.common import (
     get_active_armature,
     get_all_meshes,
-    validate_armature
 )
+from ...core.armature_validation import validate_armature
 
 # Constants
 MERGE_ITERATION_COUNT = 20
@@ -88,7 +88,7 @@ class AvatarToolkit_OT_RemoveDoublesAdvanced(Operator):
         armature = get_active_armature(context)
         if not armature:
             return False
-        valid, _ = validate_armature(armature)
+        valid, _, _ = validate_armature(armature)
         return valid
 
     def execute(self, context: Context) -> set[str]:
@@ -111,7 +111,7 @@ class AvatarToolkit_OT_RemoveDoubles(Operator):
         armature = get_active_armature(context)
         if not armature:
             return False
-        valid, _ = validate_armature(armature)
+        valid, _, _ = validate_armature(armature)
         return valid
 
     def draw(self, context: Context) -> None:

@@ -4,11 +4,12 @@ import bpy_extras
 from numpy import double
 from typing import Set, Dict
 
-from .common import get_active_armature, simplify_bonename, validate_armature, ProgressTracker
+from .common import get_active_armature, simplify_bonename, ProgressTracker
 from bpy.types import Context, Operator
 from ..core.translations import t
 from ..core.dictionaries import bone_names, resonite_translations
 from ..core.logging_setup import logger
+from ..core.armature_validation import validate_armature
 
 import re
 from .resonite_loader import resonite_animx, resonite_types
