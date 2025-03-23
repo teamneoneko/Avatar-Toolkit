@@ -22,13 +22,9 @@ class PMXImporter:
         self.use_mipmap = True
         self.sph_blend_factor = 1.0
         self.spa_blend_factor = 1.0
-        
-        # Core objects
         self.armature_obj: Optional[bpy.types.Object] = None
         self.mesh_obj: Optional[bpy.types.Object] = None
         self.root_obj: Optional[bpy.types.Object] = None
-        
-        # Reference tables
         self.bone_table: List[bpy.types.PoseBone] = []
         self.material_table: List[bpy.types.Material] = []
         self.texture_table: List[str] = []
@@ -36,7 +32,6 @@ class PMXImporter:
         self.vertex_group_table = None
         self.material_face_count = []
         self.image_table: Dict[int, bpy.types.Image] = {}
-        
         self.sdef_vertices = {}
         self.blender_ik_links: Set[int] = set()
         
@@ -381,121 +376,208 @@ class PMXImporter:
             rigid_count = len(self.model['rigid_bodies'])
             logger.info(f"Starting rigid body import for {rigid_count} objects")
             
-            # Initialize rigid body manager
+            # Create a dedicated collection for physics
+            physics_collection = bpy.data.collections.get("Physics")
+            if not physics_collection:
+                physics_collection = bpy.data.collections.new("Physics")
+                bpy.context.scene.collection.children.link(physics_collection)
+            
             rb_manager = RigidBodyManager(self.armature_obj, self.scale)
             
             # Create rigid bodies with progress tracking
             for i, rigid in enumerate(self.model['rigid_bodies']):
-                logger.debug(f"Creating rigid body {i}/{rigid_count}: {rigid['name']}")
-                
                 try:
-                    rb_obj = rb_manager.create_rigid_body(
-                        name=rigid['name'],
-                        bone_index=rigid['bone_index'],
-                        position=rigid['position'],
-                        rotation=rigid['rotation'],
-                        shape_type=rigid['shape_type'],
-                        shape_size=rigid['shape_size'],
-                        physics_mode=rigid['physics_mode'],
-                        group_id=rigid['group_id'],
-                        non_collision_group_mask=rigid['non_collision_group'],
-                        mass=rigid['mass'],
-                        friction=rigid['friction'],
-                        restitution=rigid['repulsion'],
-                        linear_damping=rigid['move_attenuation'],
-                        angular_damping=rigid['rotation_damping']
-                    )
+                    # Sanitize name to avoid encoding issues
+                    safe_name = rigid['name']
+                    if not safe_name or not isinstance(safe_name, str):
+                        safe_name = f"RigidBody_{i}"
                     
-                    self.rigid_table[i] = rb_obj
-                    logger.debug(f"Successfully created rigid body {i}: {rigid['name']}")
+                    logger.debug(f"Creating rigid body {i}/{rigid_count}: {safe_name}")
                     
+                    bone_index = rigid['bone_index']
+                    if bone_index >= 0 and bone_index < len(self.bone_table):
+                        rb_obj = rb_manager.create_rigid_body(
+                            name=safe_name,
+                            bone_index=bone_index,
+                            position=rigid['position'],
+                            rotation=rigid['rotation'],
+                            shape_type=rigid['shape_type'],
+                            shape_size=rigid['shape_size'],
+                            physics_mode=rigid['physics_mode'],
+                            group_id=rigid['group_id'],
+                            non_collision_group_mask=rigid['non_collision_group'],
+                            mass=rigid['mass'],
+                            friction=rigid['friction'],
+                            restitution=rigid['repulsion'],
+                            linear_damping=rigid['move_attenuation'],
+                            angular_damping=rigid['rotation_damping']
+                        )
+                        
+                        if rb_obj:
+                            self.rigid_table[i] = rb_obj
+                            if rb_obj.name not in physics_collection.objects:
+                                if rb_obj.users_collection:
+                                    for col in rb_obj.users_collection:
+                                        if col != physics_collection:
+                                            col.objects.unlink(rb_obj)
+                                physics_collection.objects.link(rb_obj)
+                            
+                            logger.debug(f"Successfully created rigid body {i}: {safe_name}")
+                        
                 except Exception as e:
-                    logger.error(f"Failed to create rigid body {i}: {rigid['name']}", exc_info=True)
+                    logger.error(f"Failed to create rigid body {i}: {safe_name}", exc_info=True)
                     continue
 
-            # Create non-collision constraints
-            logger.debug("Creating non-collision constraints")
-            rb_manager.create_non_collision_constraints()
-            
-            # Create physics container and parent rigid bodies
-            logger.debug("Setting up physics container")
-            physics_container = rb_manager.create_physics_container()
-            
-            for i, rigid in self.rigid_table.items():
-                try:
-                    if not rigid.parent or rigid.parent_type != 'BONE':
-                        rigid.parent = physics_container
-                except Exception as e:
-                    logger.error(f"Failed to parent rigid body {i} to physics container", exc_info=True)
+            # Create physics container if we have rigid bodies
+            if self.rigid_table:
+                logger.debug("Setting up physics container")
+                physics_container = bpy.data.objects.new("Physics_Container", None)
+                physics_collection.objects.link(physics_container)
+                physics_container.parent = self.armature_obj
+                
+                for i, rigid in self.rigid_table.items():
+                    try:
+                        if rigid and (not rigid.parent or rigid.parent_type != 'BONE'):
+                            rigid.parent = physics_container
+                    except Exception as e:
+                        logger.error(f"Failed to parent rigid body {i} to physics container", exc_info=True)
 
-            logger.info(f"Successfully created {len(self.rigid_table)} rigid bodies")
+                logger.info(f"Successfully created {len(self.rigid_table)} rigid bodies")
+                
+                if len(self.rigid_table) >= 2:
+                    logger.debug("Creating non-collision constraints")
+                    try:
+                        rb_manager.create_non_collision_constraints(distance_scale=1.2)
+                        logger.info(f"Created non-collision constraints between rigid bodies")
+                    except Exception as e:
+                        logger.error(f"Failed to create non-collision constraints: {str(e)}")
+
+            else:
+                logger.info("No rigid bodies were created successfully")
 
         except Exception as e:
             logger.error("Rigid body import failed", exc_info=True)
-            raise
 
     def _import_joints(self):
         """Import physics joints/constraints"""
-        for joint in self.model['joints']:
-            obj = bpy.data.objects.new(f"joint_{joint['name']}", None)
-            obj.empty_display_type = 'ARROWS'
-            bpy.context.scene.collection.objects.link(obj)
-            
-            # Set transform
-            obj.location = Vector(joint['position']).xzy * self.scale
-            obj.rotation_euler = Euler(Vector(joint['rotation']).xzy)
-            
-            # Create constraint
-            rb_const = obj.rigid_body_constraint
-            rb_const.type = 'GENERIC_SPRING'
-            
-            # Set connected rigid bodies
-            if joint['rigid_body_a'] in self.rigid_table:
-                rb_const.object1 = self.rigid_table[joint['rigid_body_a']]
-            if joint['rigid_body_b'] in self.rigid_table:
-                rb_const.object2 = self.rigid_table[joint['rigid_body_b']]
+        try:
+            if not self.model.get('joints'):
+                logger.info("No joints found in model")
+                return
                 
-            # Set joint limits
-            self._set_joint_limits(rb_const, joint)
+            joint_count = len(self.model['joints'])
+            logger.info(f"Starting joint import for {joint_count} joints")
+            
+            # Get or create physics collection
+            physics_collection = bpy.data.collections.get("Physics")
+            if not physics_collection:
+                physics_collection = bpy.data.collections.new("Physics")
+                bpy.context.scene.collection.children.link(physics_collection)
+            
+            for i, joint in enumerate(self.model['joints']):
+                try:
+                    # Sanitize name
+                    joint_name = joint.get('name', f"joint_{i}")
+                    if not isinstance(joint_name, str) or not joint_name:
+                        joint_name = f"joint_{i}"
+                    
+                    logger.debug(f"Creating joint {i}/{joint_count}: {joint_name}")
+                    
+                    obj = bpy.data.objects.new(f"joint_{joint_name}", None)
+                    obj.empty_display_type = 'ARROWS'
+                    physics_collection.objects.link(obj)
+                
+                    obj.location = Vector(joint['position']).xzy * self.scale
+                    obj.rotation_euler = Euler(Vector(joint['rotation']).xzy)
+                    bpy.context.view_layer.objects.active = obj
+                    obj.select_set(True)
+                    
+                    try:
+                        bpy.ops.rigidbody.constraint_add(type='GENERIC_SPRING')
+                    except Exception as e:
+                        logger.warning(f"Failed to add constraint: {str(e)}")
+                        bpy.ops.rigidbody.constraint_add(type='GENERIC')
+                    
+                    rb_const = obj.rigid_body_constraint
+                    if rb_const:
+                        if joint['rigid_body_a'] in self.rigid_table:
+                            rb_const.object1 = self.rigid_table[joint['rigid_body_a']]
+                        if joint['rigid_body_b'] in self.rigid_table:
+                            rb_const.object2 = self.rigid_table[joint['rigid_body_b']]
+                        
+                        self._set_joint_limits(rb_const, joint)
+                        
+                        logger.debug(f"Successfully created joint {i}: {joint_name}")
+                    else:
+                        logger.warning(f"Failed to create constraint for joint {joint_name}")
+                    
+                    obj.select_set(False)
+                    
+                except Exception as e:
+                    logger.error(f"Failed to create joint {i}: {str(e)}")
+                    continue
+                    
+            logger.info(f"Successfully imported {joint_count} joints")
+            
+        except Exception as e:
+            logger.error("Joint import failed", exc_info=True)
 
     def _finalize_import(self):
         """Final import steps and cleanup"""
-        # Add armature modifier
-        arm_mod = self.mesh_obj.modifiers.new(name="Armature", type='ARMATURE')
-        arm_mod.object = self.armature_obj
-        
-        # Ensure objects are visible
-        self.armature_obj.hide_viewport = False
-        self.armature_obj.hide_render = False
-        self.mesh_obj.hide_viewport = False
-        self.mesh_obj.hide_render = False
-        
-        # Set viewport display options
-        self.armature_obj.show_in_front = True
-        self.armature_obj.data.display_type = 'STICK'
-        
-        # Set custom normals
-        self.mesh_obj.data.use_auto_smooth = True
-        self.mesh_obj.data.normals_split_custom_set([Vector(v.normal).xzy for v in self.model.vertices])
-        
-        # Parent objects
-        self.mesh_obj.parent = self.armature_obj
-        
-        # Select and make active in viewport
-        bpy.ops.object.select_all(action='DESELECT')
-        self.mesh_obj.select_set(True)
-        self.armature_obj.select_set(True)
-        bpy.context.view_layer.objects.active = self.armature_obj
-        
-        # Frame imported objects in viewport
-        bpy.ops.view3d.view_selected(use_all_regions=True)
-        
-        if self.rigid_table:
-            physics_empty = bpy.data.objects.new("Physics", None)
-            bpy.context.scene.collection.objects.link(physics_empty)
-            physics_empty.parent = self.armature_obj
-            for rigid in self.rigid_table.values():
-                rigid.parent = physics_empty
+        try:
+            logger.info("Finalizing PMX import")
+            
+            # Add armature modifier
+            if self.mesh_obj and self.armature_obj:
+                for mod in self.mesh_obj.modifiers:
+                    if mod.type == 'ARMATURE':
+                        self.mesh_obj.modifiers.remove(mod)
+                        
+                arm_mod = self.mesh_obj.modifiers.new(name="Armature", type='ARMATURE')
+                arm_mod.object = self.armature_obj
+                
+                # Ensure objects are visible
+                self.armature_obj.hide_viewport = False
+                self.armature_obj.hide_render = False
+                self.mesh_obj.hide_viewport = False
+                self.mesh_obj.hide_render = False
+                
+                # Set viewport display options
+                self.armature_obj.show_in_front = True
+                self.armature_obj.data.display_type = 'STICK'
+                
+                if hasattr(self.model, 'vertices') and self.model['vertices']:
+                    try:
+                        self.mesh_obj.data.use_auto_smooth = True
+                        self.mesh_obj.data.auto_smooth_angle = 3.14159  # 180 degrees
+                        normals = [(v.normal[0], v.normal[2], v.normal[1]) for v in self.model['vertices']]
+                        self.mesh_obj.data.normals_split_custom_set_from_vertices(normals)
+                    except Exception as e:
+                        logger.warning(f"Could not set custom normals: {str(e)}")
+                
+                # Parent objects or everything may break
+                self.mesh_obj.parent = self.armature_obj
+            
+            bpy.ops.object.select_all(action='DESELECT')
+            if self.mesh_obj:
+                self.mesh_obj.select_set(True)
+            if self.armature_obj:
+                self.armature_obj.select_set(True)
+                bpy.context.view_layer.objects.active = self.armature_obj
+            
+            areas = [area for area in bpy.context.screen.areas if area.type == 'VIEW_3D']
+            if areas:
+                for area in areas:
+                    try:
+                        with bpy.context.temp_override(area=area):
+                            bpy.ops.view3d.view_selected(use_all_regions=True)
+                    except Exception as e:
+                        logger.debug(f"Could not frame view: {str(e)}")
+            
+            logger.info("PMX import finalized successfully")
+            
+        except Exception as e:
+            logger.error(f"Error finalizing import: {str(e)}")
 
     def _get_collision_shape(self, shape_type: int) -> str:
         """Convert PMX collision shape type to Blender rigid body shape"""
@@ -508,34 +590,61 @@ class PMXImporter:
 
     def _set_joint_limits(self, rb_const, joint):
         """Set joint constraint limits"""
-        rb_const.use_limit_lin_x = rb_const.use_limit_lin_y = rb_const.use_limit_lin_z = True
-        rb_const.use_limit_ang_x = rb_const.use_limit_ang_y = rb_const.use_limit_ang_z = True
+        try:
+            # Enable all limits
+            rb_const.use_limit_lin_x = rb_const.use_limit_lin_y = rb_const.use_limit_lin_z = True
+            rb_const.use_limit_ang_x = rb_const.use_limit_ang_y = rb_const.use_limit_ang_z = True
+            
+            # Linear limits (with safety checks)
+            rb_const.limit_lin_x_lower = max(-100, min(0, joint['position_min'][0] * self.scale))
+            rb_const.limit_lin_x_upper = min(100, max(0, joint['position_max'][0] * self.scale))
+            rb_const.limit_lin_y_lower = max(-100, min(0, joint['position_min'][1] * self.scale))
+            rb_const.limit_lin_y_upper = min(100, max(0, joint['position_max'][1] * self.scale))
+            rb_const.limit_lin_z_lower = max(-100, min(0, joint['position_min'][2] * self.scale))
+            rb_const.limit_lin_z_upper = min(100, max(0, joint['position_max'][2] * self.scale))
+            
+            # Angular limits (with safety checks)
+            rb_const.limit_ang_x_lower = max(-3.14, min(0, joint['rotation_min'][0]))
+            rb_const.limit_ang_x_upper = min(3.14, max(0, joint['rotation_max'][0]))
+            rb_const.limit_ang_y_lower = max(-3.14, min(0, joint['rotation_min'][1]))
+            rb_const.limit_ang_y_upper = min(3.14, max(0, joint['rotation_max'][1]))
+            rb_const.limit_ang_z_lower = max(-3.14, min(0, joint['rotation_min'][2]))
+            rb_const.limit_ang_z_upper = min(3.14, max(0, joint['rotation_max'][2]))
+            
+            # If GENERIC_SPRING, set spring values
+            if rb_const.type == 'GENERIC_SPRING':
+                rb_const.use_spring_x = rb_const.use_spring_y = rb_const.use_spring_z = True
+                rb_const.use_spring_ang_x = rb_const.use_spring_ang_y = rb_const.use_spring_ang_z = True
+                
+                # Set spring stiffness (with safety hopefully)
+                spr_pos = joint.get('spring_position', (0, 0, 0))
+                spr_rot = joint.get('spring_rotation', (0, 0, 0))
+                
+                rb_const.spring_stiffness_x = max(0, min(100, spr_pos[0]))
+                rb_const.spring_stiffness_y = max(0, min(100, spr_pos[1]))
+                rb_const.spring_stiffness_z = max(0, min(100, spr_pos[2]))
+                
+                rb_const.spring_stiffness_ang_x = max(0, min(100, spr_rot[0]))
+                rb_const.spring_stiffness_ang_y = max(0, min(100, spr_rot[1]))
+                rb_const.spring_stiffness_ang_z = max(0, min(100, spr_rot[2]))
+                
+                rb_const.spring_damping_x = max(0, min(10, 0.1 * spr_pos[0]))
+                rb_const.spring_damping_y = max(0, min(10, 0.1 * spr_pos[1]))
+                rb_const.spring_damping_z = max(0, min(10, 0.1 * spr_pos[2]))
+                
+                rb_const.spring_damping_ang_x = max(0, min(10, 0.1 * spr_rot[0]))
+                rb_const.spring_damping_ang_y = max(0, min(10, 0.1 * spr_rot[1]))
+                rb_const.spring_damping_ang_z = max(0, min(10, 0.1 * spr_rot[2]))
         
-        # Linear limits
-        rb_const.limit_lin_x_lower = joint['position_min'][0] * self.scale
-        rb_const.limit_lin_x_upper = joint['position_max'][0] * self.scale
-        rb_const.limit_lin_y_lower = joint['position_min'][1] * self.scale
-        rb_const.limit_lin_y_upper = joint['position_max'][1] * self.scale
-        rb_const.limit_lin_z_lower = joint['position_min'][2] * self.scale
-        rb_const.limit_lin_z_upper = joint['position_max'][2] * self.scale
-        
-        # Angular limits
-        rb_const.limit_ang_x_lower = joint['rotation_min'][0]
-        rb_const.limit_ang_x_upper = joint['rotation_max'][0]
-        rb_const.limit_ang_y_lower = joint['rotation_min'][1]
-        rb_const.limit_ang_y_upper = joint['rotation_max'][1]
-        rb_const.limit_ang_z_lower = joint['rotation_min'][2]
-        rb_const.limit_ang_z_upper = joint['rotation_max'][2]
-
+        except Exception as e:
+            logger.error(f"Failed to set joint limits: {str(e)}")
 
     def _create_base_objects(self, context: bpy.types.Context) -> None:
         """Create base armature and mesh objects"""
-        # Create armature
         armature = bpy.data.armatures.new(name=self.model['name'])
         self.armature_obj = bpy.data.objects.new(self.model['name'], armature)
         context.scene.collection.objects.link(self.armature_obj)
-        
-        # Create mesh
+    
         mesh = bpy.data.meshes.new(name=f"{self.model['name']}_mesh")
         self.mesh_obj = bpy.data.objects.new(f"{self.model['name']}_mesh", mesh)
         context.scene.collection.objects.link(self.mesh_obj)
@@ -544,10 +653,7 @@ class PMXImporter:
         context.view_layer.objects.active = self.armature_obj
         self.armature_obj.select_set(True)
         
-        # Initialize armature edit mode
         bpy.ops.object.mode_set(mode='EDIT')
-        
-        # Return to object mode
         bpy.ops.object.mode_set(mode='OBJECT')
         
         # Ensure viewport visibility

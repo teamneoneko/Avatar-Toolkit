@@ -37,63 +37,182 @@ class RigidBodyManager:
             obj = bpy.data.objects.new(f"rigid_{name}", None)
             obj.empty_display_type = 'SPHERE'
             
-            # Ensure object is in the active collection
-            context = bpy.context
-            if obj.name not in context.collection.objects:
-                context.collection.objects.link(obj)
+            # Custom properties
+            obj["is_rigid_body"] = True
+            obj["rigid_type"] = "RIGID_BODY"
             
-            # Set initial transform
+            # Get context and collection management
+            context = bpy.context
+            
+            physics_collection = bpy.data.collections.get("Physics")
+            if not physics_collection:
+                physics_collection = bpy.data.collections.new("Physics")
+                context.scene.collection.children.link(physics_collection)
+            
+            physics_collection.objects.link(obj)
+            
             obj.location = Vector(position).xzy * self.scale
             obj.rotation_euler = Euler(Vector(rotation).xzy)
             obj.rotation_mode = 'YXZ'
             
-            obj.mmd_type = 'RIGID_BODY'
-            
-            # Setup bone relationship if valid bone index
-            if bone_index >= 0 and bone_index < len(self.bone_table):
-                bone = self.bone_table[bone_index]
-                self._setup_bone_relationship(obj, bone, physics_mode)
-                
-            # Set up physics shape and dimensions
             dimensions = Vector(shape_size).xzy * self.scale * 2
             obj.empty_display_size = max(dimensions) if dimensions else 0.1
             obj.scale = dimensions if dimensions else Vector((0.1, 0.1, 0.1))
             
-            # Add rigid body physics with proper context
-            view_layer = context.view_layer
-            view_layer.objects.active = obj
-            obj.select_set(True)
+            # Setup bone relationship if valid bone index
+            if bone_index >= 0 and bone_index < len(self.bone_table):
+                bone = self.bone_table[bone_index]
+                if bone and bone.name:
+                    try:
+                        safe_bone_name = bone.name
+                        logger.debug(f"Parenting rigid body to bone: {safe_bone_name}")
+                        self._setup_bone_relationship(obj, bone, physics_mode)
+                        self.rigid_table[obj.name] = obj
+
+                    except Exception as e:
+                        logger.error(f"Failed to setup bone relationship: {str(e)}")
             
-            with context.temp_override(active_object=obj, selected_objects=[obj]):
+            # Ensure rigid body world exists
+            if not context.scene.rigidbody_world:
+                bpy.ops.rigidbody.world_add()
+            
+            # Try to create the rigid body using a direct approach
+            try:
+                prev_active = context.view_layer.objects.active
+                prev_selected = context.selected_objects.copy()
+                
+                bpy.ops.object.select_all(action='DESELECT')
+                obj.select_set(True)
+                context.view_layer.objects.active = obj
+                
                 bpy.ops.rigidbody.object_add(type='ACTIVE')
                 
-            # Configure rigid body properties
-            rb = obj.rigid_body
-            rb.type = 'ACTIVE' if physics_mode == 0 else 'PASSIVE'
-            rb.collision_shape = self._get_collision_shape(shape_type)
-            rb.mass = max(0.001, mass)
-            rb.friction = max(0, min(1, friction))
-            rb.restitution = max(0, min(1, restitution))
-            rb.linear_damping = linear_damping
-            rb.angular_damping = angular_damping
-            rb.collision_collections[0] = True
-            rb.collision_collections[group_id + 1] = True
-            
-            # Set collision masks
-            for i in range(16):
-                rb.collision_collections[i] = (non_collision_group_mask & (1 << i)) == 0
-            
-            if rb.type == 'PASSIVE':
-                rb.kinematic = True
+                if obj.rigid_body:
+                    rb = obj.rigid_body
+                    rb.type = 'ACTIVE' if physics_mode == 0 else 'PASSIVE'
+                    rb.collision_shape = self._get_collision_shape(shape_type)
+                    rb.mass = max(0.001, mass)
+                    rb.friction = max(0, min(1, friction))
+                    rb.restitution = max(0, min(1, restitution))
+                    rb.linear_damping = linear_damping
+                    rb.angular_damping = angular_damping
+                    rb.collision_collections[0] = True
+                    
+                    for i in range(16):
+                        rb.collision_collections[i] = False
+                    rb.collision_collections[0] = True
+                    rb.collision_collections[group_id + 1] = True
+                    
+                    for i in range(16):
+                        collision_with_group = ((non_collision_group_mask & (1 << i)) == 0)
+                        rb.collision_collections[i] = collision_with_group
+                    
+                    if rb.type == 'PASSIVE':
+                        rb.kinematic = True
+                    
+                    logger.debug(f"Successfully created rigid body: {obj.name}")
+                else:
+                    logger.warning(f"Could not create rigid body for {obj.name}, continuing without physics")
                 
-            logger.debug(f"Successfully created rigid body: {obj.name}")
+                bpy.ops.object.select_all(action='DESELECT')
+                for o in prev_selected:
+                    o.select_set(True)
+                context.view_layer.objects.active = prev_active
+                
+            except Exception as e:
+                logger.warning(f"Could not create rigid body using operator: {str(e)}")
+                # Try an alternative approach - add to rigid body world collection directly really we should not need this once we get the other method 100%.
+                if context.scene.rigidbody_world and context.scene.rigidbody_world.collection:
+                    if obj.name not in context.scene.rigidbody_world.collection.objects:
+                        context.scene.rigidbody_world.collection.objects.link(obj)
+            
             return obj
             
         except Exception as e:
             logger.error(f"Failed to create rigid body {name} | Error: {str(e)}")
-            logger.debug(f"Creation state: Physics Mode={physics_mode}, Group={group_id}, Shape={shape_type}")
             logger.debug(f"Stack trace: ", exc_info=True)
-            raise
+            return None
+
+    def _setup_dynamic_bone_tracking(self, obj: bpy.types.Object, bone: bpy.types.PoseBone):
+        """Setup dynamic rigid body with bone tracking"""
+        try:
+            # Calculate transformation
+            m = bone.matrix @ bone.bone.matrix_local.inverted()
+            self.rigid_body_matrix_map[obj] = m
+            
+            # Decompose matrix for location and rotation
+            t, r, s = (m @ obj.matrix_local).decompose()
+            obj.location = t
+            obj.rotation_euler = r.to_euler(obj.rotation_mode)
+            
+            empty_name = f"track_{bone.name}"
+            
+            old_empty = bpy.data.objects.get(empty_name)
+            if old_empty:
+                bpy.data.objects.remove(old_empty, do_unlink=True)
+            
+            empty = bpy.data.objects.new(name=empty_name, object_data=None)
+            empty.empty_display_type = 'ARROWS'
+            empty.empty_display_size = 0.1
+            
+            physics_collection = bpy.data.collections.get("Physics")
+            if physics_collection:
+                physics_collection.objects.link(empty)
+            else:
+                bpy.context.scene.collection.objects.link(empty)
+                
+            empty.matrix_world = bone.matrix
+            
+            # Set tracking type using custom property and store it
+            empty["mmd_type"] = "TRACK_TARGET"
+            empty.hide_viewport = True
+            self.empty_parent_map[empty] = obj
+            
+            if "mmd_tools_rigid_track" in bone.constraints:
+                bone.constraints.remove(bone.constraints["mmd_tools_rigid_track"])
+                
+            const = bone.constraints.new('COPY_TRANSFORMS')
+            const.name = "mmd_tools_rigid_track"
+            const.target = empty
+            const.influence = 1.0
+            
+            logger.debug(f"Successfully setup dynamic tracking for {obj.name} with {empty.name}")
+            
+        except Exception as e:
+            logger.error(f"Failed to setup dynamic bone tracking: {str(e)}")
+
+    def _create_non_collision_constraint(self, obj_a: bpy.types.Object, obj_b: bpy.types.Object):
+        """Create individual non-collision constraint"""
+        ncc = bpy.data.objects.new(name="ncc", object_data=None)
+        ncc.empty_display_type = 'ARROWS'
+        ncc.location = (0, 0, 0)
+        bpy.context.scene.collection.objects.link(ncc)
+        ncc.hide_viewport = True
+        
+        # Use proper context to add constraint
+        context = bpy.context
+        prev_active = context.view_layer.objects.active
+        context.view_layer.objects.active = ncc
+        
+        try:
+            with context.temp_override(active_object=ncc):
+                bpy.ops.rigidbody.constraint_add(type='GENERIC')
+        except (RuntimeError, AttributeError):
+            # Fallback for older Blender versions
+            override = context.copy()
+            override["active_object"] = ncc
+            bpy.ops.rigidbody.constraint_add(override, type='GENERIC')
+            
+        context.view_layer.objects.active = prev_active
+        
+        # Configure constraint
+        if hasattr(ncc, 'rigid_body_constraint') and ncc.rigid_body_constraint:
+            rb_const = ncc.rigid_body_constraint
+            rb_const.disable_collisions = True
+            rb_const.object1 = obj_a
+            rb_const.object2 = obj_b
+        
+        return ncc
 
     def _ensure_context_collection(self, obj: bpy.types.Object):
         """Ensure object is in the correct collection"""
@@ -104,45 +223,50 @@ class RigidBodyManager:
 
     def _setup_bone_relationship(self, obj: bpy.types.Object, bone: bpy.types.PoseBone, physics_mode: int):
         """Setup proper bone relationship based on physics mode"""
-        if physics_mode == 0:  # Static
-            self._setup_static_bone_parenting(obj, bone)
-        elif physics_mode == 1:  # Dynamic
-            self._setup_dynamic_bone_tracking(obj, bone)
-        else:  # Dynamic with bone influence
-            self._setup_dynamic_bone_influence(obj, bone)
+        try:
+            # Log the setup attempt
+            logger.debug(f"Setting up bone relationship for {obj.name} to bone {bone.name} with mode {physics_mode}")
             
+            if physics_mode == 0:  # Static
+                self._setup_static_bone_parenting(obj, bone)
+            elif physics_mode == 1:  # Dynamic
+                self._setup_dynamic_bone_tracking(obj, bone)
+            else:  # Dynamic with bone influence
+                self._setup_dynamic_bone_influence(obj, bone)
+                
+        except Exception as e:
+            logger.error(f"Failed to setup bone relationship: {str(e)}")
+            # Continue without failing the entire import
+
     def _setup_static_bone_parenting(self, obj: bpy.types.Object, bone: bpy.types.PoseBone):
         """Setup static rigid body parenting to bone"""
-        m = bone.matrix @ bone.bone.matrix_local.inverted()
-        self.rigid_body_matrix_map[obj] = m
-        
-        obj.parent = self.armature_obj
-        obj.parent_type = 'BONE'
-        obj.parent_bone = bone.name
-        obj.matrix_world = self.armature_obj.matrix_world @ m
-        
-    def _setup_dynamic_bone_tracking(self, obj: bpy.types.Object, bone: bpy.types.PoseBone):
-        """Setup dynamic rigid body with bone tracking"""
-        m = bone.matrix @ bone.bone.matrix_local.inverted()
-        self.rigid_body_matrix_map[obj] = m
-        t, r, s = (m @ obj.matrix_local).decompose()
-        obj.location = t
-        obj.rotation_euler = r.to_euler(obj.rotation_mode)
-        
-        empty = bpy.data.objects.new(name=f"track_{bone.name}", object_data=None)
-        empty.empty_display_type = 'ARROWS'
-        empty.empty_display_size = 0.1
-        bpy.context.scene.collection.objects.link(empty)
-        empty.matrix_world = bone.matrix
-        empty.mmd_type = "TRACK_TARGET"
-        empty.hide_viewport = True
-        
-        self.empty_parent_map[empty] = obj
-        
-        const = bone.constraints.new('COPY_TRANSFORMS')
-        const.name = "mmd_tools_rigid_track"
-        const.target = empty
-        const.influence = 1.0
+        try:
+            # Calculate transformation matrix
+            m = bone.matrix @ bone.bone.matrix_local.inverted()
+            self.rigid_body_matrix_map[obj] = m
+            
+            # First unparent the object if it has a parent
+            old_parent = obj.parent
+            if old_parent:
+                # Store the world matrix
+                world_matrix = obj.matrix_world.copy()
+                # Clear parent
+                obj.parent = None
+                # Restore world position
+                obj.matrix_world = world_matrix
+            
+            # Set proper parent and keep transform
+            obj.parent = self.armature_obj
+            obj.parent_type = 'BONE'
+            obj.parent_bone = bone.name
+            
+            # Update matrix
+            obj.matrix_world = self.armature_obj.matrix_world @ m
+            
+            logger.debug(f"Successfully parented {obj.name} to bone {bone.name}")
+            
+        except Exception as e:
+            logger.error(f"Failed to setup static bone parenting: {str(e)}")
         
     def _setup_dynamic_bone_influence(self, obj: bpy.types.Object, bone: bpy.types.PoseBone):
         """Setup dynamic rigid body with bone influence"""
