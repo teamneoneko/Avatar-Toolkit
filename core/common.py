@@ -92,20 +92,75 @@ class ProgressTracker:
 
 def get_active_armature(context: Context) -> Optional[Object]:
     """Get the currently selected armature from Avatar Toolkit properties"""
-    armature_name = str(context.scene.avatar_toolkit.active_armature)
-    if armature_name and armature_name != 'NONE':
-        return bpy.data.objects.get(armature_name)
+    try:
+        # Get the safe identifier from the enum property
+        armature_id = context.scene.avatar_toolkit.active_armature
+        
+        if not armature_id or armature_id == 'NONE':
+            return None
+        
+        # The identifier format is "ARM_{pointer_value}"
+        if armature_id.startswith('ARM_'):
+            try:
+                pointer_str = armature_id[4:] 
+                pointer_value = int(pointer_str)
+                
+                # Find the armature with this pointer value
+                for obj in context.scene.objects:
+                    if obj.type == 'ARMATURE' and obj.as_pointer() == pointer_value:
+                        return obj
+                
+                logger.warning(f"Armature with pointer {pointer_value} not found")
+            except (ValueError, AttributeError) as e:
+                logger.error(f"Failed to parse armature identifier: {e}")
+        
+        # Fallback for old-style identifiers (direct name)
+        # This handles backward compatibility
+        return bpy.data.objects.get(armature_id)
+        
+    except (UnicodeDecodeError, UnicodeEncodeError, AttributeError) as e:
+        # Handle encoding issues as a last resort
+        logger.warning(f"Encoding issue with active_armature property: {e}")
+    
+    # Final fallback: return active object if it's an armature, or first armature found
+    if context.view_layer.objects.active and context.view_layer.objects.active.type == 'ARMATURE':
+        return context.view_layer.objects.active
+    
+    for obj in context.scene.objects:
+        if obj.type == 'ARMATURE':
+            logger.info(f"Falling back to first armature found: {obj.name}")
+            return obj
+    
     return None
 
 def set_active_armature(context: Context, armature: Object) -> None:
-    """Set the active armature for Avatar Toolkit operations"""
-    context.scene.avatar_toolkit.active_armature = armature
+    """Set the active armature for Avatar Toolkit operations using safe identifier"""
+    if armature and armature.type == 'ARMATURE':
+        # Use the same safe identifier format as get_armature_list
+        safe_id = f"ARM_{armature.as_pointer()}"
+        context.scene.avatar_toolkit.active_armature = safe_id
+    else:
+        context.scene.avatar_toolkit.active_armature = 'NONE'
 
 def get_armature_list(self: Optional[Any] = None, context: Optional[Context] = None) -> List[Tuple[str, str, str]]:
-    """Get list of all armature objects in the scene"""
+    """Get list of all armature objects in the scene
+    
+    Returns tuples of (identifier, display_name, description) where:
+    - identifier: ASCII-safe unique ID (uses object's memory address)
+    - display_name: The actual object name (can contain Japanese characters)
+    - description: Empty string
+    """
     if context is None:
         context = bpy.context
-    armatures = [(obj.name, obj.name, "") for obj in context.scene.objects if obj.type == 'ARMATURE']
+    
+    # Use object's as_pointer() value as a safe ASCII identifier
+    armatures = []
+    for obj in context.scene.objects:
+        if obj.type == 'ARMATURE':
+            # Create a safe ASCII identifier using the object pointer
+            safe_id = f"ARM_{obj.as_pointer()}"
+            armatures.append((safe_id, obj.name, ""))
+    
     if not armatures:
         return [('NONE', t("Armature.validation.no_armature"), '')]
     return armatures

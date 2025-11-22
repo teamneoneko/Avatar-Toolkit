@@ -67,8 +67,14 @@ class TranslationCache:
         """Load cache from file"""
         try:
             if os.path.exists(self._cache_file):
-                with open(self._cache_file, 'r', encoding='utf-8') as f:
-                    self._cache = json.load(f)
+                # Try UTF-8 first, fallback to other encodings
+                try:
+                    with open(self._cache_file, 'r', encoding='utf-8') as f:
+                        self._cache = json.load(f)
+                except UnicodeDecodeError:
+                    # Try with UTF-8 error handling
+                    with open(self._cache_file, 'r', encoding='utf-8', errors='replace') as f:
+                        self._cache = json.load(f)
                 logger.debug(f"Loaded translation cache with {len(self._cache)} entries")
             else:
                 self._cache = {}
@@ -147,6 +153,15 @@ class AvatarToolkitTranslationManager:
     def translate_single(self, name: str, category: str = "auto", 
                         source_lang: str = "ja", target_lang: str = "en") -> TranslationResult:
         """Translate a single name with comprehensive fallback logic"""
+        # Import safe_decode_text from translation_service
+        from .translation_service import safe_decode_text
+        
+        # Ensure name is properly encoded
+        try:
+            name = safe_decode_text(name)
+        except Exception as e:
+            logger.warning(f"Failed to decode name: {e}")
+        
         if not name or not name.strip():
             return TranslationResult(name, name, "skipped")
         
@@ -300,6 +315,8 @@ class AvatarToolkitTranslationManager:
     def _process_category_batch_optimized(self, category_jobs: List[TranslationJob], 
                                         completed: int, total_jobs: int, start_time: float) -> Optional[List[TranslationResult]]:
         """Process a batch of jobs from the same category using optimized API batch translation"""
+        from .translation_service import safe_decode_text
+        
         if not category_jobs:
             return []
         
@@ -313,6 +330,14 @@ class AvatarToolkitTranslationManager:
         for i, job in enumerate(category_jobs):
             if not job.name or not job.name.strip():
                 results[i] = TranslationResult(job.name, job.name, "skipped", category=job.category)
+                continue
+            
+            # Ensure name is properly encoded
+            try:
+                original_name = safe_decode_text(job.name.strip())
+            except Exception as e:
+                logger.warning(f"Failed to decode job name: {e}")
+                original_name = job.name.strip()
                 continue
             
             original_name = job.name.strip()
@@ -426,13 +451,21 @@ class AvatarToolkitTranslationManager:
     
     def translate_armature_bones(self, armature: Object, apply_results: bool = True) -> List[TranslationResult]:
         """Translate all bone names in an armature"""
+        from .translation_service import safe_decode_text
+        
         if not armature or armature.type != 'ARMATURE':
             return []
         
         jobs = []
         for bone in armature.data.bones:
+            try:
+                bone_name = safe_decode_text(bone.name)
+            except Exception as e:
+                logger.warning(f"Failed to decode bone name, using as-is: {e}")
+                bone_name = bone.name
+            
             jobs.append(TranslationJob(
-                name=bone.name,
+                name=bone_name,
                 category="bones",
                 object_ref=bone,
                 property_name="name"
@@ -442,13 +475,21 @@ class AvatarToolkitTranslationManager:
     
     def translate_object_shapekeys(self, mesh_obj: Object, apply_results: bool = True) -> List[TranslationResult]:
         """Translate all shape key names in a mesh object"""
+        from .translation_service import safe_decode_text
+        
         if not mesh_obj or mesh_obj.type != 'MESH' or not mesh_obj.data.shape_keys:
             return []
         
         jobs = []
         for shape_key in mesh_obj.data.shape_keys.key_blocks:
+            try:
+                sk_name = safe_decode_text(shape_key.name)
+            except Exception as e:
+                logger.warning(f"Failed to decode shape key name, using as-is: {e}")
+                sk_name = shape_key.name
+            
             jobs.append(TranslationJob(
-                name=shape_key.name,
+                name=sk_name,
                 category="shapekeys",
                 object_ref=shape_key,
                 property_name="name"
@@ -458,6 +499,8 @@ class AvatarToolkitTranslationManager:
     
     def translate_scene_materials(self, apply_results: bool = True) -> List[TranslationResult]:
         """Translate all material names in the scene"""
+        from .translation_service import safe_decode_text
+        
         jobs = []
         processed_materials: Set[str] = set()
         
@@ -465,8 +508,14 @@ class AvatarToolkitTranslationManager:
             if obj.type == 'MESH' and obj.data.materials:
                 for material in obj.data.materials:
                     if material and material.name not in processed_materials:
+                        try:
+                            mat_name = safe_decode_text(material.name)
+                        except Exception as e:
+                            logger.warning(f"Failed to decode material name, using as-is: {e}")
+                            mat_name = material.name
+                        
                         jobs.append(TranslationJob(
-                            name=material.name,
+                            name=mat_name,
                             category="materials",
                             object_ref=material,
                             property_name="name"
@@ -478,14 +527,22 @@ class AvatarToolkitTranslationManager:
     def translate_scene_objects(self, object_types: Optional[Set[str]] = None, 
                                apply_results: bool = True) -> List[TranslationResult]:
         """Translate all object names in the scene"""
+        from .translation_service import safe_decode_text
+        
         if object_types is None:
             object_types = {'MESH', 'ARMATURE', 'EMPTY'}
         
         jobs = []
         for obj in bpy.data.objects:
             if obj.type in object_types:
+                try:
+                    obj_name = safe_decode_text(obj.name)
+                except Exception as e:
+                    logger.warning(f"Failed to decode object name, using as-is: {e}")
+                    obj_name = obj.name
+                
                 jobs.append(TranslationJob(
-                    name=obj.name,
+                    name=obj_name,
                     category="objects",
                     object_ref=obj,
                     property_name="name"

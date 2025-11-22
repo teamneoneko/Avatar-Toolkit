@@ -812,21 +812,27 @@ def update_translation_mode(self: PropertyGroup, context: Context) -> None:
 
 def update_active_armature(self: PropertyGroup, context: Context) -> None:
     """Update the active armature when selection changes"""
-    if self.active_armature:
-        logger.info(f"Active armature set to: {self.active_armature}")
-        # Deselect all objects first
-        bpy.ops.object.select_all(action='DESELECT')
-        # Select and make active the chosen armature
-        self.active_armature.select_set(True)
-        context.view_layer.objects.active = self.active_armature
-        logger.info(f"Selected and activated armature: {self.active_armature.name}")
+    if self.active_armature and self.active_armature != 'NONE':
+        # Get the actual armature object from the identifier
+        armature = get_active_armature(context)
         
-        # Clear armature caches when armature changes to ensure fresh validation
-        try:
-            from ..ui.quick_access_panel import clear_armature_caches
-            clear_armature_caches()
-        except ImportError:
-            pass  # UI module might not be loaded yet
+        if armature:
+            logger.info(f"Active armature set to: {armature.name}")
+            # Deselect all objects first
+            bpy.ops.object.select_all(action='DESELECT')
+            # Select and make active the chosen armature
+            armature.select_set(True)
+            context.view_layer.objects.active = armature
+            logger.info(f"Selected and activated armature: {armature.name}")
+            
+            # Clear armature caches when armature changes to ensure fresh validation
+            try:
+                from ..ui.quick_access_panel import clear_armature_caches
+                clear_armature_caches()
+            except ImportError:
+                pass  # UI module might not be loaded yet
+        else:
+            logger.warning("Failed to get armature object from identifier")
     else:
         logger.info("No armature selected")
 

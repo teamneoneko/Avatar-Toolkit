@@ -1,7 +1,7 @@
 {
   "authors": ["Avatar Toolkit Team"],
   "messages": {
-    "AvatarToolkit.label": "アバターツールキット (アルファ 0.6.0)",
+    "AvatarToolkit.label": "アバターツールキット (アルファ 0.5.2)",
     "AvatarToolkit.desc1": "アバターツールキットは早期アクセス中であり、",
     "AvatarToolkit.desc2": "問題が発生する可能性があります。問題を見つけた場合は、",
     "AvatarToolkit.desc3": "GitHubで報告してください。",

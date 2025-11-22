@@ -1,7 +1,7 @@
 {
   "authors": ["Avatar Toolkit Team"],
   "messages": {
-    "AvatarToolkit.label": "아바타 툴킷 (알파 0.6.0)",
+    "AvatarToolkit.label": "아바타 툴킷 (알파 0.5.2)",
     "AvatarToolkit.desc1": "아바타 툴킷은 초기 액세스 단계에 있으므로",
     "AvatarToolkit.desc2": "문제가 있을 수 있습니다. 문제를 발견하시면",
     "AvatarToolkit.desc3": "Github에 보고해 주세요.",
