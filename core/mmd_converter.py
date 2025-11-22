@@ -13,6 +13,112 @@ from .translations import t
 from .mmd.translations import jp_to_en_tuples, translateFromJp
 
 
+# MMD to Unity bone mapping
+# Maps MMD bone names (after English translation) to Unity humanoid bone names
+mmd_to_unity_bone_map = {
+    # Root and core
+    "ParentNode": None,  # Remove this
+    "Center": "Hips",
+    "センター": "Hips",
+    "Groove": None,  # Remove this
+    "グルーブ": None,
+    "Waist": None,  # Will be merged into Hips
+    
+    # Spine chain
+    "LowerBody": "Hips",
+    "下半身": "Hips",
+    "UpperBody": "Spine",
+    "上半身": "Spine",
+    "UpperBody2": "Chest",
+    "上半身2": "Chest",
+    "Neck": "Neck",
+    "首": "Neck",
+    "Head": "Head",
+    "頭": "Head",
+    
+    # Right leg
+    "RightLeg": "Right leg",
+    "右足": "Right leg",
+    "RightLegD": None,  # Remove D variant
+    "RightKnee": "Right knee",
+    "右ひざ": "Right knee",
+    "RightAnkle": "Right ankle",
+    "右足首": "Right ankle",
+    "RightToe": "Right toe",
+    "右つま先": "Right toe",
+    
+    # Left leg  
+    "LeftLeg": "Left leg",
+    "左足": "Left leg",
+    "LeftLegD": None,  # Remove D variant
+    "LeftKnee": "Left knee",
+    "左ひざ": "Left knee",
+    "LeftAnkle": "Left ankle",
+    "左足首": "Left ankle",
+    "LeftToe": "Left toe",
+    "左つま先": "Left toe",
+    
+    # Right arm
+    "RightShoulder": "Right shoulder",
+    "右肩": "Right shoulder",
+    "RightArm": "Right arm",
+    "右腕": "Right arm",
+    "RightElbow": "Right elbow",
+    "右ひじ": "Right elbow",
+    "RightWrist": "Right wrist",
+    "右手首": "Right wrist",
+    
+    # Left arm
+    "LeftShoulder": "Left shoulder",
+    "左肩": "Left shoulder",
+    "LeftArm": "Left arm",
+    "左腕": "Left arm",
+    "LeftElbow": "Left elbow",
+    "左ひじ": "Left elbow",
+    "LeftWrist": "Left wrist",
+    "左手首": "Left wrist",
+    
+    # Cancel/Helper bones (remove these)
+    "WaistCancelRight": None,
+    "WaistCancelLeft": None,
+    "LegIKParentRight": None,
+    "LegIKParentLeft": None,
+}
+
+
+# Unity humanoid bone hierarchy
+# Defines parent-child relationships for Unity standard
+unity_bone_hierarchy = {
+    "Hips": None,  # Root bone
+    "Spine": "Hips",
+    "Chest": "Spine",
+    "Neck": "Chest",
+    "Head": "Neck",
+    
+    # Arms
+    "Left shoulder": "Chest",
+    "Left arm": "Left shoulder",
+    "Left elbow": "Left arm",
+    "Left wrist": "Left elbow",
+    
+    "Right shoulder": "Chest",
+    "Right arm": "Right shoulder",
+    "Right elbow": "Right arm",
+    "Right wrist": "Right elbow",
+    
+    # Legs
+    "Left leg": "Hips",
+    "Left knee": "Left leg",
+    "Left ankle": "Left knee",
+    "Left toe": "Left ankle",
+    
+    "Right leg": "Hips",
+    "Right knee": "Right leg",
+    "Right ankle": "Right knee",
+    "Right toe": "Right ankle",
+}
+
+
 def detect_mmd_armature(armature: Object) -> bool:
     """Detect if armature uses MMD bone naming conventions"""
 
@@ -441,3 +547,143 @@ def translate_mmd_everything(armature: Object,
     logger.info(f"Comprehensive MMD translation complete: {total_successful} successful, {total_failed} failed")
     
     return total_failed == 0, all_messages
+
+
+def restructure_mmd_to_unity_bones(armature: Object) -> Tuple[bool, List[str]]:
+    """Restructure MMD bone hierarchy to Unity humanoid format."""
+    if not armature or armature.type != 'ARMATURE':
+        return False, [t("MMD.error.invalid_armature")]
+    
+    logger.info(f"Starting MMD to Unity bone restructuring for: {armature.name}")
+    
+    messages = []
+    renamed_count = 0
+    removed_count = 0
+    reparented_count = 0
+    
+    # Store the current mode
+    current_mode = bpy.context.mode
+    if current_mode != 'EDIT':
+        bpy.context.view_layer.objects.active = armature
+        bpy.ops.object.mode_set(mode='EDIT')
+    
+    try:
+        edit_bones = armature.data.edit_bones
+        bones_to_remove = []
+        bone_renames = {}
+        
+        # Step 1: Identify and map bones
+        for bone in edit_bones:
+            bone_name = bone.name
+            
+            # Check if bone should be renamed
+            unity_name = mmd_to_unity_bone_map.get(bone_name)
+            
+            if unity_name is None and bone_name not in mmd_to_unity_bone_map:
+                # Try to find a match by checking if bone name contains a key
+                for mmd_name, unity_target in mmd_to_unity_bone_map.items():
+                    if mmd_name.lower() in bone_name.lower():
+                        unity_name = unity_target
+                        break
+            
+            if unity_name is None:
+                # Mark for removal
+                bones_to_remove.append(bone_name)
+                logger.debug(f"Marking bone for removal: {bone_name}")
+            elif unity_name != bone_name:
+                # Mark for rename
+                bone_renames[bone_name] = unity_name
+                logger.debug(f"Planning rename: {bone_name} -> {unity_name}")
+        
+        # Step 2: Handle bone merging (e.g., LowerBody + Center -> Hips)
+        unity_bone_sources = {}
+        for old_name, new_name in bone_renames.items():
+            if new_name not in unity_bone_sources:
+                unity_bone_sources[new_name] = []
+            unity_bone_sources[new_name].append(old_name)
+        
+        # For bones with multiple sources, keep the first one and remove others
+        for unity_name, sources in unity_bone_sources.items():
+            if len(sources) > 1:
+                logger.info(f"Multiple bones map to '{unity_name}': {sources}")
+                # Keep the first, mark others for removal and reparent their children
+                keep_bone = sources[0]
+                for source in sources[1:]:
+                    if source in edit_bones:
+                        # Reparent children to the kept bone
+                        bone_to_remove = edit_bones[source]
+                        keep_bone_obj = edit_bones[keep_bone]
+                        for child in bone_to_remove.children:
+                            child.parent = keep_bone_obj
+                            reparented_count += 1
+                        bones_to_remove.append(source)
+                        if source in bone_renames:
+                            del bone_renames[source]
+        
+        # Step 3: Reparent bones to be removed (move children to parent)
+        for bone_name in bones_to_remove:
+            if bone_name in edit_bones:
+                bone = edit_bones[bone_name]
+                parent_bone = bone.parent
+                for child in bone.children:
+                    child.parent = parent_bone
+                    reparented_count += 1
+                    logger.debug(f"Reparented {child.name} from {bone_name} to {parent_bone.name if parent_bone else 'None'}")
+        
+        # Step 4: Remove marked bones
+        for bone_name in bones_to_remove:
+            if bone_name in edit_bones:
+                edit_bones.remove(edit_bones[bone_name])
+                removed_count += 1
+                logger.info(f"Removed bone: {bone_name}")
+        
+        # Step 5: Rename bones
+        for old_name, new_name in bone_renames.items():
+            if old_name in edit_bones:
+                bone = edit_bones[old_name]
+                try:
+                    bone.name = new_name
+                    renamed_count += 1
+                    logger.info(f"Renamed bone: {old_name} -> {new_name}")
+                except Exception as e:
+                    logger.error(f"Failed to rename bone {old_name}: {e}")
+        
+        # Step 6: Fix hierarchy to match Unity standard
+        for bone in edit_bones:
+            expected_parent_name = unity_bone_hierarchy.get(bone.name)
+            if expected_parent_name is not None:
+                # This bone should have a specific parent
+                if expected_parent_name in edit_bones:
+                    expected_parent = edit_bones[expected_parent_name]
+                    if bone.parent != expected_parent:
+                        bone.parent = expected_parent
+                        reparented_count += 1
+                        logger.debug(f"Fixed hierarchy: {bone.name} -> parent: {expected_parent_name}")
+            elif expected_parent_name is None and unity_bone_hierarchy.get(bone.name) is not None:
+                # This should be a root bone
+                if bone.parent is not None:
+                    bone.parent = None
+                    reparented_count += 1
+                    logger.debug(f"Made {bone.name} a root bone")
+        
+    except Exception as e:
+        logger.error(f"Error during bone restructuring: {e}", exc_info=True)
+        messages.append(t("MMD.restructure_failed", error=str(e)))
+        return False, messages
+    
+    finally:
+        # Restore original mode
+        if current_mode != 'EDIT':
+            bpy.ops.object.mode_set(mode='OBJECT')
+    
+    # Generate messages
+    if renamed_count > 0:
+        messages.append(t("MMD.bones_restructured", count=renamed_count))
+    if removed_count > 0:
+        messages.append(t("MMD.bones_removed", count=removed_count))
+    if reparented_count > 0:
+        messages.append(t("MMD.bones_reparented", count=reparented_count))
+    
+    logger.info(f"Bone restructuring complete: {renamed_count} renamed, {removed_count} removed, {reparented_count} reparented")
+    
+    return True, messages

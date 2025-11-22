@@ -745,6 +745,12 @@ class AvatarToolkitSceneProperties(PropertyGroup):
         description="Translate object names",
         default=True
     )
+    
+    mmd_restructure_bones: BoolProperty(
+        name=t("MMD.restructure_bones"),
+        description="Restructure bone hierarchy to Unity humanoid format (Hips, Spine, Chest, etc.)",
+        default=True
+    )
 
     # Translation System Properties
     translation_service: EnumProperty(

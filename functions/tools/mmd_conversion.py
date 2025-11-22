@@ -7,7 +7,7 @@ from bpy.types import Operator
 from ...core.common import get_active_armature
 from ...core.translations import t
 from ...core.mmd_converter import (convert_mmd_armature, detect_mmd_armature, 
-                                   translate_mmd_everything)
+                                   translate_mmd_everything, restructure_mmd_to_unity_bones)
 from ...core.logging_setup import logger
 
 
@@ -47,8 +47,9 @@ class AvatarToolkit_OT_ConvertMMDArmature(Operator):
         translate_materials = toolkit.mmd_translate_materials
         translate_shapekeys = toolkit.mmd_translate_shapekeys
         translate_objects = toolkit.mmd_translate_objects
+        restructure_bones = toolkit.mmd_restructure_bones
         
-        logger.info(f"Conversion settings - Make parent: {make_parent}, Rename: {rename_armature}")
+        logger.info(f"Conversion settings - Make parent: {make_parent}, Rename: {rename_armature}, Restructure: {restructure_bones}")
         logger.info(f"Translation settings - Enabled: {translate_names}, Bones: {translate_bones}, " +
                    f"Materials: {translate_materials}, Shapekeys: {translate_shapekeys}, Objects: {translate_objects}")
         
@@ -84,6 +85,21 @@ class AvatarToolkit_OT_ConvertMMDArmature(Operator):
                 logger.warning("MMD name translation completed with some failures")
             
             for msg in trans_messages:
+                self.report({'INFO'}, msg)
+        
+        # Step 3: Restructure bones to Unity format (if enabled)
+        if restructure_bones:
+            logger.info("Starting bone restructuring to Unity format")
+            self.report({'INFO'}, t("MMD.restructure_starting"))
+            
+            struct_success, struct_messages = restructure_mmd_to_unity_bones(armature)
+            
+            if struct_success:
+                logger.info("Bone restructuring completed successfully")
+            else:
+                logger.warning("Bone restructuring completed with errors")
+            
+            for msg in struct_messages:
                 self.report({'INFO'}, msg)
         
         return {'FINISHED'}

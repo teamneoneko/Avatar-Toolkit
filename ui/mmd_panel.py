@@ -55,6 +55,10 @@ class AvatarToolKit_PT_MMDPanel(Panel):
             col.prop(toolkit, 'mmd_rename_armature', text=t("MMD.rename_to_armature"))
             col.separator(factor=0.2)
             
+            # Bone restructuring
+            col.prop(toolkit, 'mmd_restructure_bones', text=t("MMD.restructure_bones"))
+            col.separator(factor=0.2)
+            
             # Translation settings
             col.prop(toolkit, 'mmd_translate_names', text=t("MMD.translate_names"))
             
@@ -81,6 +85,8 @@ class AvatarToolKit_PT_MMDPanel(Panel):
             info_col.label(text=t("MMD.conversion_info.title"), icon='INFO')
             info_col.label(text=t("MMD.conversion_info.removes_parent"))
             info_col.label(text=t("MMD.conversion_info.renames_armature"))
+            if toolkit.mmd_restructure_bones:
+                info_col.label(text=t("MMD.conversion_info.restructures_bones"))
             info_col.label(text=t("MMD.conversion_info.maintains_hierarchy"))
             if toolkit.mmd_translate_names:
                 info_col.label(text=t("MMD.conversion_info.translates_names"))
