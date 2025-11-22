@@ -14,6 +14,43 @@ from .logging_setup import logger
 from .addon_preferences import save_preference, get_preference
 
 
+def safe_decode_text(text: str) -> str:
+    """Safely decode text that might be in various encodings (UTF-8, Shift-JIS, etc.)"""
+    if not text:
+        return text
+    
+    # If it's already a proper string, return it
+    if isinstance(text, str):
+        try:
+            # Test if it's valid UTF-8
+            text.encode('utf-8')
+            return text
+        except (UnicodeDecodeError, UnicodeEncodeError):
+            pass
+    
+    # Try common encodings for Japanese text
+    encodings = ['utf-8', 'shift-jis', 'cp932', 'euc-jp', 'iso-2022-jp']
+    
+    for encoding in encodings:
+        try:
+            if isinstance(text, bytes):
+                return text.decode(encoding)
+            else:
+                # Try to re-encode and decode
+                return text.encode('latin-1', errors='ignore').decode(encoding, errors='ignore')
+        except (UnicodeDecodeError, UnicodeEncodeError, AttributeError):
+            continue
+    
+    # Fallback: replace problematic characters
+    try:
+        if isinstance(text, bytes):
+            return text.decode('utf-8', errors='replace')
+        else:
+            return str(text).encode('utf-8', errors='replace').decode('utf-8')
+    except:
+        return str(text)
+
+
 @dataclass
 class TranslationRequest:
     """Represents a translation request"""
@@ -116,6 +153,8 @@ class DeepLService(TranslationService):
         
     def translate_text(self, text: str, source_lang: str = "ja", target_lang: str = "en") -> str:
         """Translate text using DeepL API"""
+        # Ensure text is properly encoded
+        text = safe_decode_text(text)
         logger.info(f"DeepL: Starting translation of '{text}' from {source_lang} to {target_lang}")
         
         if not text or not text.strip():
@@ -220,6 +259,8 @@ class DeepLService(TranslationService):
         if not texts:
             return []
         
+        # Ensure all texts are properly encoded
+        texts = [safe_decode_text(text) for text in texts]
         logger.info(f"DeepL: Starting batch translation of {len(texts)} texts from {source_lang} to {target_lang}")
         
         results = [None] * len(texts) 
@@ -341,6 +382,8 @@ class MyMemoryService(TranslationService):
         
     def translate_text(self, text: str, source_lang: str = "ja", target_lang: str = "en") -> str:
         """Translate text using MyMemory free API"""
+        # Ensure text is properly encoded
+        text = safe_decode_text(text)
         logger.info(f"MyMemory: Starting translation of '{text}' from {source_lang} to {target_lang}")
         
         if not text or not text.strip():
@@ -430,6 +473,8 @@ class MyMemoryService(TranslationService):
         if not texts:
             return []
         
+        # Ensure all texts are properly encoded
+        texts = [safe_decode_text(text) for text in texts]
         logger.info(f"MyMemory: Starting batch translation of {len(texts)} texts from {source_lang} to {target_lang}")
         
         results = [None] * len(texts)
@@ -545,6 +590,8 @@ class LibreTranslateService(TranslationService):
         
     def translate_text(self, text: str, source_lang: str = "ja", target_lang: str = "en") -> str:
         """Translate text using LibreTranslate API"""
+        # Ensure text is properly encoded
+        text = safe_decode_text(text)
         logger.info(f"LibreTranslate: Starting translation of '{text}' from {source_lang} to {target_lang}")
         
         if not text or not text.strip():
@@ -658,6 +705,8 @@ class LibreTranslateService(TranslationService):
         if not texts:
             return []
         
+        # Ensure all texts are properly encoded
+        texts = [safe_decode_text(text) for text in texts]
         logger.info(f"LibreTranslate: Starting batch translation of {len(texts)} texts from {source_lang} to {target_lang}")
         
         # Check cache and separate cached vs uncached texts
@@ -814,6 +863,8 @@ class TranslationServiceManager:
         
     def translate_with_fallback(self, text: str, source_lang: str = "ja", target_lang: str = "en") -> Tuple[str, str]:
         """Translate text with automatic fallback to other services"""
+        # Ensure text is properly encoded
+        text = safe_decode_text(text)
         if not text or not text.strip():
             return text, "none"
             
