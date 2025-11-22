@@ -49,8 +49,25 @@ class AvatarToolKit_PT_MMDPanel(Panel):
             col.separator(factor=0.3)
             
             toolkit = context.scene.avatar_toolkit
+            
+            # Basic conversion settings
             col.prop(toolkit, 'mmd_make_parent', text=t("MMD.make_armature_parent"))
             col.prop(toolkit, 'mmd_rename_armature', text=t("MMD.rename_to_armature"))
+            col.separator(factor=0.2)
+            
+            # Translation settings
+            col.prop(toolkit, 'mmd_translate_names', text=t("MMD.translate_names"))
+            
+            # Translation sub-options (only show if translation is enabled)
+            if toolkit.mmd_translate_names:
+                trans_box = col.box()
+                trans_col = trans_box.column(align=True)
+                trans_col.label(text=t("MMD.translation_options"), icon='WORLD')
+                trans_col.prop(toolkit, 'mmd_translate_bones', text=t("MMD.translate_bones"))
+                trans_col.prop(toolkit, 'mmd_translate_materials', text=t("MMD.translate_materials"))
+                trans_col.prop(toolkit, 'mmd_translate_shapekeys', text=t("MMD.translate_shapekeys"))
+                trans_col.prop(toolkit, 'mmd_translate_objects', text=t("MMD.translate_objects"))
+            
             col.separator(factor=0.2)
             
             col.operator(
@@ -65,6 +82,8 @@ class AvatarToolKit_PT_MMDPanel(Panel):
             info_col.label(text=t("MMD.conversion_info.removes_parent"))
             info_col.label(text=t("MMD.conversion_info.renames_armature"))
             info_col.label(text=t("MMD.conversion_info.maintains_hierarchy"))
+            if toolkit.mmd_translate_names:
+                info_col.label(text=t("MMD.conversion_info.translates_names"))
             
         else:
             col.label(text=t("MMD.armature_name", name=armature.name), icon='ERROR')

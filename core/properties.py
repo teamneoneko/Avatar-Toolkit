@@ -715,6 +715,36 @@ class AvatarToolkitSceneProperties(PropertyGroup):
         description="Rename the armature object to 'Armature'",
         default=True
     )
+    
+    mmd_translate_names: BoolProperty(
+        name=t("MMD.translate_names"),
+        description="Translate Japanese names to English using MMD dictionary and translation services",
+        default=True
+    )
+    
+    mmd_translate_bones: BoolProperty(
+        name=t("MMD.translate_bones"),
+        description="Translate bone names",
+        default=True
+    )
+    
+    mmd_translate_materials: BoolProperty(
+        name=t("MMD.translate_materials"),
+        description="Translate material names",
+        default=True
+    )
+    
+    mmd_translate_shapekeys: BoolProperty(
+        name=t("MMD.translate_shapekeys"),
+        description="Translate shape key names",
+        default=True
+    )
+    
+    mmd_translate_objects: BoolProperty(
+        name=t("MMD.translate_objects"),
+        description="Translate object names",
+        default=True
+    )
 
     # Translation System Properties
     translation_service: EnumProperty(

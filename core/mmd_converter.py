@@ -4,12 +4,13 @@ Handles armature hierarchy and naming conventions
 """
 import bpy
 from typing import Dict, List, Optional, Tuple, Set
-from bpy.types import Object, Bone, Collection
+from bpy.types import Object, Bone, Collection, Material, ShapeKey
 from .common import get_active_armature
 from .dictionaries import simplify_bonename
 from .enhanced_dictionaries import mmd_bone_patterns
 from .logging_setup import logger
 from .translations import t
+from .mmd.translations import jp_to_en_tuples, translateFromJp
 
 
 def detect_mmd_armature(armature: Object) -> bool:
@@ -164,3 +165,279 @@ def convert_mmd_armature(armature: Object,
         logger.warning("MMD armature conversion completed with errors")
     
     return overall_success, messages
+
+
+def translate_mmd_name(name: str, category: str = "auto") -> Tuple[str, str]:
+    """Translate MMD name using MMD dictionary first, then translation services"""
+    if not name or not name.strip():
+        return name, "unchanged"
+    
+    original_name = name.strip()
+    
+    # Step 1: Try MMD built-in dictionary translation
+    mmd_translated = translateFromJp(original_name)
+    
+    # Check if MMD dictionary actually translated something
+    if mmd_translated != original_name and mmd_translated:
+        logger.debug(f"MMD dictionary translated: '{original_name}' -> '{mmd_translated}'")
+        return mmd_translated, "mmd_dictionary"
+    
+    # Step 2: If MMD dictionary didn't translate or only partially translated,
+    # use Avatar Toolkit translation services
+    try:
+        from .translation_manager import get_avatar_translation_manager
+        
+        manager = get_avatar_translation_manager()
+        result = manager.translate_single(original_name, category=category, source_lang="ja", target_lang="en")
+        
+        if result.translated != original_name:
+            logger.debug(f"API translated: '{original_name}' -> '{result.translated}' (method: {result.method})")
+            return result.translated, "api_translation"
+    except Exception as e:
+        logger.warning(f"Translation service failed for '{original_name}': {e}")
+    
+    # Step 3: No translation available
+    logger.debug(f"No translation available for: '{original_name}'")
+    return original_name, "unchanged"
+
+
+def translate_mmd_armature_bones(armature: Object, apply_translation: bool = True) -> Tuple[int, int, List[str]]:
+    """Translate all bone names in an MMD armature"""
+    if not armature or armature.type != 'ARMATURE':
+        return 0, 0, [t("MMD.error.invalid_armature")]
+    
+    logger.info(f"Starting bone translation for armature: {armature.name}")
+    
+    successful = 0
+    failed = 0
+    messages = []
+    bone_translations = {}
+    
+    # Store the current mode
+    current_mode = bpy.context.mode
+    if current_mode != 'EDIT':
+        bpy.context.view_layer.objects.active = armature
+        bpy.ops.object.mode_set(mode='EDIT')
+    
+    try:
+        for bone in armature.data.edit_bones:
+            original_name = bone.name
+            translated_name, method = translate_mmd_name(original_name, category="bones")
+            
+            if translated_name != original_name:
+                bone_translations[original_name] = (translated_name, method)
+                
+                if apply_translation:
+                    try:
+                        bone.name = translated_name
+                        logger.info(f"Translated bone: '{original_name}' -> '{translated_name}' ({method})")
+                        successful += 1
+                    except Exception as e:
+                        logger.error(f"Failed to rename bone '{original_name}': {e}")
+                        failed += 1
+                else:
+                    successful += 1
+            else:
+                logger.debug(f"Bone '{original_name}' not translated")
+    
+    finally:
+        # Restore original mode
+        if current_mode != 'EDIT':
+            bpy.ops.object.mode_set(mode='OBJECT')
+    
+    # Generate summary messages
+    if successful > 0:
+        messages.append(t("MMD.bones_translated", count=successful))
+    if failed > 0:
+        messages.append(t("MMD.bones_failed", count=failed))
+    
+    mmd_dict_count = sum(1 for _, (_, method) in bone_translations.items() if method == "mmd_dictionary")
+    api_count = sum(1 for _, (_, method) in bone_translations.items() if method == "api_translation")
+    
+    logger.info(f"Bone translation complete: {successful} successful, {failed} failed")
+    logger.info(f"Translation methods: MMD Dictionary: {mmd_dict_count}, API: {api_count}")
+    
+    return successful, failed, messages
+
+
+def translate_mmd_materials(armature: Object, apply_translation: bool = True) -> Tuple[int, int, List[str]]:
+    """Translate all material names for meshes parented to the armature"""
+    if not armature or armature.type != 'ARMATURE':
+        return 0, 0, [t("MMD.error.invalid_armature")]
+    
+    logger.info(f"Starting material translation for armature: {armature.name}")
+    
+    successful = 0
+    failed = 0
+    messages = []
+    processed_materials = set()
+    
+    # Get all mesh objects parented to this armature
+    for obj in bpy.data.objects:
+        if obj.type == 'MESH' and obj.parent == armature and obj.data.materials:
+            for mat in obj.data.materials:
+                if mat and mat.name not in processed_materials:
+                    processed_materials.add(mat.name)
+                    original_name = mat.name
+                    translated_name, method = translate_mmd_name(original_name, category="materials")
+                    
+                    if translated_name != original_name and apply_translation:
+                        try:
+                            mat.name = translated_name
+                            logger.info(f"Translated material: '{original_name}' -> '{translated_name}' ({method})")
+                            successful += 1
+                        except Exception as e:
+                            logger.error(f"Failed to rename material '{original_name}': {e}")
+                            failed += 1
+                    elif translated_name != original_name:
+                        successful += 1
+    
+    if successful > 0:
+        messages.append(t("MMD.materials_translated", count=successful))
+    if failed > 0:
+        messages.append(t("MMD.materials_failed", count=failed))
+    
+    logger.info(f"Material translation complete: {successful} successful, {failed} failed")
+    
+    return successful, failed, messages
+
+
+def translate_mmd_shapekeys(armature: Object, apply_translation: bool = True) -> Tuple[int, int, List[str]]:
+    """Translate all shape key names for meshes parented to the armature"""
+    if not armature or armature.type != 'ARMATURE':
+        return 0, 0, [t("MMD.error.invalid_armature")]
+    
+    logger.info(f"Starting shape key translation for armature: {armature.name}")
+    
+    successful = 0
+    failed = 0
+    messages = []
+    
+    # Get all mesh objects parented to this armature
+    for obj in bpy.data.objects:
+        if obj.type == 'MESH' and obj.parent == armature and obj.data.shape_keys:
+            for shape_key in obj.data.shape_keys.key_blocks:
+                original_name = shape_key.name
+                translated_name, method = translate_mmd_name(original_name, category="shapekeys")
+                
+                if translated_name != original_name and apply_translation:
+                    try:
+                        shape_key.name = translated_name
+                        logger.info(f"Translated shape key: '{original_name}' -> '{translated_name}' ({method})")
+                        successful += 1
+                    except Exception as e:
+                        logger.error(f"Failed to rename shape key '{original_name}': {e}")
+                        failed += 1
+                elif translated_name != original_name:
+                    successful += 1
+    
+    if successful > 0:
+        messages.append(t("MMD.shapekeys_translated", count=successful))
+    if failed > 0:
+        messages.append(t("MMD.shapekeys_failed", count=failed))
+    
+    logger.info(f"Shape key translation complete: {successful} successful, {failed} failed")
+    
+    return successful, failed, messages
+
+
+def translate_mmd_objects(armature: Object, apply_translation: bool = True) -> Tuple[int, int, List[str]]:
+    """Translate object names parented to the armature"""
+    if not armature or armature.type != 'ARMATURE':
+        return 0, 0, [t("MMD.error.invalid_armature")]
+    
+    logger.info(f"Starting object name translation for armature: {armature.name}")
+    
+    successful = 0
+    failed = 0
+    messages = []
+    
+    # Get all objects parented to this armature
+    for obj in bpy.data.objects:
+        if obj.parent == armature:
+            original_name = obj.name
+            translated_name, method = translate_mmd_name(original_name, category="objects")
+            
+            if translated_name != original_name and apply_translation:
+                try:
+                    obj.name = translated_name
+                    logger.info(f"Translated object: '{original_name}' -> '{translated_name}' ({method})")
+                    successful += 1
+                except Exception as e:
+                    logger.error(f"Failed to rename object '{original_name}': {e}")
+                    failed += 1
+            elif translated_name != original_name:
+                successful += 1
+    
+    if successful > 0:
+        messages.append(t("MMD.objects_translated", count=successful))
+    if failed > 0:
+        messages.append(t("MMD.objects_failed", count=failed))
+    
+    logger.info(f"Object translation complete: {successful} successful, {failed} failed")
+    
+    return successful, failed, messages
+
+
+def translate_mmd_everything(armature: Object, 
+                            translate_bones: bool = True,
+                            translate_materials: bool = True, 
+                            translate_shapekeys: bool = True,
+                            translate_objects: bool = True) -> Tuple[bool, List[str]]:
+    """
+    Translate all MMD names (bones, materials, shape keys, objects)
+    
+    Args:
+        armature: The armature object
+        translate_bones: Whether to translate bone names
+        translate_materials: Whether to translate material names
+        translate_shapekeys: Whether to translate shape key names
+        translate_objects: Whether to translate object names
+        
+    Returns:
+        Tuple of (success, messages)
+    """
+    if not armature or armature.type != 'ARMATURE':
+        return False, [t("MMD.error.invalid_armature")]
+    
+    logger.info(f"Starting comprehensive MMD translation for: {armature.name}")
+    
+    all_messages = []
+    total_successful = 0
+    total_failed = 0
+    
+    # Translate bones
+    if translate_bones:
+        success, failed, messages = translate_mmd_armature_bones(armature, apply_translation=True)
+        total_successful += success
+        total_failed += failed
+        all_messages.extend(messages)
+    
+    # Translate materials
+    if translate_materials:
+        success, failed, messages = translate_mmd_materials(armature, apply_translation=True)
+        total_successful += success
+        total_failed += failed
+        all_messages.extend(messages)
+    
+    # Translate shape keys
+    if translate_shapekeys:
+        success, failed, messages = translate_mmd_shapekeys(armature, apply_translation=True)
+        total_successful += success
+        total_failed += failed
+        all_messages.extend(messages)
+    
+    # Translate objects
+    if translate_objects:
+        success, failed, messages = translate_mmd_objects(armature, apply_translation=True)
+        total_successful += success
+        total_failed += failed
+        all_messages.extend(messages)
+    
+    # Summary
+    if total_successful > 0:
+        all_messages.append(t("MMD.translation_complete", total=total_successful))
+    
+    logger.info(f"Comprehensive MMD translation complete: {total_successful} successful, {total_failed} failed")
+    
+    return total_failed == 0, all_messages
