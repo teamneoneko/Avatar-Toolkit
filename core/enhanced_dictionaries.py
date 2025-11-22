@@ -174,6 +174,26 @@ physics_names: Dict[str, List[str]] = {
     "breast_tip": ["胸先", "むねさき", "ブレストティップ", "breasttip"],
 }
 
+# MMD bone name patterns (for detection)
+mmd_bone_patterns: List[str] = [
+    # Japanese bone names
+    '全ての親', 'センター', '上半身', '下半身', '首', '頭',
+    '右腕', '左腕', '右ひじ', '左ひじ', '右手首', '左手首',
+    '右足', '左足', '右ひざ', '左ひざ', '右足首', '左足首',
+    '両目', '左目', '右目', '右肩', '左肩',
+    # English bone names (common in MMD exports)
+    'center', 'groove', 'waist', 'upperbody', 'upperbody2', 'lowerbody',
+    'neck', 'head',
+    'shoulder_r', 'shoulder_l', 'arm_r', 'arm_l',
+    'elbow_r', 'elbow_l', 'wrist_r', 'wrist_l',
+    'leg_r', 'leg_l', 'knee_r', 'knee_l',
+    'ankle_r', 'ankle_l', 'toe_r', 'toe_l',
+    # Mixed/Romanized patterns
+    '센터', 'グルーブ', 'ウエスト',
+    # Common MMD suffixes
+    '_r', '_l', '.r', '.l'
+]
+
 # Create reverse lookup dictionaries
 reverse_shapekey_lookup: Dict[str, str] = {}
 reverse_material_lookup: Dict[str, str] = {}

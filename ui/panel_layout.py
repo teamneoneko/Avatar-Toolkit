@@ -14,7 +14,8 @@ VISEMES_ORDER = 6
 EYE_TRACKING_ORDER = 7
 TEXTURE_ATLAS_ORDER = 8
 VRM_UNITY_ORDER = 9
-SETTINGS_ORDER = 10
+MMD_ORDER = 10
+SETTINGS_ORDER = 11
 
 # Panel open/closed by default
 PANELS_OPEN_BY_DEFAULT = {
@@ -27,6 +28,7 @@ PANELS_OPEN_BY_DEFAULT = {
     'EYE_TRACKING': True,   
     'TEXTURE_ATLAS': True,  
     'VRM_UNITY': True,      
+    'MMD': True,            
     'SETTINGS': True,       
     'TRANSLATION': True,   
 }
@@ -44,6 +46,7 @@ def get_panel_order(panel_name: str) -> int:
         'eye_tracking': EYE_TRACKING_ORDER,
         'texture_atlas': TEXTURE_ATLAS_ORDER,
         'vrm_unity': VRM_UNITY_ORDER,
+        'mmd': MMD_ORDER,
         'settings': SETTINGS_ORDER,
     }
     return order_map.get(panel_name.lower(), 99)

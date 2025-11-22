@@ -703,6 +703,19 @@ class AvatarToolkitSceneProperties(PropertyGroup):
         default=True
     )
 
+    # MMD Conversion Properties
+    mmd_make_parent: BoolProperty(
+        name=t("MMD.make_armature_parent"),
+        description="Remove parent Empty object and make armature the main parent",
+        default=True
+    )
+    
+    mmd_rename_armature: BoolProperty(
+        name=t("MMD.rename_to_armature"),
+        description="Rename the armature object to 'Armature'",
+        default=True
+    )
+
     # Translation System Properties
     translation_service: EnumProperty(
         name=t("Translation.service"),
