@@ -609,12 +609,7 @@ def restructure_mmd_to_unity_bones(armature: Object) -> Tuple[bool, List[str]]:
 
 
 def remove_mmd_ik_bones(armature: Object) -> Tuple[bool, List[str]]:
-    """
-    Remove MMD IK (Inverse Kinematics) and helper bones.
-    
-    This identifies bones that have zero vertex weights AND match IK/helper patterns.
-    Similar to CATS approach: remove bones with no mesh influence that are control/helper bones.
-    """
+    """Remove MMD IK (Inverse Kinematics) and helper bones."""
     if not armature or armature.type != 'ARMATURE':
         return False, [t("MMD.error.invalid_armature")]
     
@@ -820,14 +815,7 @@ def remove_mmd_ik_bones(armature: Object) -> Tuple[bool, List[str]]:
 
 
 def remove_mmd_twist_bones(armature: Object) -> Tuple[bool, List[str]]:
-    """
-    Remove MMD twist bones.
-    
-    Twist bone patterns:
-    - Contains 'twist', 'Twist'
-    - Ends with '_twist'
-    - Contains '捩' (Japanese for twist)
-    """
+    """Remove MMD twist bones."""
     if not armature or armature.type != 'ARMATURE':
         return False, [t("MMD.error.invalid_armature")]
     
