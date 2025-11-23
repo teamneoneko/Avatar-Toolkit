@@ -751,6 +751,18 @@ class AvatarToolkitSceneProperties(PropertyGroup):
         description="Restructure bone hierarchy to Unity humanoid format (Hips, Spine, Chest, etc.)",
         default=True
     )
+    
+    mmd_remove_twist_bones: BoolProperty(
+        name=t("MMD.remove_twist_bones"),
+        description="Remove twist bones",
+        default=True
+    )
+    
+    mmd_remove_zero_weight_bones: BoolProperty(
+        name=t("MMD.remove_zero_weight_bones"),
+        description="Remove bones with zero or near-zero vertex weights",
+        default=False
+    )
 
     # Translation System Properties
     translation_service: EnumProperty(

@@ -59,6 +59,14 @@ class AvatarToolKit_PT_MMDPanel(Panel):
             col.prop(toolkit, 'mmd_restructure_bones', text=t("MMD.restructure_bones"))
             col.separator(factor=0.2)
             
+            # Bone cleanup options
+            col.label(text=t("MMD.bone_cleanup"), icon='BONE_DATA')
+            cleanup_box = col.box()
+            cleanup_col = cleanup_box.column(align=True)
+            cleanup_col.prop(toolkit, 'mmd_remove_twist_bones', text=t("MMD.remove_twist_bones"))
+            cleanup_col.prop(toolkit, 'mmd_remove_zero_weight_bones', text=t("MMD.remove_zero_weight_bones"))
+            col.separator(factor=0.2)
+            
             # Translation settings
             col.prop(toolkit, 'mmd_translate_names', text=t("MMD.translate_names"))
             
@@ -87,6 +95,11 @@ class AvatarToolKit_PT_MMDPanel(Panel):
             info_col.label(text=t("MMD.conversion_info.renames_armature"))
             if toolkit.mmd_restructure_bones:
                 info_col.label(text=t("MMD.conversion_info.restructures_bones"))
+            info_col.label(text=t("MMD.conversion_info.removes_ik_bones"))
+            if toolkit.mmd_remove_twist_bones:
+                info_col.label(text=t("MMD.conversion_info.removes_twist_bones"))
+            if toolkit.mmd_remove_zero_weight_bones:
+                info_col.label(text=t("MMD.conversion_info.removes_zero_weight_bones"))
             info_col.label(text=t("MMD.conversion_info.maintains_hierarchy"))
             if toolkit.mmd_translate_names:
                 info_col.label(text=t("MMD.conversion_info.translates_names"))

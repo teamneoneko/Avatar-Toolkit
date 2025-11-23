@@ -3,120 +3,15 @@ MMD Converter - Core conversion logic for MMD models
 Handles armature hierarchy and naming conventions
 """
 import bpy
+import re
 from typing import Dict, List, Optional, Tuple, Set
 from bpy.types import Object, Bone, Collection, Material, ShapeKey
 from .common import get_active_armature
 from .dictionaries import simplify_bonename
-from .enhanced_dictionaries import mmd_bone_patterns
+from .enhanced_dictionaries import mmd_bone_patterns, mmd_to_unity_bone_map, unity_bone_hierarchy
 from .logging_setup import logger
 from .translations import t
 from .mmd.translations import jp_to_en_tuples, translateFromJp
-
-
-# MMD to Unity bone mapping
-# Maps MMD bone names (after English translation) to Unity humanoid bone names
-mmd_to_unity_bone_map = {
-    # Root and core
-    "ParentNode": None,  # Remove this
-    "Center": "Hips",
-    "センター": "Hips",
-    "Groove": None,  # Remove this
-    "グルーブ": None,
-    "Waist": None,  # Will be merged into Hips
-    
-    # Spine chain
-    "LowerBody": "Hips",
-    "下半身": "Hips",
-    "UpperBody": "Spine",
-    "上半身": "Spine",
-    "UpperBody2": "Chest",
-    "上半身2": "Chest",
-    "Neck": "Neck",
-    "首": "Neck",
-    "Head": "Head",
-    "頭": "Head",
-    
-    # Right leg
-    "RightLeg": "Right leg",
-    "右足": "Right leg",
-    "RightLegD": None,  # Remove D variant
-    "RightKnee": "Right knee",
-    "右ひざ": "Right knee",
-    "RightAnkle": "Right ankle",
-    "右足首": "Right ankle",
-    "RightToe": "Right toe",
-    "右つま先": "Right toe",
-    
-    # Left leg  
-    "LeftLeg": "Left leg",
-    "左足": "Left leg",
-    "LeftLegD": None,  # Remove D variant
-    "LeftKnee": "Left knee",
-    "左ひざ": "Left knee",
-    "LeftAnkle": "Left ankle",
-    "左足首": "Left ankle",
-    "LeftToe": "Left toe",
-    "左つま先": "Left toe",
-    
-    # Right arm
-    "RightShoulder": "Right shoulder",
-    "右肩": "Right shoulder",
-    "RightArm": "Right arm",
-    "右腕": "Right arm",
-    "RightElbow": "Right elbow",
-    "右ひじ": "Right elbow",
-    "RightWrist": "Right wrist",
-    "右手首": "Right wrist",
-    
-    # Left arm
-    "LeftShoulder": "Left shoulder",
-    "左肩": "Left shoulder",
-    "LeftArm": "Left arm",
-    "左腕": "Left arm",
-    "LeftElbow": "Left elbow",
-    "左ひじ": "Left elbow",
-    "LeftWrist": "Left wrist",
-    "左手首": "Left wrist",
-    
-    # Cancel/Helper bones (remove these)
-    "WaistCancelRight": None,
-    "WaistCancelLeft": None,
-    "LegIKParentRight": None,
-    "LegIKParentLeft": None,
-}
-
-
-# Unity humanoid bone hierarchy
-# Defines parent-child relationships for Unity standard
-unity_bone_hierarchy = {
-    "Hips": None,  # Root bone
-    "Spine": "Hips",
-    "Chest": "Spine",
-    "Neck": "Chest",
-    "Head": "Neck",
-    
-    # Arms
-    "Left shoulder": "Chest",
-    "Left arm": "Left shoulder",
-    "Left elbow": "Left arm",
-    "Left wrist": "Left elbow",
-    
-    "Right shoulder": "Chest",
-    "Right arm": "Right shoulder",
-    "Right elbow": "Right arm",
-    "Right wrist": "Right elbow",
-    
-    # Legs
-    "Left leg": "Hips",
-    "Left knee": "Left leg",
-    "Left ankle": "Left knee",
-    "Left toe": "Left ankle",
-    
-    "Right leg": "Hips",
-    "Right knee": "Right leg",
-    "Right ankle": "Right knee",
-    "Right toe": "Right ankle",
-}
 
 
 def detect_mmd_armature(armature: Object) -> bool:
@@ -572,26 +467,50 @@ def restructure_mmd_to_unity_bones(armature: Object) -> Tuple[bool, List[str]]:
         bones_to_remove = []
         bone_renames = {}
         
-        # Step 1: Identify and map bones
+        # Protected bone name patterns (never remove or modify these)
+        protected_patterns = [
+            r'.*[bB]reast.*', r'.*[bB]ust.*', r'.*[tT]its.*',  # Breast bones
+            r'.*[sS]kirt.*',  # Skirt bones
+            r'.*[hH]air.*',  # Hair bones
+            r'.*[bB]ag.*',  # Bag/accessory bones
+            r'.*[rR]ibbon.*',  # Ribbon bones
+            r'.*[tT]ail.*',  # Tail bones
+            r'.*[wW]ing.*',  # Wing bones
+            r'.*[eE]ar.*',  # Ear bones
+            r'.*[sS]leeve.*',  # Sleeve bones
+            r'.*[cC]ape.*', r'.*[sS]carf.*',  # Cape/Scarf bones
+            r'.*[cC]oat.*', r'.*[dD]ress.*',  # Coat/Dress bones
+            r'.*[fF]inger.*', r'.*[tT]humb.*',  # Finger bones
+            r'.*[aA]ccessor.*',  # Accessory bones
+            r'.*[jJ]oint.*',  # Joint bones
+            r'.*[cC]loth.*', r'.*[pP]hys.*',  # Cloth/Physics bones
+            r'^tf_.*',  # tf_ prefixed bones (clothing/accessories)
+            r'^\+.*',  # + prefixed bones (accessories)
+            r'.*[tT]ooth.*',  # Tooth bones
+        ]
+        compiled_protected = [re.compile(pattern) for pattern in protected_patterns]
+        
+        # Step 1: Identify and map bones (but only rename/remove bones explicitly in the map)
         for bone in edit_bones:
             bone_name = bone.name
             
-            # Check if bone should be renamed
+            # Check if bone is protected - never touch these
+            is_protected = any(pattern.match(bone_name) for pattern in compiled_protected)
+            if is_protected:
+                logger.debug(f"Protected bone (keeping): {bone_name}")
+                continue
+            
+            # Only process bones that are EXPLICITLY in the map
             unity_name = mmd_to_unity_bone_map.get(bone_name)
             
-            if unity_name is None and bone_name not in mmd_to_unity_bone_map:
-                # Try to find a match by checking if bone name contains a key
-                for mmd_name, unity_target in mmd_to_unity_bone_map.items():
-                    if mmd_name.lower() in bone_name.lower():
-                        unity_name = unity_target
-                        break
-            
             if unity_name is None:
-                # Mark for removal
-                bones_to_remove.append(bone_name)
-                logger.debug(f"Marking bone for removal: {bone_name}")
+                # Only mark for removal if explicitly mapped to None
+                if bone_name in mmd_to_unity_bone_map:
+                    bones_to_remove.append(bone_name)
+                    logger.debug(f"Marking bone for removal: {bone_name}")
+                # Otherwise, keep the bone as-is
             elif unity_name != bone_name:
-                # Mark for rename
+                # Mark for rename only if explicitly mapped
                 bone_renames[bone_name] = unity_name
                 logger.debug(f"Planning rename: {bone_name} -> {unity_name}")
         
@@ -685,5 +604,488 @@ def restructure_mmd_to_unity_bones(armature: Object) -> Tuple[bool, List[str]]:
         messages.append(t("MMD.bones_reparented", count=reparented_count))
     
     logger.info(f"Bone restructuring complete: {renamed_count} renamed, {removed_count} removed, {reparented_count} reparented")
+    
+    return True, messages
+
+
+def remove_mmd_ik_bones(armature: Object) -> Tuple[bool, List[str]]:
+    """
+    Remove MMD IK (Inverse Kinematics) and helper bones.
+    
+    This identifies bones that have zero vertex weights AND match IK/helper patterns.
+    Similar to CATS approach: remove bones with no mesh influence that are control/helper bones.
+    """
+    if not armature or armature.type != 'ARMATURE':
+        return False, [t("MMD.error.invalid_armature")]
+    
+    logger.info(f"Starting MMD IK bone removal for: {armature.name}")
+    
+    messages = []
+    removed_count = 0
+    reparented_count = 0
+    
+    # Store the current mode
+    current_mode = bpy.context.mode
+    
+    try:
+        # Switch to object mode to check weights
+        if bpy.context.mode != 'OBJECT':
+            bpy.context.view_layer.objects.active = armature
+            bpy.ops.object.mode_set(mode='OBJECT')
+        
+        # Get all meshes using this armature
+        meshes = [obj for obj in bpy.data.objects 
+                 if obj.type == 'MESH' and obj.parent == armature]
+        
+        # Track bones with weights
+        bones_with_weights = set()
+        
+        for mesh in meshes:
+            for vertex_group in mesh.vertex_groups:
+                # Check if any vertices have non-zero weights
+                has_weight = False
+                for vert in mesh.data.vertices:
+                    try:
+                        weight = vertex_group.weight(vert.index)
+                        if weight > 0.001:  # Threshold for "zero" weight
+                            has_weight = True
+                            break
+                    except:
+                        continue
+                
+                if has_weight:
+                    bones_with_weights.add(vertex_group.name)
+        
+        logger.info(f"Found {len(bones_with_weights)} bones with vertex weights")
+        
+        # Set armature as active object before switching modes
+        bpy.context.view_layer.objects.active = armature
+        
+        # Patterns to identify IK and helper bones (Japanese and English)
+        # These are control/helper bones that typically have zero weights
+        ik_helper_patterns = [
+            r'.*[iI][kK].*',  # Contains IK (IK, ik, etc.)
+            r'.*ＩＫ.*',  # Japanese fullwidth IK
+            r'.*親.*',  # Japanese "parent"
+            r'.*[DCd]$',  # D/C suffix (D-bones, control bones like RightKneeD, RightAnkleD)
+            r'.*[Ee][Xx]$',  # EX suffix (extra bones like RightLegTipEX)
+            r'.*[Pp]arent$',  # Ends with Parent
+            r'.*[Pp]$',  # P suffix (helper bones like ShoulderP)
+            r'.*[Cc]$',  # C suffix (control bones like ShoulderC)
+            r'^_dummy_.*',  # Dummy bones
+            r'^_shadow_.*',  # Shadow bones
+            r'.*ダミー.*',  # Japanese "dummy"
+            r'.*補助.*',  # Japanese "auxiliary/helper"
+            r'.*操作.*',  # Japanese "control/operation"
+            r'.*[Tt]arget$',  # Target bones
+            r'.*[Gg]roup$',  # Group bones
+        ]
+        
+        # Compile patterns
+        compiled_patterns = [re.compile(pattern) for pattern in ik_helper_patterns]
+        
+        # Protected bone names (main skeleton - never remove these even with zero weights)
+        protected_bones = {
+            "Hips", "Spine", "Chest", "UpperChest", "Upper Chest", "Neck", "Head",
+            "Left shoulder", "Right shoulder", "Shoulder_L", "Shoulder_R",
+            "Left arm", "Right arm", "UpperArm_L", "UpperArm_R",
+            "Left elbow", "Right elbow", "LowerArm_L", "LowerArm_R",
+            "Left wrist", "Right wrist", "Hand_L", "Hand_R",
+            "Left leg", "Right leg", "UpperLeg_L", "UpperLeg_R",
+            "Left knee", "Right knee", "LowerLeg_L", "LowerLeg_R",
+            "Left ankle", "Right ankle", "Foot_L", "Foot_R",
+            "Left toe", "Right toe", "Toe_L", "Toe_R",
+            "Left eye", "Right eye", "Eye_L", "Eye_R"
+        }
+        
+        # Protected bone name patterns (never remove these)
+        protected_patterns = [
+            r'.*[bB]reast.*',  # Breast bones
+            r'.*[bB]ust.*',  # Bust bones
+            r'.*[sS]kirt.*',  # Skirt bones
+            r'.*[hH]air.*',  # Hair bones
+            r'.*[bB]ag.*',  # Bag/accessory bones
+            r'.*[rR]ibbon.*',  # Ribbon bones
+            r'.*[tT]ail.*',  # Tail bones
+            r'.*[wW]ing.*',  # Wing bones
+            r'.*[sS]leeve.*',  # Sleeve bones
+            r'.*[cC]ape.*',  # Cape bones
+            r'.*[sS]carf.*',  # Scarf bones
+            r'.*[cC]oat.*',  # Coat bones
+            r'.*[dD]ress.*',  # Dress bones
+            r'.*[fF]inger.*',  # Finger bones
+            r'.*[tT]humb.*',  # Thumb bones
+            r'.*[aA]ccessor.*',  # Accessory bones
+            r'.*[cC]loth.*',  # Cloth bones
+            r'.*[pP]hys.*',  # Physics bones
+        ]
+        compiled_protected = [re.compile(pattern) for pattern in protected_patterns]
+        
+        # Switch to pose mode to remove constraints first
+        bpy.ops.object.mode_set(mode='POSE')
+        pose_bones = armature.pose.bones
+        
+        # Identify IK/helper bones to remove (zero weight + matches pattern)
+        bones_to_remove = []
+        
+        for bone in armature.data.bones:
+            bone_name = bone.name
+            
+            # Check if it matches IK/helper pattern FIRST (before protection checks)
+            matches_pattern = any(pattern.match(bone_name) for pattern in compiled_patterns)
+            
+            # Skip if bone has weights (it's actually used by the mesh)
+            if bone_name in bones_with_weights:
+                if matches_pattern:
+                    logger.debug(f"IK pattern match but has weights (keeping): {bone_name}")
+                continue
+            
+            # If matches IK pattern, remove regardless of other checks (except weights)
+            if matches_pattern:
+                bones_to_remove.append(bone_name)
+                logger.debug(f"IK/helper bone identified (zero weight): {bone_name}")
+                
+                # Remove constraints from this bone
+                if bone_name in pose_bones:
+                    pose_bone = pose_bones[bone_name]
+                    for constraint in list(pose_bone.constraints):
+                        constraint_name = constraint.name
+                        pose_bone.constraints.remove(constraint)
+                        logger.debug(f"Removed constraint '{constraint_name}' from {bone_name}")
+                continue
+            
+            # Skip if in protected set
+            if bone_name in protected_bones:
+                continue
+            
+            # Skip if matches protected pattern
+            is_protected = any(pattern.match(bone_name) for pattern in compiled_protected)
+            if is_protected:
+                logger.debug(f"Protected bone (keeping): {bone_name}")
+                continue
+        
+        # Remove constraints that reference bones we're about to delete
+        for pose_bone in pose_bones:
+            for constraint in list(pose_bone.constraints):
+                if hasattr(constraint, 'target') and constraint.target:
+                    if hasattr(constraint, 'subtarget') and constraint.subtarget in bones_to_remove:
+                        constraint_name = constraint.name
+                        pose_bone_name = pose_bone.name
+                        pose_bone.constraints.remove(constraint)
+                        logger.debug(f"Removed constraint '{constraint_name}' from {pose_bone_name} (referenced deleted bone)")
+        
+        # Switch to edit mode for bone removal
+        bpy.ops.object.mode_set(mode='EDIT')
+        edit_bones = armature.data.edit_bones
+        
+        # Reparent children before removing
+        for bone_name in bones_to_remove:
+            if bone_name in edit_bones:
+                bone = edit_bones[bone_name]
+                parent_bone = bone.parent
+                for child in bone.children:
+                    child.parent = parent_bone
+                    reparented_count += 1
+                    logger.debug(f"Reparented {child.name} from {bone_name} to {parent_bone.name if parent_bone else 'None'}")
+        
+        # Remove IK/helper bones
+        for bone_name in bones_to_remove:
+            if bone_name in edit_bones:
+                edit_bones.remove(edit_bones[bone_name])
+                removed_count += 1
+                logger.info(f"Removed IK/helper bone: {bone_name}")
+        
+    except Exception as e:
+        logger.error(f"Error during IK bone removal: {e}", exc_info=True)
+        messages.append(t("MMD.ik_removal_failed", error=str(e)))
+        return False, messages
+    
+    finally:
+        # Restore original mode
+        if current_mode != 'OBJECT':
+            bpy.ops.object.mode_set(mode='OBJECT')
+    
+    # Generate messages
+    if removed_count > 0:
+        messages.append(t("MMD.ik_bones_removed", count=removed_count))
+    else:
+        messages.append(t("MMD.no_ik_bones_found"))
+    
+    if reparented_count > 0:
+        messages.append(t("MMD.bones_reparented", count=reparented_count))
+    
+    logger.info(f"IK bone removal complete: {removed_count} removed, {reparented_count} reparented")
+    
+    return True, messages
+
+
+def remove_mmd_twist_bones(armature: Object) -> Tuple[bool, List[str]]:
+    """
+    Remove MMD twist bones.
+    
+    Twist bone patterns:
+    - Contains 'twist', 'Twist'
+    - Ends with '_twist'
+    - Contains '捩' (Japanese for twist)
+    """
+    if not armature or armature.type != 'ARMATURE':
+        return False, [t("MMD.error.invalid_armature")]
+    
+    logger.info(f"Starting MMD twist bone removal for: {armature.name}")
+    
+    messages = []
+    removed_count = 0
+    reparented_count = 0
+    
+    # Store the current mode
+    current_mode = bpy.context.mode
+    if current_mode != 'EDIT':
+        bpy.context.view_layer.objects.active = armature
+        bpy.ops.object.mode_set(mode='EDIT')
+    
+    try:
+        edit_bones = armature.data.edit_bones
+        bones_to_remove = []
+        
+        # Patterns to identify twist bones - be specific about twist markers
+        twist_patterns = [
+            r'.*_[tT]wist$',  # Ends with _twist or _Twist
+            r'^[tT]wist_',  # Starts with twist_ or Twist_
+            r'.*\.[tT]wist$',  # Ends with .twist or .Twist
+            r'^[tT]wist\.',  # Starts with twist. or Twist.
+            r'.*[tT]wist$',  # Ends with Twist (no underscore/dot required)
+            r'.*捩.*',  # Contains Japanese twist character
+        ]
+        
+        # Compile patterns
+        compiled_patterns = [re.compile(pattern) for pattern in twist_patterns]
+        
+        # Protected bone name patterns (never remove these)
+        protected_patterns = [
+            r'.*[bB]reast.*',  # Breast bones
+            r'.*[bB]ust.*',  # Bust bones
+            r'.*[sS]kirt.*',  # Skirt bones
+            r'.*[hH]air.*',  # Hair bones
+            r'.*[bB]ag.*',  # Bag/accessory bones
+            r'.*[rR]ibbon.*',  # Ribbon bones
+            r'.*[tT]ail.*',  # Tail bones
+            r'.*[wW]ing.*',  # Wing bones
+            r'.*[eE]ar.*',  # Ear bones
+            r'.*[sS]leeve.*',  # Sleeve bones
+            r'.*[cC]ape.*',  # Cape bones
+            r'.*[sS]carf.*',  # Scarf bones
+            r'.*[cC]oat.*',  # Coat bones
+            r'.*[dD]ress.*',  # Dress bones
+        ]
+        compiled_protected = [re.compile(pattern) for pattern in protected_patterns]
+        
+        # Identify twist bones (but exclude protected bones)
+        for bone in edit_bones:
+            bone_name = bone.name
+            
+            # Check if bone is protected
+            is_protected = any(pattern.match(bone_name) for pattern in compiled_protected)
+            if is_protected:
+                continue
+            
+            # Check if it's a twist bone
+            for pattern in compiled_patterns:
+                if pattern.match(bone_name):
+                    bones_to_remove.append(bone_name)
+                    logger.debug(f"Twist bone identified: {bone_name}")
+                    break
+        
+        # Reparent children before removing
+        for bone_name in bones_to_remove:
+            if bone_name in edit_bones:
+                bone = edit_bones[bone_name]
+                parent_bone = bone.parent
+                for child in bone.children:
+                    child.parent = parent_bone
+                    reparented_count += 1
+                    logger.debug(f"Reparented {child.name} from {bone_name} to {parent_bone.name if parent_bone else 'None'}")
+        
+        # Remove twist bones
+        for bone_name in bones_to_remove:
+            if bone_name in edit_bones:
+                edit_bones.remove(edit_bones[bone_name])
+                removed_count += 1
+                logger.info(f"Removed twist bone: {bone_name}")
+        
+    except Exception as e:
+        logger.error(f"Error during twist bone removal: {e}", exc_info=True)
+        messages.append(t("MMD.twist_removal_failed", error=str(e)))
+        return False, messages
+    
+    finally:
+        # Restore original mode
+        if current_mode != 'EDIT':
+            bpy.ops.object.mode_set(mode='OBJECT')
+    
+    # Generate messages
+    if removed_count > 0:
+        messages.append(t("MMD.twist_bones_removed", count=removed_count))
+    else:
+        messages.append(t("MMD.no_twist_bones_found"))
+    
+    if reparented_count > 0:
+        messages.append(t("MMD.bones_reparented", count=reparented_count))
+    
+    logger.info(f"Twist bone removal complete: {removed_count} removed, {reparented_count} reparented")
+    
+    return True, messages
+
+
+def remove_mmd_zero_weight_bones(armature: Object) -> Tuple[bool, List[str]]:
+    """
+    Remove bones with zero or near-zero vertex weights.
+    Protects main skeleton bones from removal.
+    """
+    if not armature or armature.type != 'ARMATURE':
+        return False, [t("MMD.error.invalid_armature")]
+    
+    logger.info(f"Starting zero weight bone removal for: {armature.name}")
+    
+    messages = []
+    removed_count = 0
+    reparented_count = 0
+    
+    # Store the current mode
+    current_mode = bpy.context.mode
+    
+    try:
+        # Switch to object mode to check weights
+        if bpy.context.mode != 'OBJECT':
+            bpy.context.view_layer.objects.active = armature
+            bpy.ops.object.mode_set(mode='OBJECT')
+        
+        # Get all meshes using this armature
+        meshes = [obj for obj in bpy.data.objects 
+                 if obj.type == 'MESH' and obj.parent == armature]
+        
+        # Track bones with weights
+        bones_with_weights = set()
+        
+        for mesh in meshes:
+            for vertex_group in mesh.vertex_groups:
+                # Check if any vertices have non-zero weights
+                has_weight = False
+                for vert in mesh.data.vertices:
+                    try:
+                        weight = vertex_group.weight(vert.index)
+                        if weight > 0.001:  # Threshold for "zero" weight
+                            has_weight = True
+                            break
+                    except:
+                        continue
+                
+                if has_weight:
+                    bones_with_weights.add(vertex_group.name)
+        
+        # Switch to edit mode
+        bpy.ops.object.mode_set(mode='EDIT')
+        edit_bones = armature.data.edit_bones
+        
+        # Protected bone names (main skeleton)
+        protected_bones = {
+            "Hips", "Spine", "Chest", "UpperChest", "Neck", "Head",
+            "Left shoulder", "Right shoulder", "Shoulder_L", "Shoulder_R",
+            "Left arm", "Right arm", "UpperArm_L", "UpperArm_R",
+            "Left elbow", "Right elbow", "LowerArm_L", "LowerArm_R",
+            "Left wrist", "Right wrist", "Hand_L", "Hand_R",
+            "Left leg", "Right leg", "UpperLeg_L", "UpperLeg_R",
+            "Left knee", "Right knee", "LowerLeg_L", "LowerLeg_R",
+            "Left ankle", "Right ankle", "Foot_L", "Foot_R",
+            "Left toe", "Right toe", "Toe_L", "Toe_R",
+            "Left eye", "Right eye", "Eye_L", "Eye_R"
+        }
+        
+        # Protected bone name patterns (never remove these even with zero weights)
+        protected_patterns = [
+            r'.*[bB]reast.*',  # Breast bones
+            r'.*[bB]ust.*',  # Bust bones
+            r'.*[sS]kirt.*',  # Skirt bones
+            r'.*[hH]air.*',  # Hair bones
+            r'.*[bB]ag.*',  # Bag/accessory bones
+            r'.*[rR]ibbon.*',  # Ribbon bones
+            r'.*[tT]ail.*',  # Tail bones
+            r'.*[wW]ing.*',  # Wing bones
+            r'.*[eE]ar.*',  # Ear bones (not Eye)
+            r'.*[sS]leeve.*',  # Sleeve bones
+            r'.*[cC]ape.*',  # Cape bones
+            r'.*[sS]carf.*',  # Scarf bones
+            r'.*[cC]oat.*',  # Coat bones
+            r'.*[dD]ress.*',  # Dress bones
+            r'.*[fF]inger.*',  # Finger bones
+            r'.*[tT]humb.*',  # Thumb bones
+            r'.*[iI]ndex.*',  # Index finger bones
+            r'.*[mM]iddle.*',  # Middle finger bones
+            r'.*[rR]ing.*',  # Ring finger bones
+            r'.*[pP]ink.*',  # Pinky bones
+            r'.*[tT]oe.*',  # Toe bones
+            r'.*[aA]ccessor.*',  # Accessory bones
+            r'.*[jJ]oint.*',  # Joint bones
+            r'.*[cC]loth.*',  # Cloth bones
+            r'.*[pP]hys.*',  # Physics bones
+        ]
+        compiled_protected = [re.compile(pattern) for pattern in protected_patterns]
+        
+        # Identify zero weight bones (but exclude protected bones)
+        bones_to_remove = []
+        for bone in edit_bones:
+            # Skip if bone has weights
+            if bone.name in bones_with_weights:
+                continue
+            
+            # Skip if in protected set
+            if bone.name in protected_bones:
+                continue
+            
+            # Skip if matches protected pattern
+            is_protected = any(pattern.match(bone.name) for pattern in compiled_protected)
+            if is_protected:
+                logger.debug(f"Protected bone (zero weight but keeping): {bone.name}")
+                continue
+            
+            bones_to_remove.append(bone.name)
+            logger.debug(f"Zero weight bone identified: {bone.name}")
+        
+        # Reparent children before removing
+        for bone_name in bones_to_remove:
+            if bone_name in edit_bones:
+                bone = edit_bones[bone_name]
+                parent_bone = bone.parent
+                for child in bone.children:
+                    child.parent = parent_bone
+                    reparented_count += 1
+                    logger.debug(f"Reparented {child.name} from {bone_name} to {parent_bone.name if parent_bone else 'None'}")
+        
+        # Remove zero weight bones
+        for bone_name in bones_to_remove:
+            if bone_name in edit_bones:
+                edit_bones.remove(edit_bones[bone_name])
+                removed_count += 1
+                logger.info(f"Removed zero weight bone: {bone_name}")
+        
+    except Exception as e:
+        logger.error(f"Error during zero weight bone removal: {e}", exc_info=True)
+        messages.append(t("MMD.zero_weight_removal_failed", error=str(e)))
+        return False, messages
+    
+    finally:
+        # Restore original mode
+        if current_mode != 'OBJECT':
+            bpy.ops.object.mode_set(mode='OBJECT')
+    
+    # Generate messages
+    if removed_count > 0:
+        messages.append(t("MMD.zero_weight_bones_removed", count=removed_count))
+    else:
+        messages.append(t("MMD.no_zero_weight_bones_found"))
+    
+    if reparented_count > 0:
+        messages.append(t("MMD.bones_reparented", count=reparented_count))
+    
+    logger.info(f"Zero weight bone removal complete: {removed_count} removed, {reparented_count} reparented")
     
     return True, messages
