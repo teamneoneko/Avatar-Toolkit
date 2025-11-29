@@ -67,10 +67,42 @@ def highlight_problem_bones(self: PropertyGroup, context: Context) -> None:
     save_preference("highlight_problem_bones", self.highlight_problem_bones)
 
 def get_mesh_objects(self, context):
-    meshes = [(obj.name, obj.name, "") for obj in bpy.data.objects if obj.type == 'MESH']
+    """Get list of all mesh objects with ASCII-safe identifiers
+    
+    Returns tuples of (identifier, display_name, description) where:
+    - identifier: ASCII-safe unique ID (uses object's memory address)
+    - display_name: The actual object name (can contain Japanese/non-ASCII characters)
+    - description: Empty string
+    
+    Uses caching to prevent encoding issues with Blender's EnumProperty system
+    """
+    # Create a cache key based on mesh objects
+    mesh_objects = [obj for obj in bpy.data.objects if obj.type == 'MESH']
+    cache_key = tuple((obj.name, obj.as_pointer()) for obj in mesh_objects)
+    
+    # Check if we have a cached result
+    if hasattr(get_mesh_objects, '_cache_key') and get_mesh_objects._cache_key == cache_key:
+        if hasattr(get_mesh_objects, '_cached_items'):
+            return get_mesh_objects._cached_items
+    
+    # Build the list
+    meshes = []
+    for obj in mesh_objects:
+        safe_id = f"MESH_{obj.as_pointer()}"
+        # Use the name directly - Blender should handle Unicode in display names
+        display_name = obj.name
+        meshes.append((safe_id, display_name, ""))
+    
     if not meshes:
-        return [('NONE', t("Visemes.no_meshes"), '')]
-    return meshes
+        result = [('NONE', t("Visemes.no_meshes"), '')]
+    else:
+        result = meshes
+    
+    # Cache the result
+    get_mesh_objects._cache_key = cache_key
+    get_mesh_objects._cached_items = result
+    
+    return result
 
 def auto_populate_merge_armatures(context: Context) -> None:
     """Auto-populate merge armature fields when there are 2+ armatures"""

@@ -34,8 +34,9 @@ class AvatarToolKit_PT_VisemesPanel(Panel):
         else:
             col.label(text=t("Visemes.no_armature"), icon='ERROR')
 
-        # Get selected mesh
-        mesh_obj = bpy.data.objects.get(props.viseme_mesh)
+        # Get selected mesh using safe identifier
+        from ..core.common import get_mesh_from_identifier
+        mesh_obj = get_mesh_from_identifier(props.viseme_mesh)
         if not mesh_obj or not mesh_obj.data or not mesh_obj.data.shape_keys:
             layout.label(text=t("Visemes.no_shapekeys"))
             return
