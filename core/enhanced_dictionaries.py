@@ -174,6 +174,130 @@ physics_names: Dict[str, List[str]] = {
     "breast_tip": ["胸先", "むねさき", "ブレストティップ", "breasttip"],
 }
 
+# MMD bone name patterns (for detection)
+mmd_bone_patterns: List[str] = [
+    # Japanese bone names
+    '全ての親', 'センター', '上半身', '下半身', '首', '頭',
+    '右腕', '左腕', '右ひじ', '左ひじ', '右手首', '左手首',
+    '右足', '左足', '右ひざ', '左ひざ', '右足首', '左足首',
+    '両目', '左目', '右目', '右肩', '左肩',
+    # English bone names (common in MMD exports)
+    'center', 'groove', 'waist', 'upperbody', 'upperbody2', 'lowerbody',
+    'neck', 'head',
+    'shoulder_r', 'shoulder_l', 'arm_r', 'arm_l',
+    'elbow_r', 'elbow_l', 'wrist_r', 'wrist_l',
+    'leg_r', 'leg_l', 'knee_r', 'knee_l',
+    'ankle_r', 'ankle_l', 'toe_r', 'toe_l',
+    # Mixed/Romanized patterns
+    '센터', 'グルーブ', 'ウエスト',
+    # Common MMD suffixes
+    '_r', '_l', '.r', '.l'
+]
+
+# MMD to Unity bone mapping
+# Maps MMD bone names (after English translation) to Unity humanoid bone names
+mmd_to_unity_bone_map: Dict[str, Optional[str]] = {
+    # Root and core
+    "ParentNode": None,  # Remove this
+    "Center": "Hips",
+    "センター": "Hips",
+    "Groove": None,  # Remove this
+    "グルーブ": None,
+    "Waist": None,  # Will be merged into Hips
+    
+    # Spine chain
+    "LowerBody": "Hips",
+    "下半身": "Hips",
+    "UpperBody": "Spine",
+    "上半身": "Spine",
+    "UpperBody2": "Chest",
+    "上半身2": "Chest",
+    "Neck": "Neck",
+    "首": "Neck",
+    "Head": "Head",
+    "頭": "Head",
+    
+    # Right leg
+    "RightLeg": "Right leg",
+    "右足": "Right leg",
+    "RightLegD": None,  # Remove D variant
+    "RightKnee": "Right knee",
+    "右ひざ": "Right knee",
+    "RightAnkle": "Right ankle",
+    "右足首": "Right ankle",
+    "RightToe": "Right toe",
+    "右つま先": "Right toe",
+    
+    # Left leg  
+    "LeftLeg": "Left leg",
+    "左足": "Left leg",
+    "LeftLegD": None,  # Remove D variant
+    "LeftKnee": "Left knee",
+    "左ひざ": "Left knee",
+    "LeftAnkle": "Left ankle",
+    "左足首": "Left ankle",
+    "LeftToe": "Left toe",
+    "左つま先": "Left toe",
+    
+    # Right arm
+    "RightShoulder": "Right shoulder",
+    "右肩": "Right shoulder",
+    "RightArm": "Right arm",
+    "右腕": "Right arm",
+    "RightElbow": "Right elbow",
+    "右ひじ": "Right elbow",
+    "RightWrist": "Right wrist",
+    "右手首": "Right wrist",
+    
+    # Left arm
+    "LeftShoulder": "Left shoulder",
+    "左肩": "Left shoulder",
+    "LeftArm": "Left arm",
+    "左腕": "Left arm",
+    "LeftElbow": "Left elbow",
+    "左ひじ": "Left elbow",
+    "LeftWrist": "Left wrist",
+    "左手首": "Left wrist",
+    
+    # Cancel/Helper bones (remove these)
+    "WaistCancelRight": None,
+    "WaistCancelLeft": None,
+    "LegIKParentRight": None,
+    "LegIKParentLeft": None,
+}
+
+# Unity humanoid bone hierarchy
+# Defines parent-child relationships for Unity standard
+unity_bone_hierarchy: Dict[str, Optional[str]] = {
+    "Hips": None,  # Root bone
+    "Spine": "Hips",
+    "Chest": "Spine",
+    "Neck": "Chest",
+    "Head": "Neck",
+    
+    # Arms
+    "Left shoulder": "Chest",
+    "Left arm": "Left shoulder",
+    "Left elbow": "Left arm",
+    "Left wrist": "Left elbow",
+    
+    "Right shoulder": "Chest",
+    "Right arm": "Right shoulder",
+    "Right elbow": "Right arm",
+    "Right wrist": "Right elbow",
+    
+    # Legs
+    "Left leg": "Hips",
+    "Left knee": "Left leg",
+    "Left ankle": "Left knee",
+    "Left toe": "Left ankle",
+    
+    "Right leg": "Hips",
+    "Right knee": "Right leg",
+    "Right ankle": "Right knee",
+    "Right toe": "Right ankle",
+}
+
 # Create reverse lookup dictionaries
 reverse_shapekey_lookup: Dict[str, str] = {}
 reverse_material_lookup: Dict[str, str] = {}

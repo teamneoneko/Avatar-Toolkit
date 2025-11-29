@@ -67,10 +67,42 @@ def highlight_problem_bones(self: PropertyGroup, context: Context) -> None:
     save_preference("highlight_problem_bones", self.highlight_problem_bones)
 
 def get_mesh_objects(self, context):
-    meshes = [(obj.name, obj.name, "") for obj in bpy.data.objects if obj.type == 'MESH']
+    """Get list of all mesh objects with ASCII-safe identifiers
+    
+    Returns tuples of (identifier, display_name, description) where:
+    - identifier: ASCII-safe unique ID (uses object's memory address)
+    - display_name: The actual object name (can contain Japanese/non-ASCII characters)
+    - description: Empty string
+    
+    Uses caching to prevent encoding issues with Blender's EnumProperty system
+    """
+    # Create a cache key based on mesh objects
+    mesh_objects = [obj for obj in bpy.data.objects if obj.type == 'MESH']
+    cache_key = tuple((obj.name, obj.as_pointer()) for obj in mesh_objects)
+    
+    # Check if we have a cached result
+    if hasattr(get_mesh_objects, '_cache_key') and get_mesh_objects._cache_key == cache_key:
+        if hasattr(get_mesh_objects, '_cached_items'):
+            return get_mesh_objects._cached_items
+    
+    # Build the list
+    meshes = []
+    for obj in mesh_objects:
+        safe_id = f"MESH_{obj.as_pointer()}"
+        # Use the name directly - Blender should handle Unicode in display names
+        display_name = obj.name
+        meshes.append((safe_id, display_name, ""))
+    
     if not meshes:
-        return [('NONE', t("Visemes.no_meshes"), '')]
-    return meshes
+        result = [('NONE', t("Visemes.no_meshes"), '')]
+    else:
+        result = meshes
+    
+    # Cache the result
+    get_mesh_objects._cache_key = cache_key
+    get_mesh_objects._cached_items = result
+    
+    return result
 
 def auto_populate_merge_armatures(context: Context) -> None:
     """Auto-populate merge armature fields when there are 2+ armatures"""
@@ -701,6 +733,67 @@ class AvatarToolkitSceneProperties(PropertyGroup):
         name=t("VRM.remove_root"),
         description=t("VRM.remove_root_desc"),
         default=True
+    )
+
+    # MMD Conversion Properties
+    mmd_make_parent: BoolProperty(
+        name=t("MMD.make_armature_parent"),
+        description="Remove parent Empty object and make armature the main parent",
+        default=True
+    )
+    
+    mmd_rename_armature: BoolProperty(
+        name=t("MMD.rename_to_armature"),
+        description="Rename the armature object to 'Armature'",
+        default=True
+    )
+    
+    mmd_translate_names: BoolProperty(
+        name=t("MMD.translate_names"),
+        description="Translate Japanese names to English using MMD dictionary and translation services",
+        default=True
+    )
+    
+    mmd_translate_bones: BoolProperty(
+        name=t("MMD.translate_bones"),
+        description="Translate bone names",
+        default=True
+    )
+    
+    mmd_translate_materials: BoolProperty(
+        name=t("MMD.translate_materials"),
+        description="Translate material names",
+        default=True
+    )
+    
+    mmd_translate_shapekeys: BoolProperty(
+        name=t("MMD.translate_shapekeys"),
+        description="Translate shape key names",
+        default=True
+    )
+    
+    mmd_translate_objects: BoolProperty(
+        name=t("MMD.translate_objects"),
+        description="Translate object names",
+        default=True
+    )
+    
+    mmd_restructure_bones: BoolProperty(
+        name=t("MMD.restructure_bones"),
+        description="Restructure bone hierarchy to Unity humanoid format (Hips, Spine, Chest, etc.)",
+        default=True
+    )
+    
+    mmd_remove_twist_bones: BoolProperty(
+        name=t("MMD.remove_twist_bones"),
+        description="Remove twist bones",
+        default=True
+    )
+    
+    mmd_remove_zero_weight_bones: BoolProperty(
+        name=t("MMD.remove_zero_weight_bones"),
+        description="Remove bones with zero or near-zero vertex weights",
+        default=False
     )
 
     # Translation System Properties

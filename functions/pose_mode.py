@@ -92,7 +92,7 @@ class AvatarToolkit_OT_StopPoseMode(Operator):
             self.report({'ERROR'}, t("PoseMode.error.stop", error=traceback.format_exc()))
             return {'CANCELLED'}
 
-class AvatarToolkit_OT_ApplyPoseAsRest(Operator, BatchPoseOperationMixin):
+class AvatarToolkit_OT_ApplyPoseAsShapekey(Operator, BatchPoseOperationMixin):
     bl_idname = 'avatar_toolkit.apply_pose_as_shapekey'
     bl_label = t("QuickAccess.apply_pose_as_shapekey.label")
     bl_description = t("QuickAccess.apply_pose_as_shapekey.desc")
@@ -136,7 +136,7 @@ class AvatarToolkit_OT_ApplyPoseAsRest(Operator, BatchPoseOperationMixin):
             self.report({'ERROR'}, t("PoseMode.error.shapekey", error=traceback.format_exc()))
             return {'CANCELLED'}
 
-class AvatarToolkit_OT_ApplyPoseAsShapekey(Operator, BatchPoseOperationMixin):
+class AvatarToolkit_OT_ApplyPoseAsRest(Operator, BatchPoseOperationMixin):
     bl_idname = 'avatar_toolkit.apply_pose_as_rest'
     bl_label = t("QuickAccess.apply_pose_as_rest.label")
     bl_description = t("QuickAccess.apply_pose_as_rest.desc")

@@ -137,15 +137,17 @@ class AvatarToolkit_OT_PreviewVisemes(Operator):
             return False
             
         # Get mesh from UI selection
+        from ..core.common import get_mesh_from_identifier
         props = context.scene.avatar_toolkit
-        mesh_obj = bpy.data.objects.get(props.viseme_mesh)
+        mesh_obj = get_mesh_from_identifier(props.viseme_mesh)
         
         # Validate mesh
         return mesh_obj and mesh_obj.type == 'MESH'
     
     def execute(self, context: Context) -> Set[str]:
+        from ..core.common import get_mesh_from_identifier
         props = context.scene.avatar_toolkit
-        mesh = bpy.data.objects.get(props.viseme_mesh)
+        mesh = get_mesh_from_identifier(props.viseme_mesh)
         
         if props.viseme_preview_mode:
             VisemePreview.end_preview(mesh)
@@ -191,15 +193,17 @@ class AvatarToolkit_OT_CreateVisemes(Operator):
             return False
             
         # Get mesh from UI selection
+        from ..core.common import get_mesh_from_identifier
         props = context.scene.avatar_toolkit
-        mesh_obj = bpy.data.objects.get(props.viseme_mesh)
+        mesh_obj = get_mesh_from_identifier(props.viseme_mesh)
         
         # Validate mesh
         return mesh_obj and mesh_obj.type == 'MESH'
 
     def execute(self, context: Context) -> Set[str]:
+        from ..core.common import get_mesh_from_identifier
         props = context.scene.avatar_toolkit
-        mesh = bpy.data.objects.get(props.viseme_mesh)  # Changed from context.active_object
+        mesh = get_mesh_from_identifier(props.viseme_mesh)
         
         if not mesh or not mesh.data.shape_keys:
             self.report({'ERROR'}, t("Visemes.error.no_shapekeys"))

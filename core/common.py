@@ -142,6 +142,41 @@ def set_active_armature(context: Context, armature: Object) -> None:
     else:
         context.scene.avatar_toolkit.active_armature = 'NONE'
 
+def get_mesh_from_identifier(mesh_id: str) -> Optional[Object]:
+    """Get mesh object from safe identifier
+    
+    Args:
+        mesh_id: Safe identifier in format "MESH_{pointer}" or direct object name
+    
+    Returns:
+        Mesh object or None if not found
+    """
+    if not mesh_id or mesh_id == 'NONE':
+        return None
+    
+    # Handle new-style identifiers (MESH_{pointer})
+    if mesh_id.startswith('MESH_'):
+        try:
+            pointer_str = mesh_id[5:]  # Remove "MESH_" prefix
+            target_pointer = int(pointer_str)
+            
+            # Search for object with matching pointer
+            for obj in bpy.data.objects:
+                if obj.type == 'MESH' and obj.as_pointer() == target_pointer:
+                    return obj
+        except (ValueError, AttributeError):
+            pass
+    
+    # Fallback for old-style identifiers (direct name)
+    return bpy.data.objects.get(mesh_id)
+
+def clear_enum_caches() -> None:
+    """Clear all enum property caches to force refresh of dropdown lists"""
+    if hasattr(get_armature_list, '_cache_key'):
+        delattr(get_armature_list, '_cache_key')
+    if hasattr(get_armature_list, '_cached_items'):
+        delattr(get_armature_list, '_cached_items')
+
 def get_armature_list(self: Optional[Any] = None, context: Optional[Context] = None) -> List[Tuple[str, str, str]]:
     """Get list of all armature objects in the scene
     
@@ -149,21 +184,40 @@ def get_armature_list(self: Optional[Any] = None, context: Optional[Context] = N
     - identifier: ASCII-safe unique ID (uses object's memory address)
     - display_name: The actual object name (can contain Japanese characters)
     - description: Empty string
+    
+    Uses caching to prevent encoding issues with Blender's EnumProperty system
     """
     if context is None:
         context = bpy.context
     
-    # Use object's as_pointer() value as a safe ASCII identifier
+    # Create a cache key based on armature objects in scene
+    armature_objects = [obj for obj in context.scene.objects if obj.type == 'ARMATURE']
+    cache_key = tuple((obj.name, obj.as_pointer()) for obj in armature_objects)
+    
+    # Check if we have a cached result
+    if hasattr(get_armature_list, '_cache_key') and get_armature_list._cache_key == cache_key:
+        if hasattr(get_armature_list, '_cached_items'):
+            return get_armature_list._cached_items
+    
+    # Build the list
     armatures = []
-    for obj in context.scene.objects:
-        if obj.type == 'ARMATURE':
-            # Create a safe ASCII identifier using the object pointer
-            safe_id = f"ARM_{obj.as_pointer()}"
-            armatures.append((safe_id, obj.name, ""))
+    for obj in armature_objects:
+        # Create a safe ASCII identifier using the object pointer
+        safe_id = f"ARM_{obj.as_pointer()}"
+        # Use the name directly - Blender should handle Unicode in display names
+        display_name = obj.name
+        armatures.append((safe_id, display_name, ""))
     
     if not armatures:
-        return [('NONE', t("Armature.validation.no_armature"), '')]
-    return armatures
+        result = [('NONE', t("Armature.validation.no_armature"), '')]
+    else:
+        result = armatures
+    
+    # Cache the result
+    get_armature_list._cache_key = cache_key
+    get_armature_list._cached_items = result
+    
+    return result
   
 def auto_select_single_armature(context: Context) -> None:
     """Automatically select armature if only one exists in scene"""
